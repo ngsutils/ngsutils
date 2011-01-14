@@ -128,11 +128,7 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, noperfect=False, m
             if noperfect and total == counts[refbase]:
                 continue
 
-            if total+inserts+deletions == 0:
-                refbase = refbase.lower()
-                var = 0
-            elif total == counts[refbase]:
-                refbase = refbase.lower()
+            if total+inserts+deletions == 0 or total == counts[refbase]:
                 var = 0
             else:
                 var = float(total - counts[refbase] + inserts + deletions)/(total + inserts + deletions)
