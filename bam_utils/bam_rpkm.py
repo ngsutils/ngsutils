@@ -66,6 +66,7 @@ def calc_rpkm(bam_fname,refiso_name,stranded=True,multiple='complete',normalizat
     if coverage:
         headers.append('Coverage mean')
         headers.append('Coverage stdev')
+        headers.append('Coverage median')
     
     if mapped_count:
         print "#mapped_count\t%s" % mapped_count
@@ -79,7 +80,13 @@ def calc_rpkm(bam_fname,refiso_name,stranded=True,multiple='complete',normalizat
     
     for gene in genes:
         if mil_mapped:
-            gene.append( gene[-1] / (gene[-2]/1000.0) / mil_mapped )
+            if coverage:
+                count = gene[-4]
+                size = gene[-5]
+            else:
+                count = gene[-1]
+                size = gene[-2]
+            gene.append(count / (size/1000.0) / mil_mapped)
         sys.stdout.write('%s\n' % '\t'.join([str(x) for x in gene]))
 
     eta.done()
@@ -112,6 +119,7 @@ def calc_bed(bam_fname,bed_name,stranded=True,multiple='complete',normalization=
 
         count,reads = _fetch_reads(bam,chrom,strand if stranded else None,[start],[end],multiple,False,whitelist,blacklist,uniq)
         cols = [chrom,start,end,0,name,strand,coding_len,count]
+
         if coverage:
             cols.extend(calc_coverage(bam,chrom,strand if stranded else None,[start],[end],whitelist,blacklist))
             eta.print_status(extra='%s coverage' % name)
@@ -136,8 +144,9 @@ def calc_bed(bam_fname,bed_name,stranded=True,multiple='complete',normalization=
     headers = "chrom start end name score strand size count".split()
 
     if coverage:
-        headers.append('cover_mean')
-        headers.append('cover_stdev')
+        headers.append('coverage_mean')
+        headers.append('coverage_stdev')
+        headers.append('coverage_median')
 
     if mapped_count:
         print "#mapped_count\t%s" % mapped_count
@@ -152,7 +161,13 @@ def calc_bed(bam_fname,bed_name,stranded=True,multiple='complete',normalization=
 
     for region in regions:
         if mil_mapped:
-            region.append(region[-1] / (region[-2]/1000.0) / mil_mapped)
+            if coverage:
+                count = region[-4]
+                size = region[-5]
+            else:
+                count = region[-1]
+                size = region[-2]
+            region.append(count / (size/1000.0) / mil_mapped)
         print '\t'.join([str(x) for x in region])
 
     eta.done()
@@ -269,9 +284,14 @@ def calc_alt(bam_fname,refiso_name,stranded=True,multiple='complete',whitelist=N
         #find const regions
         coding_len = 0
         const_regions = []
+        starts = []
+        ends = []
 
         last_const = False
         for num,start,end,const,names in gene.regions:
+            starts.append(start)
+            ends.append(end)
+            
             if const:
                 if not last_const:
                     const_regions.append([])
@@ -279,6 +299,8 @@ def calc_alt(bam_fname,refiso_name,stranded=True,multiple='complete',whitelist=N
                 last_const = True
             else:
                 last_const = False
+        
+        total_count,reads = _fetch_reads(bam,gene.chrom,gene.strand if stranded else None,starts,ends,multiple,False,whitelist,blacklist)
 
         const_count = 0
         for const_spans in const_regions:
@@ -292,7 +314,7 @@ def calc_alt(bam_fname,refiso_name,stranded=True,multiple='complete',whitelist=N
         
         for num,start,end,const,names in gene.regions:
             count,reads = _fetch_reads(bam,gene.chrom,gene.strand if stranded else None,[start],[end],multiple,False,whitelist,blacklist)
-            cols = [gene.iso_id,gene.name,const_count,num,'const' if const else 'alt','',gene.chrom,gene.strand,start,end,end-start,count,]
+            cols = [gene.iso_id,gene.name,total_count,const_count,num,'const' if const else 'alt','',gene.chrom,gene.strand,start,end,end-start,count,]
             if const_count > 0:
                 cols.append(float(count) / const_count)
             else:
@@ -304,7 +326,7 @@ def calc_alt(bam_fname,refiso_name,stranded=True,multiple='complete',whitelist=N
         print "# nostrand"
 
     print ""
-    print '\t'.join("iso_id gene const_count region_num const_alt altEvent chrom strand start end length count alt_index".split())
+    print '\t'.join("iso_id gene total_count const_count region_num const_alt altEvent chrom strand start end length count alt_index".split())
     for cols in lines:
         print '\t'.join([str(x) for x in cols])
         
@@ -333,8 +355,15 @@ def calc_coverage(bam,chrom,strand,starts,ends,whitelist,blacklist):
 
             coverage.append(count)
     
-    return mean_stdev(coverage)
-    
+    mean,stdev = mean_stdev(coverage)
+    coverage.sort()
+    if len(coverage) % 2 == 1:
+        median = coverage[len(coverage)/2]
+    else:
+        a = coverage[(len(coverage)/2)-1]
+        b = coverage[(len(coverage)/2)]
+        median = (a + b) / 2
+    return mean,stdev,median
 def mean_stdev(l):
     acc = 0
     for el in l:
@@ -457,7 +486,7 @@ def _fetch_reads(bam,chrom,strand,starts,ends,multiple,exclusive,whitelist=None,
 def usage():
     print __doc__
     print """\
-Usage: %s [rpkm|alt|bed|repeat] {opts} bamfile [annotation file]
+Usage: %s [gene|bed|alt|repeat] annotation_file {opts} bamfile
 
 Common options:
     -nostrand          ignore strand in counting reads
@@ -469,23 +498,13 @@ Common options:
     -blacklist=<file>  file containing a black-list of read names
                        these read-names will not be used in the calcs
 
-[rpkm]
+[gene]
     Calculate the number of reads that map within the coding regions of each 
     gene. If [matches] is given, an RPKM calculation is also performed, 
     yielding the normalized RPKM value for each gene.
 
     Annotation: RefIso
     Calculates: # reads, RPKM, coverage
-
-
-[alt]
-    Calculate the number of reads that map to each expressed region
-    for all genes. Also, for each gene, the reads mapping to consecutively 
-    constant regions are also found.  With these two numbers an alternative
-    index is calculated (# reads in a region / # consec. const. reads).
-
-    Annotation: RefIso
-    Calculates: const region # reads, # reads per exon, alt-splice index
 
 
 [bed]
@@ -497,6 +516,16 @@ Common options:
 
     Annotation: BED file
     Calculates: # reads, RPKM, coverage
+
+
+[alt]
+    Calculate the number of reads that map to each expressed region
+    for all genes. Also, for each gene, the reads mapping to consecutively 
+    constant regions are also found.  With these two numbers an alternative
+    index is calculated (# reads in a region / # consec. const. reads).
+
+    Annotation: RefIso
+    Calculates: const region # reads, # reads per exon, alt-splice index
 
 
 [repeat]
@@ -528,12 +557,12 @@ Possible values for {-multiple}:
 
 if __name__ == '__main__':
     try:
-        opts,(cmd,bam,refiso) = ngs_utils.parse_args(sys.argv[1:],{'nostrand':False,'coverage':False,'multiple':'complete','norm':'genes','whitelist':None,'blacklist':None,'uniq':False})
+        opts,(cmd,annotation,bam) = ngs_utils.parse_args(sys.argv[1:],{'nostrand':False,'coverage':False,'multiple':'complete','norm':'genes','whitelist':None,'blacklist':None,'uniq':False})
     except:
         usage()
         sys.exit(-1)
     
-    if not cmd in ['rpkm','alt','bed','repeat'] or not bam or not refiso:
+    if not cmd in ['gene','alt','bed','repeat'] or not bam or not annotation or not os.path.exists(bam) or not os.path.exists(annotation):
         usage()
         sys.exit(-1)
 
@@ -554,12 +583,12 @@ if __name__ == '__main__':
         f.close()
 
     
-    if cmd == 'rpkm':
-        calc_rpkm(bam,refiso,not opts['nostrand'],opts['multiple'],opts['norm'],whitelist,blacklist,opts['coverage'])
+    if cmd == 'gene':
+        calc_rpkm(bam,annotation,not opts['nostrand'],opts['multiple'],opts['norm'],whitelist,blacklist,opts['coverage'])
     elif cmd == 'bed':
-        calc_bed(bam,refiso,not opts['nostrand'],opts['multiple'],opts['norm'],whitelist,blacklist,opts['uniq'],opts['coverage'])
+        calc_bed(bam,annotation,not opts['nostrand'],opts['multiple'],opts['norm'],whitelist,blacklist,opts['uniq'],opts['coverage'])
     elif cmd == 'alt':
-        calc_alt(bam,refiso,not opts['nostrand'],opts['multiple'],whitelist,blacklist)
+        calc_alt(bam,annotation,not opts['nostrand'],opts['multiple'],whitelist,blacklist)
     elif cmd == 'repeat':
-        calc_repeat(bam,refiso,not opts['nostrand'],opts['multiple'],opts['norm'],whitelist,blacklist)
+        calc_repeat(bam,annotation,not opts['nostrand'],opts['multiple'],opts['norm'],whitelist,blacklist)
 
