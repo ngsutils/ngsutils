@@ -1,0 +1,256 @@
+#!/usr/bin/env python
+"""
+Given a BAM file, this script will only allow reads that meet filtering 
+criteria to be written to output. The output is another BAM file with the 
+reads not matching the criteria removed.
+
+Currently, the available filters are:
+    mapped
+    mismatch num ref.fa (mismatches or indel)
+    
+    eq  tag_name value
+    lt  tag_name value
+    lte tag_name value
+    gt  tag_name value
+    gte tag_name value
+
+    Where tag_name should be the full name, plus the type eg: AS:i
+    
+Common tags to filter by:
+    AS:i    Alignment score
+    NM:i    Edit distance
+    IH:i    Number of alignments
+    
+"""
+
+import os,sys,gzip
+sys.path.append(os.path.join(os.path.dirname(__file__),"..","utils")) #eta
+sys.path.append(os.path.join(os.path.dirname(__file__),"..","ext")) #pysam
+
+from eta import ETA
+import pysam
+
+def usage():
+    base = os.path.basename(sys.argv[0])
+    print __doc__
+    print """
+Usage: %s in.bam out.bam {-failed out.txt} criteria...
+
+If given, -failed, will be a text file containing the read names of all reads 
+that were removed with filtering.
+
+Example: %s filename.bam output.bam -mapped -gte AS:i 1000
+This will remove all unmapped reads, as well as any reads that have an AS:i 
+value less than 1000.
+""" % (base,base)
+    sys.exit(1)
+
+bam_cigar = ['M','I','D','N','S','H','P']
+
+class Mismatch(object):
+    def __init__(self,num,refname):
+        self.num = int(num)
+        self.refname = refname
+        
+        if not os.path.exists('%s.fai' % refname):
+            pysam.faidx(refname)
+        
+        self.ref = pysam.Fastafile(refname)
+
+    def filter(self,bam,read):
+        chrom = bam.getrname(read.rname)
+        start = read.pos
+        end = read.aend
+        
+        edits = 0
+        ref_pos = 0
+        read_pos = 0
+
+        for op,length in read.cigar:
+            if op == 1:
+                edits += 1
+                read_pos += length
+            elif op == 2:
+                edits += 1
+                ref_pos += length
+            elif op == 3:
+                ref_pos += length
+            elif op == 0:
+                refseq = self.ref.fetch(chrom,start+ref_pos,start+ref_pos+length)
+                for refbase,readbase in zip(refseq,read.seq[read_pos:read_pos+length]):
+                    if refbase.upper() != readbase.upper():
+                        edits += 1
+                ref_pos += length
+                read_pos += length
+                
+            if edits > self.num:
+                return False
+        return True
+    def __repr__(self):
+        return '%s mismatch%s in %s' % (self.num,'' if self.num == 1 else 'es',os.path.basename(self.refname))
+        
+
+class Mapped(object):
+    def __init__(self):
+        pass
+    def filter(self,bam,read):
+        if read.is_paired and (read.is_unmapped or read.mate_is_unmapped):
+            return False
+        elif read.is_unmapped:
+            return False
+        return True
+    def __repr__(self):
+        return 'is mapped'
+
+class _TagCompare(object):
+    def __init__(self,tag,value):
+        self.args = '%s %s' % (tag,value)
+        if ':' in tag:
+            self.tag = tag[0:tag.find(':')]
+        else:
+            self.tag = tag
+            
+        if tag[-1] == 'i':
+            self.value = int(value)
+        elif tag[-1] == 'f':
+            self.value = float(value)
+        else:
+            self.value = value
+    def __repr__(self):
+        return "%s %s %s" % (self.tag,self.__class__.op,self.value)
+            
+class TagLessThan(_TagCompare):
+    op = '<'
+    def filter(self,bam,read):
+        for name,value in read.tags:
+            if name == self.tag and value < self.value:
+                return True
+        return False
+
+class TagLessThanEquals(_TagCompare):
+    op = '<='
+    def filter(self,bam,read):
+        for name,value in read.tags:
+            if name == self.tag and value <= self.value:
+                return True
+        return False
+
+class TagGreaterThan(_TagCompare):
+    op = '>'
+    def filter(self,bam,read):
+        for name,value in read.tags:
+            if name == self.tag and value > self.value:
+                return True
+        return False
+
+class TagGreaterThanEquals(_TagCompare):
+    op = '>='
+    def filter(self,bam,read):
+        for name,value in read.tags:
+            if name == self.tag and value > self.value:
+                return True
+        return False
+        
+class TagEquals(_TagCompare):
+    op = '='
+    def filter(self,bam,read):
+        for name,value in read.tags:
+            if name == self.tag and value == self.value:
+                return True
+        return False
+
+_criteria = {
+    'mapped': Mapped,
+    'lt': TagLessThan,
+    'gt': TagGreaterThan,
+    'lte': TagLessThanEquals,
+    'gte': TagGreaterThanEquals,
+    'eq': TagEquals,
+    'mismatch': Mismatch
+}
+
+def bam_filter(infile,outfile,criteria,failedfile = None, verbose = False):
+    if verbose:
+        sys.stderr.write('Input file  : %s\n' % infile)
+        sys.stderr.write('Output file : %s\n' % outfile)
+        if failedfile:
+            sys.stderr.write('Failed reads: %s\n' % failedfile)
+        sys.stderr.write('Criteria:\n')
+        for criterion in criteria:
+            sys.stderr.write('    %s\n' % criterion)
+    
+        sys.stderr.write('\n')
+    
+    bamfile = pysam.Samfile(infile,"rb")
+    outfile = pysam.Samfile(outfile,"wb",template=bamfile)
+    if failedfile:
+        failed_out = open(failedfile,'w')
+    else:
+        failed_out = None
+    eta = ETA(0,bamfile=bamfile)
+    
+    passed = 0
+    failed = 0
+    
+    for read in bamfile:
+        eta.print_status(extra="kept:%s, failed:%s" % (passed,failed),bam_pos=(read.rname,read.pos))
+        p=True
+
+        for criterion in criteria:
+            if not criterion.filter(bamfile,read):
+                p = False
+                failed+=1
+                if failed_out:
+                    failed_out.write('%s\n'%read.qname)
+                break
+        if p:
+            passed += 1
+            outfile.write(read)
+
+    eta.done()
+    bamfile.close()
+    outfile.close()
+    if failed_out:
+        failed_out.close()
+    sys.stderr.write("%s kept\n%s failed\n" % (passed,failed))
+
+
+if __name__ == '__main__':
+    infile = None
+    outfile = None
+    failed = None
+    criteria = []
+
+    crit_args=[]
+    last = None
+    verbose = False
+    for arg in sys.argv[1:]:
+        if last == '-failed':
+            failed = arg
+            last = None
+        elif arg == '-failed':
+            last = arg
+        elif arg == '-v':
+            verbose = True
+        elif not infile:
+            infile = arg
+        elif not outfile:
+            outfile = arg
+        elif arg[0] == '-':
+            if not arg[1:] in _criteria:
+                print "Unknown criterion: %s" % arg
+                usage()
+            if crit_args:
+                criteria.append(_criteria[crit_args[0][1:]](*crit_args[1:]))
+            crit_args = [arg,]
+        elif crit_args:
+            crit_args.append(arg)
+
+    if crit_args:
+        criteria.append(_criteria[crit_args[0][1:]](*crit_args[1:]))
+    
+    if not infile or not outfile or not criteria:
+        usage()
+    else:
+        bam_filter(infile,outfile,criteria,failed,verbose)
+        

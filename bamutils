@@ -1,0 +1,53 @@
+#!/bin/bash
+if [ "$1" == "" ]; then
+    echo "Usage: bamutils COMMAND"
+    echo ""
+    echo "Commands"
+    echo "    basecall - Base caller"
+    echo "    rpkm     - Calculates RPKM/counts for genes/regions/repeats"
+    echo "    stats    - Calculate simple stats for a BAM file"
+    echo ""
+    echo "See 'bamutils help CMD' for more information about a specific command"
+    exit -1
+fi
+
+REAL=`python -c 'import os,sys;print os.path.realpath(sys.argv[1])' "$0"`
+DIR=`dirname "$REAL"`
+
+PYVER=`python -V 2>&1 | awk '{print $2}' | sed -e 's/\.[0-9]*$//'`
+OS=`uname`
+ARCH=`uname -m`
+
+PYTHONPATH=$PYTHONPATH:"$DIR"/support:"$DIR"/ext
+
+for d in "$DIR"/ext/*; do
+    if [ -d "$d" ]; then
+        PYTHONPATH=$PYTHONPATH:"$d"
+    fi
+done
+
+# for egg in "$DIR"/ext/*-Py$PYVER-$OS-$ARCH.{zip,egg}; do
+#     if [ -e $egg ]; then
+#         PYTHONPATH=$PYTHONPATH:$egg
+#     fi
+# done
+
+export PYTHONPATH
+
+if [ "$1" == "help" ]; then
+    action=bam_$2.py
+    if [ ! -e "$DIR"/bam_utils/$action ]; then
+        echo "Unknown command '$2'"
+        exit 1
+    fi
+    "$DIR"/bam_utils/$action -h
+else
+    action=bam_$1.py
+    if [ ! -e "$DIR"/bam_utils/$action ]; then
+        echo "Unknown command '$1'"
+        exit 1
+    fi
+    shift
+
+    "$DIR"/bam_utils/$action $@
+fi
