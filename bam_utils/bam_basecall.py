@@ -30,7 +30,6 @@ Entropy is sum(a..t) { p log2 p } where p = freq(+pseudocount) / genomic freq.
 pseudo count = genomic freq * sqrt(N)
 
 We use the following genomic frequencies: A 0.3, C 0.2, G 0.2, T 0.3
-
 """
 
 import os,sys,math
