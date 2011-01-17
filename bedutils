@@ -1,0 +1,53 @@
+#!/bin/bash
+usage(){
+    echo "Usage: bedutils COMMAND"
+    echo ""
+    echo "Commands"
+    echo "    extext    - Extends BED regions"
+    echo "    reduce    - Merges overlapping BED regions"
+    echo "    ref_count - Given a number of BED files, calculate the number of" 
+    echo "                samples that overlap regions in a reference BED file"
+    echo "    sort      - Sorts a BED file (in place)"
+    echo ""
+    echo "See 'bedutils help CMD' for more information about a specific command"
+    exit -1
+}
+
+if [ "$1" == "" ]; then
+    usage
+fi
+
+REAL=`python -c 'import os,sys;print os.path.realpath(sys.argv[1])' "$0"`
+DIR=`dirname "$REAL"`
+
+if [ "$1" == "help" ]; then
+    if [ "$2" == "" ]; then
+        usage
+    fi
+    
+    if [ "$2" == "sort" ]; then
+        action=bed_sort.sh
+    else
+        action=bed_$2.py
+    fi
+    
+    if [ ! -e "$DIR"/bed_utils/$action ]; then
+        echo "Unknown command '$2'"
+        exit 1
+    fi
+    "$DIR"/bed_utils/$action -h
+else
+    if [ "$1" == "sort" ]; then
+        action=bed_sort.sh
+    else
+        action=bed_$1.py
+    fi
+    
+    if [ ! -e "$DIR"/bed_utils/$action ]; then
+        echo "Unknown command '$1'"
+        exit 1
+    fi
+    shift
+
+    "$DIR"/bed_utils/$action $@
+fi

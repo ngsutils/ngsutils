@@ -4,7 +4,7 @@
 #
 # 2011-01-13 Marcus Breese
 #
-if [ "$1" == "" ]; then
+if [[ "$1" == "" || "$1" == "-h" ]]; then
     echo "Usage: `basename $0` in.bed [out.bed]"
     echo ""
     echo "Sorts a BED file.  If out.bed is given, the sorted output is"
