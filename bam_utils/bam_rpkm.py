@@ -5,8 +5,6 @@ support of each gene / region.
 '''
 
 import sys,os,gzip,re,math
-sys.path.append(os.path.join(os.path.dirname(__file__),"..","gene_model")) #RefIso
-
 import ngs_utils
 from eta import ETA
 from refiso import RefIso
@@ -267,14 +265,16 @@ def calc_repeat(bam_fname,repeat_fname,stranded=True,multiple='complete',normali
     eta.done()
     bam.close()
 
-def calc_alt(bam_fname,refiso_name,stranded=True,multiple='complete',whitelist=None,blacklist=None):
+def calc_alt(bam_fname,refiso_name,stranded=True,multiple='complete',normalization='genes',whitelist=None,blacklist=None):
     assert multiple in ['complete','partial','ignore']
+    assert normalization in ['genes','total','none']
 
     bam = pysam.Samfile(bam_fname,'rb')
     refiso = RefIso(refiso_name)
 
     lines = []
-
+    all_reads = set()
+    all_counts = []
     eta=ETA(refiso.fsize(),fileobj=refiso)
     for gene in refiso.genes:
         if not gene.chrom in bam.references:
@@ -291,7 +291,7 @@ def calc_alt(bam_fname,refiso_name,stranded=True,multiple='complete',whitelist=N
         for num,start,end,const,names in gene.regions:
             starts.append(start)
             ends.append(end)
-            
+            coding_len += (end-start)
             if const:
                 if not last_const:
                     const_regions.append([])
@@ -300,8 +300,12 @@ def calc_alt(bam_fname,refiso_name,stranded=True,multiple='complete',whitelist=N
             else:
                 last_const = False
         
-        total_count,reads = _fetch_reads(bam,gene.chrom,gene.strand if stranded else None,starts,ends,multiple,False,whitelist,blacklist)
+        # find all reads (rpkm)
+        total_count,total_reads = _fetch_reads(bam,gene.chrom,gene.strand if stranded else None,starts,ends,multiple,False,whitelist,blacklist)
+        all_reads.update(total_reads)
+        all_counts.append(total_count)
 
+        # find const-reads
         const_count = 0
         for const_spans in const_regions:
             starts = []
@@ -312,23 +316,66 @@ def calc_alt(bam_fname,refiso_name,stranded=True,multiple='complete',whitelist=N
             count,reads = _fetch_reads(bam,gene.chrom,gene.strand if stranded else None,starts,ends,multiple,True,whitelist,blacklist)
             const_count += count
         
+        #find counts for each region
         for num,start,end,const,names in gene.regions:
             count,reads = _fetch_reads(bam,gene.chrom,gene.strand if stranded else None,[start],[end],multiple,False,whitelist,blacklist)
-            cols = [gene.iso_id,gene.name,total_count,const_count,num,'const' if const else 'alt','',gene.chrom,gene.strand,start,end,end-start,count,]
-            if const_count > 0:
-                cols.append(float(count) / const_count)
+            excl_count,excl_reads = _fetch_reads_excluding(bam,gene.chrom,gene.strand if stranded else None,start,end,multiple,whitelist,blacklist)
+            
+            # remove reads that exclude this region
+            for read in excl_reads:
+                if read in reads:
+                    reads.remove(read)
+                    count = count -1
+            
+            cols = [gene.iso_id,gene.name,total_count,coding_len,const_count,num,'const' if const else 'alt','',gene.chrom,gene.strand,start,end,end-start,count,excl_count]
+            
+            other_reads = 0
+            for read in total_reads:
+                if not read in reads and not read in excl_reads:
+                    other_reads += 1
+                    
+            if other_reads > 0:
+                cols.append(float(count-excl_count) / other_reads)
             else:
                 cols.append('')
+                
             lines.append(cols)
+
+    mapped_count = 0
+    if normalization == 'genes':
+        mapped_count = len(all_reads)
+    elif normalization == 'total':
+        mapped_count = _find_mapped_count(bam,bam_fname,whitelist,blacklist)
+    elif normalization == 'quartile':
+        # since each gene will appear multiple times, we have to store the 
+        # counts separately from the cols like above
+        mapped_count = _find_mapped_count_quartile(all_counts)
 
     print "# multiple %s" % multiple
     if not stranded:
         print "# nostrand"
 
+    headers = "iso_id gene total_count total_length".split()
+    
+    if mapped_count:
+        print "#mapped_count\t%s" % mapped_count
+        headers.append('RPKM')
+        mil_mapped = mapped_count / 1000000.0
+    else:
+        mil_mapped = 0
+
+    headers.extend("const_count region_num const_alt altEvent chrom strand start end length count excl_count alt_index".split())
+    
     print ""
-    print '\t'.join("iso_id gene total_count const_count region_num const_alt altEvent chrom strand start end length count alt_index".split())
+    print '\t'.join(headers)
+    
     for cols in lines:
-        print '\t'.join([str(x) for x in cols])
+        sys.stdout.write('\t'.join([str(x) for x in cols[:4]]))
+        if mil_mapped:
+            sys.stdout.write('\t')
+            sys.stdout.write(str(cols[2] / (cols[3]/1000.0) / mil_mapped))
+            sys.stdout.write('\t')
+        sys.stdout.write('%s\n' % '\t'.join([str(x) for x in cols[4:]]))
         
 
     eta.done()
@@ -411,6 +458,55 @@ def _find_mapped_count(bam,bam_fname,whitelist=None,blacklist=None):
     sys.stderr.write("%s mapped reads\n" % mapped_count)
     return mapped_count
     
+def _calc_read_regions(read):
+    regions = []
+    start = read.pos
+    end = read.pos
+    for op,length in read.cigar:
+        if op == 0:
+            end += length
+        elif op == 1:
+            pass
+        elif op == 2:
+            pos += length
+        elif op == 3:
+            regions.append((start,end))
+            end += length
+            start = end
+        
+    regions.append((start,end))
+    
+    return regions
+            
+    
+    
+def _fetch_reads_excluding(bam,chrom,strand,start,end,multiple,whitelist=None,blacklist=None):
+    '''
+    Find reads that exclude this region.  
+    
+    Example:  This read excludes region 'B'
+    
+    ------AAAAAAAAA---------BBBBBBBBB---------------------CCCCCCCC---------
+              +++++.......................................+++
+    
+    '''
+    
+    reads = set()
+    count = 0
+    
+    for read in bam.fetch(chrom,start,end):
+        if not strand or (strand=='+' and not read.is_reverse) or (strand=='-' and read.is_reverse):
+            excl = True
+            for s,e in _calc_read_regions(read):
+                if start <= s <=end or start <= e <= end:
+                    excl = False
+                    break
+            if excl:
+                reads.add(read.qname)
+                count += 1
+    return count,reads
+            
+    
 def _fetch_reads(bam,chrom,strand,starts,ends,multiple,exclusive,whitelist=None,blacklist=None,uniq=False):
     '''
     Find reads that match within the given regions...
@@ -425,6 +521,7 @@ def _fetch_reads(bam,chrom,strand,starts,ends,multiple,exclusive,whitelist=None,
         'partial'  - a fraction of a point is added to the count, based upon how many
                      other places this read maps.  For example, if a read mapped to 3 places
                      on the genome, it would add only 1/3 to the read count.
+        'ignore'   - reads that map to multiple places on the genome are ignored.
                      
     Exclusive is a boolean.  If true, then reads must start AND end w/in the given regions in order to
     count.  If false, the read must just be present in the region (start or end).  This is helpful
@@ -476,17 +573,22 @@ def _fetch_reads(bam,chrom,strand,starts,ends,multiple,exclusive,whitelist=None,
                     if not read.qname in reads:
                         start_pos.add(k)
                         reads.add(read.qname)
-                        ih=read.opt('IH')
+                        if read.tags and 'IH' in read.tags:
+                            ih=int(read.opt('IH'))
+                        else:
+                            ih = 1
                         if ih==1 or multiple=='complete':
                             count += 1
                         elif multiple == 'partial':
                             count += (1.0/ih)
+                        else:
+                            pass #ignore...
     return count,reads
 
 def usage():
     print __doc__
     print """\
-Usage: %s [gene|bed|alt|repeat] annotation_file {opts} bamfile
+Usage: %s [gene|alt|bed|repeat] annotation_file {opts} bamfile
 
 Common options:
     -nostrand          ignore strand in counting reads
@@ -507,6 +609,23 @@ Common options:
     Calculates: # reads, RPKM, coverage
 
 
+[alt]
+    Calculate the number of reads that map to each expressed region
+    for all genes. Also, for each gene, the reads mapping to consecutively 
+    constant regions are also found.  With these two numbers an alternative
+    index is calculated (# reads in a region / # consec. const. reads).
+    
+    Regions can be exons, or parts of exons, depending on splicing (determined
+    by RefIso annotation file).
+
+    Annotation: RefIso
+    Calculates: # reads, RPKM, # const region reads, # region reads, alt-index
+    
+    Alt-index =     (# region reads) - (# region excluding reads)
+                 ------------------------------------------------
+                            (# NOT region reads)
+
+
 [bed]
     Calculates the number of reads in a region, where the region is defined 
     in a BED6 formated file: chrom, start (0), end, name, score, strand.
@@ -516,16 +635,6 @@ Common options:
 
     Annotation: BED file
     Calculates: # reads, RPKM, coverage
-
-
-[alt]
-    Calculate the number of reads that map to each expressed region
-    for all genes. Also, for each gene, the reads mapping to consecutively 
-    constant regions are also found.  With these two numbers an alternative
-    index is calculated (# reads in a region / # consec. const. reads).
-
-    Annotation: RefIso
-    Calculates: const region # reads, # reads per exon, alt-splice index
 
 
 [repeat]
@@ -588,7 +697,7 @@ if __name__ == '__main__':
     elif cmd == 'bed':
         calc_bed(bam,annotation,not opts['nostrand'],opts['multiple'],opts['norm'],whitelist,blacklist,opts['uniq'],opts['coverage'])
     elif cmd == 'alt':
-        calc_alt(bam,annotation,not opts['nostrand'],opts['multiple'],whitelist,blacklist)
+        calc_alt(bam,annotation,not opts['nostrand'],opts['multiple'],opts['norm'],whitelist,blacklist)
     elif cmd == 'repeat':
         calc_repeat(bam,annotation,not opts['nostrand'],opts['multiple'],opts['norm'],whitelist,blacklist)
 
