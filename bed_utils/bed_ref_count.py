@@ -28,7 +28,6 @@ try:
     import rpy2.robjects as robjects
 except Exception,e:
     robjects = None
-    
 
 
 def usage():
@@ -151,6 +150,13 @@ def _fisher_test(vals):
         return p
     return None
 
+def _py_fisher_test(a,b,c,d):
+    
+    n = a+b+c+d
+    p = float(math.factorial(a+b)*math.factorial(c+d)*math.factorial(a+c)*math.factorial(b+d)) / (math.factorial(n) * math.factorial(a) * math.factorial(b) * math.factorial(c) * math.factorial(d))
+    
+    return p
+    
 
 if __name__ == '__main__':
     refname = None
