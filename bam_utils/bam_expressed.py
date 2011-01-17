@@ -135,6 +135,7 @@ Options:
                 (default: 2)
 
 """ % os.path.basename(sys.argv[0])
+    sys.exit(1)
 
 if __name__ == "__main__":
     uniq = False
@@ -151,6 +152,8 @@ if __name__ == "__main__":
         elif last == '-mincount':
             mincount = int(arg)
             last = None
+        elif arg == '-h':
+            usage()
         elif arg == '-uniq':
             uniq = True
         elif arg == '-ns':
@@ -162,9 +165,7 @@ if __name__ == "__main__":
         else:
             print 'Unknown argument: %s' % arg
             usage()
-            sys.exit(1)
     if not fname:
         usage()
-        sys.exit(1)
         
     bam_find_regions(fname,dist,mincount,uniq,nostrand)
