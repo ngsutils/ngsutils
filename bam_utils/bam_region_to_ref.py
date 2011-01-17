@@ -152,7 +152,9 @@ if __name__ == '__main__':
     chrom_sizes = None
 
     for arg in sys.argv[1:]:
-        if not infile:
+        if arg == '-h':
+            usage()
+        elif not infile:
             infile = arg
         elif not outfile:
             outfile = arg

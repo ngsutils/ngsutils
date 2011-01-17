@@ -8,7 +8,6 @@ transcripts are isoforms as the first column.  This can be produced from
 KnownGene or RefFlat files.
 """
 import sys,os,gzip
-sys.path.append(os.path.join(os.path.dirname(__file__),"..","utils"))
 from ngs_utils import dictify,gzip_opener
 
 class RefIso(object): 

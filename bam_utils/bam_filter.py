@@ -225,9 +225,12 @@ if __name__ == '__main__':
     last = None
     verbose = False
     for arg in sys.argv[1:]:
+            
         if last == '-failed':
             failed = arg
             last = None
+        elif arg == '-h':
+            usage()
         elif arg == '-failed':
             last = arg
         elif arg == '-v':

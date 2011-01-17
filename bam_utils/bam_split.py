@@ -65,6 +65,8 @@ if __name__ == '__main__':
         if last == '-n':
             num = int(arg)
             last = None
+        elif arg == '-h':
+                usage()
         elif arg in ['-n',]:
             last = arg
         elif not infile:
