@@ -90,7 +90,7 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, noperfect=False, m
     bam = pysam.Samfile(bam_fname,"rb")
     ref = pysam.Fastafile(ref_fname)
     eta = ETA(0,bamfile=bam)
-    sys.stdout.write('#chrom\tpos\tref\tcount\tave mappings\tvar\tentropy\tA\tC\tG\tT\tInserts\tDeletions\n')
+    sys.stdout.write('chrom\tpos\tref\tcount\tave mappings\tvar\tentropy\tA\tC\tG\tT\tInserts\tDeletions\n')
     printed = False
     for pileup in bam.pileup():
         chrom = bam.getrname(pileup.tid)
