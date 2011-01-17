@@ -8,7 +8,7 @@ import pysam
 
 bam_cigar = ['M','I','D','N','S','H','P']
 
-def bam_read_pos(fname,all=False):
+def bam_read_pos(fname,show_all=False):
     bamfile = pysam.Samfile(fname,"rb")
     eta = ETA(0,bamfile=bamfile)
 
@@ -16,7 +16,7 @@ def bam_read_pos(fname,all=False):
         eta.print_status(extra=read.qname,bam_pos=(read.rname,read.pos))
         if not read.is_unmapped:
             print '%s\t%s\t%s\t%s' % (read.qname, bamfile.getrname(read.rname), read.pos, ''.join(['%s%s' % (length,bam_cigar[op]) for op,length in read.cigar]))
-        elif all:
+        elif show_all:
             print '%s\t*\t0\t\n' % (read.qname)
     
     eta.done()
