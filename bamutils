@@ -1,5 +1,5 @@
 #!/bin/bash
-if [ "$1" == "" ]; then
+usage(){
     echo "Usage: bamutils COMMAND"
     echo ""
     echo "Commands"
@@ -13,6 +13,10 @@ if [ "$1" == "" ]; then
     echo ""
     echo "See 'bamutils help CMD' for more information about a specific command"
     exit -1
+}
+
+if [ "$1" == "" ]; then
+    usage
 fi
 
 REAL=`python -c 'import os,sys;print os.path.realpath(sys.argv[1])' "$0"`
@@ -39,6 +43,9 @@ done
 export PYTHONPATH
 
 if [ "$1" == "help" ]; then
+    if [ "$2" == "" ]; then
+        usage
+    fi
     action=bam_$2.py
     if [ ! -e "$DIR"/bam_utils/$action ]; then
         echo "Unknown command '$2'"
