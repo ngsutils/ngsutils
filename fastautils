@@ -1,0 +1,43 @@
+#!/bin/bash
+# usage(){
+#     echo "Usage: bedutils COMMAND"
+#     echo ""
+#     echo "Commands"
+#     echo "    extend    - Extends BED regions (3' end)"
+#     echo "    reduce    - Merges overlapping BED regions"
+#     echo "    ref_count - Given a number of BED files, calculate the number of" 
+#     echo "                samples that overlap regions in a reference BED file"
+#     echo "    sort      - Sorts a BED file (in place)"
+#     echo ""
+#     echo "See 'bedutils help CMD' for more information about a specific command"
+#     exit -1
+# }
+# 
+# if [ "$1" == "" ]; then
+#     usage
+# fi
+
+REAL=`python -c 'import os,sys;print os.path.realpath(sys.argv[1])' "$0"`
+DIR=`dirname "$REAL"`
+
+PYVER=`python -V 2>&1 | awk '{print $2}' | sed -e 's/\.[0-9]*$//'`
+OS=`uname`
+ARCH=`uname -m`
+
+PYTHONPATH=$PYTHONPATH:"$DIR":"$DIR"/ext
+
+if [ ! -e "$DIR"/ext/pysam ]; then
+    cd "$DIR"/ext
+    unzip pysam-0.3-Py$PYVER-$OS-$ARCH.{zip,egg}
+    cd -
+fi
+
+
+for d in "$DIR"/ext/*; do
+    if [ -d "$d" ]; then
+        PYTHONPATH=$PYTHONPATH:"$d"
+    fi
+done
+
+export PYTHONPATH
+"$DIR"/fasta_utils.py $@

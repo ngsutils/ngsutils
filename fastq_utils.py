@@ -9,10 +9,10 @@ Dec 16, 2010
 '''
 
 import sys,os,gzip
-import ngs_utils,localalign
-from eta import ETA
+import support.ngs_utils,support.localalign
+from support.eta import ETA
 def read_fastq(fname,quiet=False,eta_callback=None):
-    with ngs_utils.gzip_opener(fname) as f:
+    with support.ngs_utils.gzip_opener(fname) as f:
         if not quiet:
             eta = ETA(os.stat(fname).st_size,fileobj=f)
         while f:
@@ -212,7 +212,7 @@ def fastq_trim(fname,linker_5=None,linker_3=None,out=sys.stdout,pct_identity=0.8
     pct_identity - the percentage of matches that must be present in the alignment to strip away linkers
     min_trim - the distance away from the edges that the linkers much match w/in
     '''
-    sw = localalign.LocalAlignment(localalign.NucleotideScoringMatrix(2,-1),-1)
+    sw = support.localalign.LocalAlignment(support.localalign.NucleotideScoringMatrix(2,-1),-1)
     removed = 0
     trimmed = 0
     for name,seq,qual in read_fastq(fname):

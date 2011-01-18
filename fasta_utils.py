@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 
 import sys,gzip,os,hashlib
-sys.path.append(os.path.join(os.path.dirname(__file__),"..","ext"))
-from eta import ETA
-import ngs_utils
+from support.eta import ETA
+import support.ngs_utils
 
 import pysam
 
@@ -267,7 +266,7 @@ def sort_fasta(fname):
     name = ''
     names = []
 
-    with ngs_utils.gzip_opener(fname) as f:
+    with support.ngs_utils.gzip_opener(fname) as f:
         eta = ETA(os.stat(fname).st_size,fileobj=f)
         for line in f:
             eta.print_status(extra=name)
@@ -293,7 +292,7 @@ def seq_dict(fname):
     
     sys.stdout.write('@HD\tVN:1.0\tSO:unsorted\n')
     
-    with ngs_utils.gzip_opener(fname) as f:
+    with support.ngs_utils.gzip_opener(fname) as f:
         eta = ETA(os.stat(fname).st_size,fileobj=f)
         for line in f:
             eta.print_status(extra=name)
@@ -338,9 +337,9 @@ if __name__ == "__main__":
                 print "%20s\t%s" % (param,desc)
         
     else:
-        if len(sys.argv)>1:
-            print "Unknown routine: %s" % sys.argv[1]
-        print "Available routines:"
+        if len(sys.argv)>1 and sys.argv[1] not in ['-h','help']:
+            print "Unknown commands: %s" % sys.argv[1]
+        print "Available commands:"
         for prg in prgs:
             print " %20s\t%s" % (prg,prgs[prg][1])
         
