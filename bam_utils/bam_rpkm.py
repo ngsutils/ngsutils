@@ -5,9 +5,9 @@ support of each gene / region.
 '''
 
 import sys,os,gzip,re,math
-import ngs_utils
-from eta import ETA
-from refiso import RefIso
+import support.ngs_utils
+from support.eta import ETA
+from support.refiso import RefIso
 import pysam
 
 bam_cigar = ['M','I','D','N','S','H','P']
@@ -178,7 +178,7 @@ def calc_repeat(bam_fname,repeat_fname,stranded=True,multiple='complete',normali
 
     bam = pysam.Samfile(bam_fname,'rb')
     
-    with ngs_utils.gzip_opener(repeat_fname) as repeat_f:
+    with support.ngs_utils.gzip_opener(repeat_fname) as repeat_f:
         repeat_f.next()
         repeat_f.next()
         repeat_f.next()
@@ -666,7 +666,7 @@ Possible values for {-multiple}:
 
 if __name__ == '__main__':
     try:
-        opts,(cmd,annotation,bam) = ngs_utils.parse_args(sys.argv[1:],{'nostrand':False,'coverage':False,'multiple':'complete','norm':'genes','whitelist':None,'blacklist':None,'uniq':False})
+        opts,(cmd,annotation,bam) = support.ngs_utils.parse_args(sys.argv[1:],{'nostrand':False,'coverage':False,'multiple':'complete','norm':'genes','whitelist':None,'blacklist':None,'uniq':False})
     except:
         usage()
         sys.exit(-1)

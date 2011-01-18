@@ -9,10 +9,7 @@ Only unique regions are returned across all files.
 """
 
 import os,sys,math
-sys.path.append(os.path.join(os.path.dirname(__file__),"..","utils")) #eta
-sys.path.append(os.path.join(os.path.dirname(__file__),"..","ext")) #pysam
-
-from eta import ETA
+from support.eta import ETA
 import pysam
 
 def usage():
@@ -179,6 +176,8 @@ if __name__ == '__main__':
             output = 'fasta'
             ref = arg
             last = None
+        elif arg == '-h':
+            usage()
         elif arg in ['-flanking','-fasta','-cutoff','-window']:
             last = arg
         elif arg == '-ns':

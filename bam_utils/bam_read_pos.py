@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 
 import sys,gzip,os
-sys.path.append(os.path.join(os.path.dirname(__file__),"..","utils"))
-sys.path.append(os.path.join(os.path.dirname(__file__),"..","ext"))
-from eta import ETA
+from support.eta import ETA
 import pysam
 
 bam_cigar = ['M','I','D','N','S','H','P']

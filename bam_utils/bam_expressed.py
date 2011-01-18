@@ -4,9 +4,7 @@ Scans a BAM file, looking for regions of mapped reads. Reads in a BAM file,
 and outputs regions of expression in BED format.
 '''
 import sys,gzip,os
-sys.path.append(os.path.join(os.path.dirname(__file__),"..","utils"))
-sys.path.append(os.path.join(os.path.dirname(__file__),"..","ext"))
-from eta import ETA
+from support.eta import ETA
 
 import pysam
 

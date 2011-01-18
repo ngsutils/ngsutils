@@ -5,10 +5,7 @@ limit on the number of reads included.
 """
 
 import os,sys,gzip
-sys.path.append(os.path.join(os.path.dirname(__file__),"..","utils")) #eta
-sys.path.append(os.path.join(os.path.dirname(__file__),"..","ext")) #pysam
-
-from eta import ETA
+from support.eta import ETA
 import pysam
 
 def usage():

@@ -5,8 +5,8 @@ Calculate a number of summary statistics for a BAM file
 
 import os,sys,gzip
 import pysam
-from eta import ETA
-from refiso import RefIso
+from support.eta import ETA
+from support.refiso import RefIso
 
 def usage():
     base = os.path.basename(sys.argv[0])
@@ -132,8 +132,8 @@ def bam_stats(infile,ref_file = None):
     alignments = Bins()
     edits = Bins()
     names = set()
-    e
     refs = {}
+
     for rname in bamfile.references:
         refs[rname] = 0
     
@@ -153,8 +153,14 @@ def bam_stats(infile,ref_file = None):
 
         mapped += 1
         refs[bamfile.getrname(read.rname)]+=1
-        ih = int(read.opt('IH'))
-        nm = int(read.opt('NM'))
+        try:
+            ih = int(read.opt('IH'))
+        except:
+            ih = 0
+        try:
+            nm = int(read.opt('NM'))
+        except:
+            nm = 0
     
         alignments.add(ih)
         edits.add(nm)

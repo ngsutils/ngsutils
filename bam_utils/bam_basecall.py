@@ -33,7 +33,7 @@ We use the following genomic frequencies: A 0.3, C 0.2, G 0.2, T 0.3
 """
 
 import os,sys,math
-from eta import ETA
+from support.eta import ETA
 import pysam
 
 def usage():
