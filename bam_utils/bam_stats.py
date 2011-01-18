@@ -125,10 +125,11 @@ def bam_stats(infile,ref_file = None):
         counts['intergenic']=0
         counts['mitochondrial']=0
         
-
+    
     total = 0
     mapped = 0
     unmapped = 0
+    lengths = Bins()
     alignments = Bins()
     edits = Bins()
     names = set()
@@ -138,70 +139,80 @@ def bam_stats(infile,ref_file = None):
         refs[rname] = 0
     
     sys.stderr.write('Calculating Read stats...\n')
-    for read in bamfile:
-        if read.qname in names:
-            # reads only count once for this...
-            continue
+    try:
+        for read in bamfile:
+            if read.qname in names:
+                # reads only count once for this...
+                continue
         
-        eta.print_status(extra="%s:%s" % (bamfile.getrname(read.rname),read.pos),bam_pos=(read.rname,read.pos))
-        names.add(read.qname)
+            eta.print_status(extra="%s:%s" % (bamfile.getrname(read.rname),read.pos),bam_pos=(read.rname,read.pos))
+            names.add(read.qname)
+            lengths.add(len(read.seq))
+            total += 1
+            if read.is_unmapped:
+                unmapped += 1
+                continue
         
-        total += 1
-        if read.is_unmapped:
-            unmapped += 1
-            continue
-
-        mapped += 1
-        refs[bamfile.getrname(read.rname)]+=1
-        try:
-            ih = int(read.opt('IH'))
-        except:
-            ih = 0
-        try:
-            nm = int(read.opt('NM'))
-        except:
-            nm = 0
+            mapped += 1
+            refs[bamfile.getrname(read.rname)]+=1
+            try:
+                ih = int(read.opt('IH'))
+            except:
+                ih = 0
+            try:
+                nm = int(read.opt('NM'))
+            except:
+                nm = 0
     
-        alignments.add(ih)
-        edits.add(nm)
+            alignments.add(ih)
+            edits.add(nm)
         
-        if regions:
-            tag = None
-            chrom = bamfile.getrname(read.rname)
-            strand = '-' if read.is_reverse else '+'
+            if regions:
+                tag = None
+                chrom = bamfile.getrname(read.rname)
+                strand = '-' if read.is_reverse else '+'
 
-            if chrom == 'chrM':
-                tag = 'mitochondrial'
+                if chrom == 'chrM':
+                    tag = 'mitochondrial'
             
-            if not tag:
-                for op,length in read.cigar:
-                    if op == 3:
-                        tag = 'junction'
-                        break
+                if not tag:
+                    for op,length in read.cigar:
+                        if op == 3:
+                            tag = 'junction'
+                            break
                         
-            if not tag:
-                for region in regions:
-                    tag = region.get_tag(chrom,strand,read.pos)
-                    if tag:
-                        break
+                if not tag:
+                    for region in regions:
+                        tag = region.get_tag(chrom,strand,read.pos)
+                        if tag:
+                            break
         
-            if not tag:
-                tag = 'intergenic'
+                if not tag:
+                    tag = 'intergenic'
 
-            if tag:
-                counts[tag] += 1
-
+                if tag:
+                    counts[tag] += 1
+    except KeyboardInterrupt:
+        pass
+        
     eta.done()
 
     print "Reads:\t%s" % total
     print "Mapped:\t%s" % mapped
     print "Unmapped:\t%s" % unmapped
     print ""
+    print "Ave length:\t%s" % lengths.mean()
+    print ""
     print "Ave # alignments (IH):\t%s" % alignments.mean()
     print "Max # alignments (IH):\t%s" % alignments.max()
     print
     print "Ave edit distance (NM):\t%s" % edits.mean()
     print "Max edit distance (NM):\t%s" % edits.max()
+    print ""
+    print "Read lengths"
+    for i,v in enumerate(lengths.bins[::-1]):
+        if v:
+            print "%s\t%s" % (lengths.max()-i,v)
     print ""
     print "# of alignments (IH)"
     for i,v in enumerate(alignments.bins):
