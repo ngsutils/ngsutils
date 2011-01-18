@@ -19,15 +19,13 @@ ref B      4               1               1               0              3
 '''
 
 import os,sys
-sys.path.append(os.path.join(os.path.dirname(__file__),"..","utils"))
-sys.path.append(os.path.join(os.path.dirname(__file__),"..","ext"))
-from eta import ETA
-import ngs_utils
+from support.eta import ETA
+import support.ngs_utils
 import pysam
-try:
-    import rpy2.robjects as robjects
-except Exception,e:
-    robjects = None
+# try:
+#     import rpy2.robjects as robjects
+# except Exception,e:
+#     robjects = None
 
 
 def usage():
@@ -67,7 +65,7 @@ def _ref_count(tabix,chrom,start,end,strand=None):
 def bed_ref_count(refname,group_files,group_names,stranded=True):
     groups = []
     for fnames,name in zip(group_files,group_names):
-        samples = ngs_utils.filenames_to_uniq([os.path.basename(x) for x in fnames])
+        samples = support.ngs_utils.filenames_to_uniq([os.path.basename(x) for x in fnames])
         tabix = []
         for fname in fnames:
             tabix.append(pysam.Tabixfile(fname))
@@ -115,9 +113,9 @@ def bed_ref_count(refname,group_files,group_names,stranded=True):
                     group_pres_notpres.append(notpresent)
                     sys.stdout.write('\t')
                     sys.stdout.write(str(present))
-                if len(groups)==2 and robjects:
+                if len(groups)==2:
                     sys.stdout.write('\t')
-                    sys.stdout.write(str(_fisher_test(group_pres_notpres)))
+                    sys.stdout.write(str(_fisher_test(*group_pres_notpres)))
                     sys.stdout.write('\t')
                     if group_pres_notpres[0] > group_pres_notpres[2]:
                         sys.stdout.write(groups[0][0])
@@ -126,8 +124,31 @@ def bed_ref_count(refname,group_files,group_names,stranded=True):
                         
                 sys.stdout.write('\n')
         eta.done()
-
-def _fisher_test(vals):
+# 
+# def _fisher_test(vals):
+#     '''
+#     vals is a list: [sample1_pres,sample1_notpres,sample2_pres,sample2_notpres]
+#     Computes a Fisher Exact test
+# 
+#     The actual test is performed in R
+# 
+#                      Group1   Group2    total
+#                      ------   ------    -----
+#        Present         a        b        a+b
+#        Not Present     c        d        c+d
+#                        a+c      b+d      n
+# 
+#                (a+b)!(c+d)!(a+c)!(b+d)!
+#        p   =   -----------------------
+#                    n!a!b!c!d!
+#     '''
+#     if robjects:
+#         table=robjects.r.matrix(robjects.FloatVector([vals[0],vals[2],vals[1],vals[3]]),nr=2)
+#         p=robjects.r['fisher.test'](table)[0][0]
+#         return p
+#     return None
+# 
+def _fisher_test(a,b,c,d):
     '''
     vals is a list: [sample1_pres,sample1_notpres,sample2_pres,sample2_notpres]
     Computes a Fisher Exact test
@@ -144,14 +165,6 @@ def _fisher_test(vals):
        p   =   -----------------------
                    n!a!b!c!d!
     '''
-    if robjects:
-        table=robjects.r.matrix(robjects.FloatVector([vals[0],vals[2],vals[1],vals[3]]),nr=2)
-        p=robjects.r['fisher.test'](table)[0][0]
-        return p
-    return None
-
-def _py_fisher_test(a,b,c,d):
-    
     n = a+b+c+d
     p = float(math.factorial(a+b)*math.factorial(c+d)*math.factorial(a+c)*math.factorial(b+d)) / (math.factorial(n) * math.factorial(a) * math.factorial(b) * math.factorial(c) * math.factorial(d))
     
