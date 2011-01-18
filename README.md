@@ -25,3 +25,8 @@ Commands available with bedutils:
 * reduce    - Merges overlapping BED regions
 * ref_count - Given a number of BED files, calculate the number of samples that overlap regions in a reference BED file
 * sort      - Sorts a BED file (in place)
+
+
+If not otherwise specified:
+
+Author: Marcus Breese <mbreese@iupui.edu>
