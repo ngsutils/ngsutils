@@ -19,6 +19,7 @@ However, if the first character of SIZE is '+', then the region is extended
 SIZE bases, regardless of how long it is to start with.
 
 """ % os.path.basename(sys.argv[0])
+    sys.exit(1)
 
 def bed_extend(fname,size,relative=False):
     with ngs_utils.gzip_opener(fname) as f:
@@ -48,6 +49,8 @@ if __name__ == '__main__':
     last = None
     
     for arg in sys.argv[1:]:
+        if arg == '-h':
+            usage()
         if not size:
             if arg[0] == '+':
                 relative = True
@@ -59,10 +62,8 @@ if __name__ == '__main__':
         else:
             print "Unknown option: %s" % arg
             usage()
-            sys.exit(1)
     
     if not fname or not size:
         usage()
-        sys.exit(1)
     
     bed_extend(fname,size,relative)

@@ -3,11 +3,20 @@ usage(){
     echo "Usage: bamutils COMMAND"
     echo ""
     echo "Commands"
+    echo "  CLIPSeq"
+    echo "    cims_finder   - Finds regions of unusual deletions (CLIP-Seq)"
+    echo ""
+    echo "  DNASeq"
     echo "    basecall      - Base caller"
+    echo "    minorallele   - Find potential minor allele frequency"
+    echo ""
+    echo "  RNASeq"
+    echo "    rpkm          - Calculates RPKM/counts for genes/regions/repeats"
+    echo ""
+    echo "  Generic"
     echo "    expressed     - Finds regions expressed in a BAM file"
     echo "    filter        - Removes reads from a BAM file based on criteria"
     echo "    region_to_ref - Converts region mapping to genomic mapping"
-    echo "    rpkm          - Calculates RPKM/counts for genes/regions/repeats"
     echo "    split         - Splits a BAM file into smaller pieces"
     echo "    stats         - Calculates simple stats for a BAM file"
     echo ""
@@ -26,19 +35,20 @@ PYVER=`python -V 2>&1 | awk '{print $2}' | sed -e 's/\.[0-9]*$//'`
 OS=`uname`
 ARCH=`uname -m`
 
-PYTHONPATH=$PYTHONPATH:"$DIR"/support:"$DIR"/ext
+PYTHONPATH=$PYTHONPATH:"$DIR":"$DIR"/ext
+
+if [ ! -e "$DIR"/ext/pysam ]; then
+    cd "$DIR"/ext
+    unzip pysam-0.3-Py$PYVER-$OS-$ARCH.zip
+    cd -
+fi
+
 
 for d in "$DIR"/ext/*; do
     if [ -d "$d" ]; then
         PYTHONPATH=$PYTHONPATH:"$d"
     fi
 done
-
-# for egg in "$DIR"/ext/*-Py$PYVER-$OS-$ARCH.{zip,egg}; do
-#     if [ -e $egg ]; then
-#         PYTHONPATH=$PYTHONPATH:$egg
-#     fi
-# done
 
 export PYTHONPATH
 
