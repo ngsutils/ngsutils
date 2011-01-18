@@ -6,7 +6,12 @@ reads not matching the criteria removed.
 
 Currently, the available filters are:
     mapped
-    mismatch num ref.fa (mismatches or indel)
+    
+    mismatch num            # mismatches or indels
+                            indel always counts as 1 regardless of length
+                            (requires NM tag in reads)
+    mismatch_ref num ref.fa # mismatches or indel - looks up mismatches 
+                            directly in a ref FASTA file (if NM not available)
     
     eq  tag_name value
     lt  tag_name value
@@ -18,16 +23,13 @@ Currently, the available filters are:
     
 Common tags to filter by:
     AS:i    Alignment score
-    NM:i    Edit distance
+    NM:i    Edit distance (each indel counts as many as it's length)
     IH:i    Number of alignments
     
 """
 
 import os,sys,gzip
-sys.path.append(os.path.join(os.path.dirname(__file__),"..","utils")) #eta
-sys.path.append(os.path.join(os.path.dirname(__file__),"..","ext")) #pysam
-
-from eta import ETA
+from support.eta import ETA
 import pysam
 
 def usage():
@@ -48,6 +50,36 @@ value less than 1000.
 bam_cigar = ['M','I','D','N','S','H','P']
 
 class Mismatch(object):
+    def __init__(self,num):
+        self.num = int(num)
+    def filter(self,bam,read):
+        inserts = 0
+        deletions = 0
+        indels = 0
+        edits = int(read.opt('NM'))
+        #
+        # NM counts the length of indels
+        # We really just care about *if* there is an indel, not the size
+        #
+        
+        for op,length in read.cigar:
+            if op == 1:
+                inserts += length
+                indels += 1
+            elif op == 2:
+                deletions += length
+                indels += 1
+        
+        mismatches = edits - inserts - deletions + indels
+        
+        if mismatches > self.num:
+            return False
+                
+        return True
+    def __repr__(self):
+        return '%s mismatch%s in %s' % (self.num,'' if self.num == 1 else 'es',os.path.basename(self.refname))
+
+class MismatchRef(object):
     def __init__(self,num,refname):
         self.num = int(num)
         self.refname = refname
@@ -166,7 +198,8 @@ _criteria = {
     'lte': TagLessThanEquals,
     'gte': TagGreaterThanEquals,
     'eq': TagEquals,
-    'mismatch': Mismatch
+    'mismatch': Mismatch,
+    'mismatch_ref': MismatchRef
 }
 
 def bam_filter(infile,outfile,criteria,failedfile = None, verbose = False):
