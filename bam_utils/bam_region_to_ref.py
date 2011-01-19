@@ -128,8 +128,13 @@ def bam_region_to_ref(infile,outfile,chrom_sizes):
     eta = ETA(0,bamfile=bamfile)
     count = 0
     
-    for read in bamfile.fetch():
+    for read in bamfile:
         eta.print_status(bam_pos=(read.rname,read.pos))
+        
+        if read.is_unmapped:
+            outfile.write(read)
+            continue
+            
         chrom,pos,cigar = region_pos_to_genomic_pos(bamfile.getrname(read.rname),read.pos,read.cigar)
         read.pos = pos
         read.cigar = cigar
