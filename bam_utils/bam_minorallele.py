@@ -58,9 +58,10 @@ def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0
     bam = pysam.Samfile(bam_fname,"rb")
     ref = pysam.Fastafile(ref_fname)
     eta = ETA(0,bamfile=bam)
+    sys.stdout.write('#ref %s\n' % os.path.basename(ref_fname))
     sys.stdout.write('chrom\tpos\tref\talt\ttotal\tref count\talt count\tbackground count\tref-background\talt-background')
     if robjects:
-        sys.stdout.write('\tMean level\t95% CI low\t95%CI high\tCI Range\tlow count\thigh count')
+        sys.stdout.write('\tMean level\t95% CI low\t95% CI high\tCI Range\tlow count\thigh count')
     sys.stdout.write('\n')
 
     printed = False
