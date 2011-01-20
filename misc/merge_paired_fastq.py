@@ -12,7 +12,7 @@ Note: Illumina paired end reads are: Read1 (forward) Read2 (reverse).
 '''
 
 import os,sys,gzip
-
+˝˝
 try:
     sys.path.append(os.path.normpath(os.path.join(os.path.dirname(__file__),'..')))
     from support.eta import ETA
