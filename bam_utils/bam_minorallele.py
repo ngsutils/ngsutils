@@ -111,7 +111,7 @@ def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0
             cols = [chrom,pileup.pos,refbase,altbase,total,refcount,altcount,background,refback,altback]
             if robjects and num_alleles:
                 ci_low,ci_high = calc_cp_ci(refback+altback,altback,num_alleles)
-                cols.append(float(altback) / (refback+altback)
+                cols.append(float(altback) / (refback+altback))
                 cols.append(ci_low)
                 cols.append(ci_high)
                 cols.append(ci_high-ci_low)
