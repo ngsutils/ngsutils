@@ -10,7 +10,7 @@ variation compared to reference, or bases whose variation is too low.
 The output is a tab-delimited file that contains the following for each base:
 
 chromosome
-position (0-based)
+position (1-based)
 reference base
 # reads that contain this base
 Variation [0..1]

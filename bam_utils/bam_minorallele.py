@@ -12,7 +12,7 @@ also ignores indels.
 
 Outputs a tab-delimited file with the following columns:
 chrom
-position
+position (1-based)
 reference base
 alternative base
 total counts
