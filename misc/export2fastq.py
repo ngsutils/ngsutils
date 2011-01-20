@@ -1,20 +1,16 @@
 #!/usr/bin/env python
-#
-# Converts Illumina export file format to Phred scaled FASTQ format
-# Based on: http://www.cassj.co.uk/blog/?p=490
-#           http://en.wikipedia.org/wiki/FASTQ_format
-#
+'''
+ Converts Illumina export file format to Phred scaled FASTQ format
+ Based on: http://www.cassj.co.uk/blog/?p=490
+           http://en.wikipedia.org/wiki/FASTQ_format
+'''
 # 2010-07-21 - Marcus Breese <mbreese@iupui.edu>
-#
 
 import sys,math,os,gzip
 
 try:
-    utilpath = os.path.normpath(os.path.join(os.path.dirname(__file__),'..','utils'))
-    if os.path.exists(utilpath):
-        sys.path.append(utilpath)
-    
-    from eta import ETA
+    sys.path.append(os.path.normpath(os.path.join(os.path.dirname(__file__),'..')))
+    from support.eta import ETA
 except:
     ETA = None
 

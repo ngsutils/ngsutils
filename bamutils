@@ -20,6 +20,14 @@ usage(){
     echo "    split         - Splits a BAM file into smaller pieces"
     echo "    stats         - Calculates simple stats for a BAM file"
     echo ""
+    echo "  Conversions"
+    echo "    to_bed        - Convert BAM reads to BED regions"
+    echo "    to_bedgraph   - Convert BAM coverage to BedGraph"
+    echo "    to_fasta      - Convert BAM reads to FASTA sequences"
+    echo "                    (mapped or unmapped)"
+    echo "    to_fastq      - Convert BAM reads back to FASTQ sequences"
+    echo "                    (mapped or unmapped)"
+    echo ""
     echo "See 'bamutils help CMD' for more information about a specific command"
     exit -1
 }

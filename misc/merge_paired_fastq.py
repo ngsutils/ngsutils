@@ -12,12 +12,11 @@ Note: Illumina paired end reads are: Read1 (forward) Read2 (reverse).
 '''
 
 import os,sys,gzip
-utilpath = os.path.normpath(os.path.join(os.path.dirname(__file__),'..','utils'))
 
-if os.path.exists(utilpath):
-    sys.path.append(utilpath)
-    from eta import ETA
-else:
+try:
+    sys.path.append(os.path.normpath(os.path.join(os.path.dirname(__file__),'..')))
+    from support.eta import ETA
+except:
     ETA = None
 
 _comps = { 'A':'T','T':'A','G':'C','C':'G' }
