@@ -28,13 +28,10 @@ from support.eta import ETA
 import pysam
 try:
     __rsrc = os.path.join(os.path.dirname(__file__),'minorallele_cpci.R')
-    if os.path.exists(__rsrc):
-        import rpy2.robjects as robjects
-        with open(__rsrc) as f:
-            robjects.r(f.read())
-    else:
-        robjects = None
-except Exception,e:
+    import rpy2.robjects as robjects
+    with open(__rsrc) as f:
+        robjects.r(f.read())
+except Exception:
     robjects = None
 
 def usage():
@@ -63,7 +60,7 @@ def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0
     eta = ETA(0,bamfile=bam)
     sys.stdout.write('chrom\tpos\tref\talt\ttotal\tref count\talt count\tbackground count\tref-background\talt-background')
     if robjects:
-        sys.stdout.write('\t95% CI low\t95%CI high\t')
+        sys.stdout.write('\tMean level\t95% CI low\t95%CI high\tCI Range\tlow count\thigh count')
     sys.stdout.write('\n')
 
     printed = False
@@ -108,12 +105,18 @@ def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0
                 altcount = scounts[0][0]
             
             background = scounts[2][0]
+            refback = refcount-background
+            altback = altcount-background
 
-            cols = [chrom,pileup.pos,refbase,altbase,total,refcount,altcount,background,refcount-background,altcount-background]
+            cols = [chrom,pileup.pos,refbase,altbase,total,refcount,altcount,background,refback,altback]
             if robjects and num_alleles:
-                ci_low,ci_high = calc_cp_ci(refcount-background+altcount-background,altcount-background,num_alleles)
+                ci_low,ci_high = calc_cp_ci(refback+altback,altback,num_alleles)
+                cols.append(float(altback) / (refback+altback)
                 cols.append(ci_low)
                 cols.append(ci_high)
+                cols.append(ci_high-ci_low)
+                cols.append(ci_low * (num_alleles))
+                cols.append(ci_high * (num_alleles))
             
             sys.stdout.write('%s\n' % '\t'.join([str(x) for x in cols]))
     
