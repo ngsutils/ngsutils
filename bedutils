@@ -20,7 +20,7 @@ fi
 REAL=`python -c 'import os,sys;print os.path.realpath(sys.argv[1])' "$0"`
 DIR=`dirname "$REAL"`
 
-PYVER=`python -V 2>&1 | awk '{print $2}' | sed -e 's/\.[0-9]*$//'`
+PYVER=`python -V 2>&1 | awk '{print $2}'`
 OS=`uname`
 ARCH=`uname -m`
 
