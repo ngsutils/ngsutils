@@ -27,12 +27,17 @@ import os,sys,math
 from support.eta import ETA
 import pysam
 try:
+    1/0
     __rsrc = os.path.join(os.path.dirname(__file__),'minorallele_cpci.R')
     import rpy2.robjects as robjects
     with open(__rsrc) as f:
         robjects.r(f.read())
 except Exception:
     robjects = None
+    import subprocess
+    __rsh_src = os.path.join(os.path.dirname(__file__),'minorallele_cpci.rsh')
+    if __rsh_src == 'minorallele_cpci.rsh':
+        __rsh_src = './minorallele_cpci.rsh'
 
 def usage():
     base = os.path.basename(sys.argv[0])
@@ -64,7 +69,7 @@ def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0
     ref = pysam.Fastafile(ref_fname)
     eta = ETA(0,bamfile=bam)
     sys.stdout.write('chrom\tpos\tref\talt\ttotal\tref count\talt count\tbackground count\tref-background\talt-background')
-    if robjects:
+    if num_alleles:
         sys.stdout.write('\tMean level\t95% CI low\t95% CI high\tCI Range\tlow count\thigh count')
     sys.stdout.write('\n')
 
@@ -114,7 +119,7 @@ def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0
             altback = altcount-background
 
             cols = [chrom,(pileup.pos+1),refbase,altbase,total,refcount,altcount,background,refback,altback]
-            if robjects and num_alleles:
+            if num_alleles:
                 ci_low,ci_high = calc_cp_ci(refback+altback,altback,num_alleles)
                 cols.append(float(altback) / (refback+altback))
                 cols.append(ci_low)
@@ -132,7 +137,9 @@ def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0
 def calc_cp_ci(N,count,num_alleles):
     if robjects:
         return robjects.r['CP.CI'](N,count,num_alleles)
-    return None,None
+    else:
+        output = subprocess.Popen([__rsh_src, '%s %s %s' % (N, count,num_alleles)], stdout=subprocess.PIPE).communicate()[0]
+        return [float(x) for x in output.split()]
 
 if __name__ == '__main__':
     bam = None
