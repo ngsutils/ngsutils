@@ -160,7 +160,7 @@ def calc_cp_ci(N,count,num_alleles):
         return robjects.r['CP.CI'](N,count,num_alleles)
     else:
         if not __cpci_socket:
-            subprocess.Popen([__rsh_src,str(__port)])
+            subprocess.Popen([__rsh_src,str(__port)], cwd = os.path.dirname(__file__))
             _socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             _socket.connect(('127.0.0.1', __port))
             __cpci_socket = BufferedSocket(_socket)
