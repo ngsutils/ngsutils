@@ -27,7 +27,6 @@ import os,sys,math
 from support.eta import ETA
 import pysam
 try:
-    1/0
     __rsrc = os.path.join(os.path.dirname(__file__),'minorallele_cpci.R')
     import rpy2.robjects as robjects
     with open(__rsrc) as f:
