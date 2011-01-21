@@ -23,7 +23,7 @@ ref-background
 alt-background
 """
 
-import os,sys,math,socket
+import os,sys,math
 from support.eta import ETA
 import pysam
 __cpci_socket = None
@@ -36,7 +36,7 @@ try:
         robjects.r(f.read())
 except Exception:
     robjects = None
-    import subprocess
+    import subprocess,socket,time
     __rsh_src = os.path.join(os.path.dirname(__file__),'minorallele_cpci.rsh')
     __port = 13001
     if __rsh_src == 'minorallele_cpci.rsh':
@@ -161,9 +161,13 @@ def calc_cp_ci(N,count,num_alleles):
     else:
         if not __cpci_socket:
             subprocess.Popen([__rsh_src,str(__port)], cwd = os.path.dirname(__file__))
-            _socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            _socket.connect(('127.0.0.1', __port))
-            __cpci_socket = BufferedSocket(_socket)
+            while not __cpci_socket:
+                try:
+                    _socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    _socket.connect(('127.0.0.1', __port))
+                    __cpci_socket = BufferedSocket(_socket)
+                except:
+                    time.sleep(1)
 
         __cpci_socket.send('%s %s %s\n' % (N, count,num_alleles))
         output = __cpci_socket.readline()
