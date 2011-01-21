@@ -66,6 +66,23 @@ Options:
     
     sys.exit(1)
 
+class BufferedSocket(object):
+    def __init__(self,socket):
+        self._socket = socket
+        self._buffer = ''
+
+    def readline(self):
+        while not '\n' in self._buffer:
+            self._buffer += self._socket.recv(1024)
+        spl = self._buffer.split('\n',1)
+        self._buffer = spl[1]
+        return spl[0]
+
+    def send(self,data):
+        self._socket.send(data)
+
+    def close(self,):
+        self._socket.close()
 
 def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0):
     bam = pysam.Samfile(bam_fname,"rb")
@@ -138,17 +155,18 @@ def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0
     ref.close()
 
 def calc_cp_ci(N,count,num_alleles):
+    global __cpci_socket
     if robjects:
         return robjects.r['CP.CI'](N,count,num_alleles)
     else:
         if not __cpci_socket:
             subprocess.Popen([__rsh_src,str(__port)])
-            __cpci_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            __cpci_socket.connect(('127.0.0.1', __port))
+            _socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            _socket.connect(('127.0.0.1', __port))
+            __cpci_socket = BufferedSocket(_socket)
 
         __cpci_socket.send('%s %s %s\n' % (N, count,num_alleles))
-        output = s.recv(1024)
-        output = output.strip()
+        output = __cpci_socket.readline()
         
 #        output = subprocess.Popen([__rsh_src, '%s %s %s' % (N, count,num_alleles)], stdout=subprocess.PIPE).communicate()[0]
         return [float(x) for x in output.split()]
