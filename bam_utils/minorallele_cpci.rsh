@@ -9,7 +9,7 @@ trim <- function (x) gsub("^\\s+|\\s+$", "", x)
 argv = commandArgs(trailingOnly=TRUE)
 if (length(argv) == 1) {
     close_socket <- FALSE;
-    conn <- make.socket(host = "127.0.0.1", as.integer(argv[1]), fail = TRUE, server = TRUE);
+    conn <- make.socket(host = "localhost", as.integer(argv[1]), fail = TRUE, server = TRUE);
     on.exit(close.socket(conn));
     
     while (!close_socket) {
