@@ -51,6 +51,11 @@ Options:
               If given, a Clopper-Pearson style confidence interval will be 
               calculated. (requires rpy2)
 """ % (base)
+    if robjects:
+        print "rpy2 detected!"
+    else:
+        print "rpy2 not detected!"
+    
     sys.exit(1)
 
 
