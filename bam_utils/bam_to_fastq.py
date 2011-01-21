@@ -4,12 +4,13 @@ Takes a SAM file and exports a FASTQ file
 '''
 
 import sys,os
-sys.path.append(os.path.join(os.path.dirname(__file__),"..","utils"))
-sys.path.append(os.path.join(os.path.dirname(__file__),"..","ext"))
-from eta import ETA
+from support.eta import ETA
 import pysam
 
 def bam2fastq(sam_fname,colorspace=False,only_mapped=False,only_unmapped=False):
+    if only_mapped == False and only_unmapped == False:
+        return
+        
     if sam_fname[-4:].lower() == '.bam':
         sam = pysam.Samfile(sam_fname,'rb')
     else:
@@ -60,5 +61,9 @@ if __name__ == '__main__':
             samf = arg
     if not samf:
         usage()
-        
+    
+    if not unmapped and not mapped:
+        mapped = True
+        unmapped = True
+    
     bam2fastq(samf,cs,mapped,unmapped)

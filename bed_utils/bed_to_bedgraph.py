@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 '''
-Takes a BAM file and produces a BedGraph file.  This can optionally 
+Takes a BED file and produces a BedGraph file.  This can optionally 
 normalize the counts by a given factor.
 
  See: http://genome.ucsc.edu/goldenPath/help/bedgraph.html
@@ -8,8 +8,7 @@ normalize the counts by a given factor.
 '''
 
 import sys,os
-sys.path.append(os.path.join(os.path.dirname(__file__),"..","utils")) #eta
-from eta import ETA
+from support.eta import ETA
 
 def write_regions(regions,normalize = None):
     while regions:

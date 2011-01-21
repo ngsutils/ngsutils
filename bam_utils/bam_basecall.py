@@ -10,8 +10,8 @@ variation compared to reference, or bases whose variation is too low.
 The output is a tab-delimited file that contains the following for each base:
 
 chromosome
-position (0-based)
-reference base (lowercase = no variation measured, uppercase = some variation)
+position (1-based)
+reference base
 # reads that contain this base
 Variation [0..1]
 Entropy
@@ -140,7 +140,7 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, noperfect=False, m
             ave_mappings = float(read_ih_acc) / read_count
             
             if total >= min_count and var >= min_var:
-                sys.stdout.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' % (chrom,pileup.pos,refbase,total,ave_mappings,var,entropy,counts['A'],counts['C'],counts['G'],counts['T'],inserts,deletions))
+                sys.stdout.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' % (chrom,(pileup.pos+1),refbase,total,ave_mappings,var,entropy,counts['A'],counts['C'],counts['G'],counts['T'],inserts,deletions))
     
     eta.done()
     bam.close()
