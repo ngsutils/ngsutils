@@ -210,4 +210,5 @@ if __name__ == '__main__':
     else:
         bam_minorallele(bam,ref,min_qual,min_count,num_alleles)
         if __cpci_socket:
+           __cpci_socket.send('quit\n')
             __cpci_socket.close()
