@@ -26,7 +26,6 @@ alt-background
 import os,sys,math
 from support.eta import ETA
 import pysam
-__cpci_socket = None
 
 try:
     __rsrc = os.path.join(os.path.dirname(__file__),'minorallele_cpci.R')
@@ -35,11 +34,12 @@ try:
         robjects.r(f.read())
 except Exception:
     robjects = None
-    import subprocess,socket,time
-    __rsh_src = os.path.join(os.path.dirname(__file__),'minorallele_cpci.rsh')
-    __port = 13001
-    if __rsh_src == 'minorallele_cpci.rsh':
-        __rsh_src = './minorallele_cpci.rsh'
+    # import subprocess,socket,time
+    # __cpci_socket = None
+    # __rsh_src = os.path.join(os.path.dirname(__file__),'minorallele_cpci.rsh')
+    # __port = 13001
+    # if __rsh_src == 'minorallele_cpci.rsh':
+    #     __rsh_src = './minorallele_cpci.rsh'
 
 def usage():
     base = os.path.basename(sys.argv[0])
@@ -138,7 +138,7 @@ def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0
             altback = altcount-background
 
             cols = [chrom,(pileup.pos+1),refbase,altbase,total,refcount,altcount,background,refback,altback]
-            if num_alleles:
+            if robjects and num_alleles:
                 ci_low,ci_high = calc_cp_ci(refback+altback,altback,num_alleles)
                 cols.append(float(altback) / (refback+altback))
                 cols.append(ci_low)
@@ -154,25 +154,26 @@ def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0
     ref.close()
 
 def calc_cp_ci(N,count,num_alleles):
-    global __cpci_socket
+    # global __cpci_socket
     if robjects:
         return robjects.r['CP.CI'](N,count,num_alleles)
     else:
-        if not __cpci_socket:
-            subprocess.Popen([__rsh_src,str(__port)], cwd = os.path.dirname(__file__))
-            while not __cpci_socket:
-                try:
-                    _socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    _socket.connect(('127.0.0.1', __port))
-                    __cpci_socket = BufferedSocket(_socket)
-                except:
-                    time.sleep(1)
-
-        __cpci_socket.send('%s %s %s\n' % (N, count,num_alleles))
-        output = __cpci_socket.readline()
-        
-#        output = subprocess.Popen([__rsh_src, '%s %s %s' % (N, count,num_alleles)], stdout=subprocess.PIPE).communicate()[0]
-        return [float(x) for x in output.split()]
+        return None,None
+#         if not __cpci_socket:
+#             subprocess.Popen([__rsh_src,str(__port)], cwd = os.path.dirname(__file__))
+#             while not __cpci_socket:
+#                 try:
+#                     _socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#                     _socket.connect(('127.0.0.1', __port))
+#                     __cpci_socket = BufferedSocket(_socket)
+#                 except:
+#                     time.sleep(1)
+# 
+#         __cpci_socket.send('%s %s %s\n' % (N, count,num_alleles))
+#         output = __cpci_socket.readline()
+#         
+# #        output = subprocess.Popen([__rsh_src, '%s %s %s' % (N, count,num_alleles)], stdout=subprocess.PIPE).communicate()[0]
+#         return [float(x) for x in output.split()]
 
 if __name__ == '__main__':
     bam = None
@@ -209,6 +210,6 @@ if __name__ == '__main__':
         usage()
     else:
         bam_minorallele(bam,ref,min_qual,min_count,num_alleles)
-        if __cpci_socket:
-           __cpci_socket.send('quit\n')
-            __cpci_socket.close()
+        # if __cpci_socket:
+        #    __cpci_socket.send('quit\n')
+        #     __cpci_socket.close()
