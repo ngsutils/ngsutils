@@ -10,6 +10,8 @@ This assumes that if a SNP exists, there is likely only one possible variation.
 So, this calculation will fail if more than one minor allele is present.  This
 also ignores indels.
 
+If rpy2 is installed and -alleles is given, this will also calculate a 95% CI.
+
 Outputs a tab-delimited file with the following columns:
 chrom
 position (1-based)
@@ -34,12 +36,6 @@ try:
         robjects.r(f.read())
 except Exception:
     robjects = None
-    # import subprocess,socket,time
-    # __cpci_socket = None
-    # __rsh_src = os.path.join(os.path.dirname(__file__),'minorallele_cpci.rsh')
-    # __port = 13001
-    # if __rsh_src == 'minorallele_cpci.rsh':
-    #     __rsh_src = './minorallele_cpci.rsh'
 
 def usage():
     base = os.path.basename(sys.argv[0])
@@ -88,7 +84,7 @@ def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0
     ref = pysam.Fastafile(ref_fname)
     eta = ETA(0,bamfile=bam)
     sys.stdout.write('chrom\tpos\tref\talt\ttotal\tref count\talt count\tbackground count\tref-background\talt-background')
-    if num_alleles:
+    if robjects and num_alleles:
         sys.stdout.write('\tMean level\t95% CI low\t95% CI high\tCI Range\tlow count\thigh count')
     sys.stdout.write('\n')
 
@@ -154,26 +150,8 @@ def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0
     ref.close()
 
 def calc_cp_ci(N,count,num_alleles):
-    # global __cpci_socket
     if robjects:
         return robjects.r['CP.CI'](N,count,num_alleles)
-    else:
-        return None,None
-#         if not __cpci_socket:
-#             subprocess.Popen([__rsh_src,str(__port)], cwd = os.path.dirname(__file__))
-#             while not __cpci_socket:
-#                 try:
-#                     _socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#                     _socket.connect(('127.0.0.1', __port))
-#                     __cpci_socket = BufferedSocket(_socket)
-#                 except:
-#                     time.sleep(1)
-# 
-#         __cpci_socket.send('%s %s %s\n' % (N, count,num_alleles))
-#         output = __cpci_socket.readline()
-#         
-# #        output = subprocess.Popen([__rsh_src, '%s %s %s' % (N, count,num_alleles)], stdout=subprocess.PIPE).communicate()[0]
-#         return [float(x) for x in output.split()]
 
 if __name__ == '__main__':
     bam = None
@@ -210,6 +188,3 @@ if __name__ == '__main__':
         usage()
     else:
         bam_minorallele(bam,ref,min_qual,min_count,num_alleles)
-        # if __cpci_socket:
-        #    __cpci_socket.send('quit\n')
-        #     __cpci_socket.close()
