@@ -79,6 +79,7 @@ Options:
 
 """ % os.path.basename(sys.argv[0])
     sys.exit(1)
+    
 if __name__ == '__main__':
     insert_col = 3
     tab_fname = None
