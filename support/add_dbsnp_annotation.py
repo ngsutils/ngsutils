@@ -20,6 +20,7 @@ If there is more than one SNP, these will be comma-delimited
 
 import sys,os
 from ngs_utils import gzip_opener
+from eta import ETA
 
 def read_dbsnp(fname):
     '''
@@ -28,20 +29,27 @@ def read_dbsnp(fname):
     '''
     dbsnp = {}
     
+    sys.stderr.write('Reading dbSNP...\n')
+    
     with gzip_opener(fname) as f:
+        eta = ETA(os.stat(fname).st_size, fileobj=f)
         for line in f:
+            eta.print_status()
             cols = line.strip().split('\t')
             k = (cols[1],int(cols[3]))
             if not k in dbsnp:
                 dbsnp[k] = []
             dbsnp[k].append((cols[4],cols[6],cols[9],cols[13],cols[15]))
-            
+        eta.done()
     return dbsnp
     
 def annotate_tab(fname,dbsnp,header=True,insert_at_col=3):
     with gzip_opener(fname) as f:
+        eta = ETA(os.stat(fname).st_size, fileobj=f)
         for line in f:
             cols = line.strip().split('\t')
+            eta.print_status(extra='%s:%s' % (cols[0],cols[1]))
+
             if header:
                 header = False
                 sys.stdout.write('\t'.join(cols[:insert_at_col]))
@@ -64,6 +72,7 @@ def annotate_tab(fname,dbsnp,header=True,insert_at_col=3):
                 sys.stdout.write('\t%s\t%s\t%s\t%s\t%s\t' % (rs,strand,observed,freq,func))
                 sys.stdout.write('\t'.join(cols[insert_at_col:]))
                 sys.stdout.write('\n')
+        eta.done()
 
 def usage():
     print __doc__
