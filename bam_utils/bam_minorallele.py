@@ -113,23 +113,23 @@ def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0
             refbase = ref.fetch(chrom,pileup.pos,pileup.pos+1).upper()
             if not refbase in counts:
                 continue
-
+            
+            refcount = counts[refbase]
+            
+            # sort non-ref counts.  first is alt, next is background
+            
             scounts = []
             for c in counts:
-                scounts.append((counts[c],c))
+                if c != refbase:
+                    scounts.append((counts[c],c))
+                    
             scounts.sort()
             scounts.reverse()
             
-            if scounts[0][1] == refbase:
-                refcount = scounts[0][0]
-                altbase = scounts[1][1]
-                altcount = scounts[1][0]
-            else:
-                refcount = scounts[1][0]
-                altbase = scounts[0][1]
-                altcount = scounts[0][0]
+            altbase = scounts[0][1]
+            altcount = scounts[0][0]
+            background = scounts[1][0]
             
-            background = scounts[2][0]
             refback = refcount-background
             altback = altcount-background
 
