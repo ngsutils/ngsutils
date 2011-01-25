@@ -51,11 +51,12 @@ def annotate_tab(fname,dbsnp_fname,header=True,insert_at_col=3):
                 
                 for line in dbsnp.fetch(cols[0],int(cols[1])-1,int(cols[1])):
                     tups = line.split('\t')
-                    rs.append(tups[4])
-                    strand.append(tups[6])
-                    observed.append(tups[9])
-                    freq.append(tups[13])
-                    func.append(tups[15])
+                    if int(cols[1]) == int(tups[3]):
+                        rs.append(tups[4])
+                        strand.append(tups[6])
+                        observed.append(tups[9])
+                        freq.append(tups[13])
+                        func.append(tups[15])
                 
                 sys.stdout.write('\t'.join(cols[:insert_at_col]))
                 sys.stdout.write('\t%s\t%s\t%s\t%s\t%s\t' % (','.join(rs),','.join(strand),','.join(observed),','.join(freq),','.join(func)))
