@@ -87,7 +87,7 @@ if __name__ == '__main__':
     header = True
     
     last = None
-    for arg in sys.argv[1]:
+    for arg in sys.argv[1:]:
         if last == '-insertcol':
             insert_col = int(arg)
             last = None
