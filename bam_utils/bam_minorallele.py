@@ -61,23 +61,11 @@ Options:
     
     sys.exit(1)
 
-class BufferedSocket(object):
-    def __init__(self,socket):
-        self._socket = socket
-        self._buffer = ''
+class Blackhole(object):
+    def write(self, string):
+        pass
 
-    def readline(self):
-        while not '\n' in self._buffer:
-            self._buffer += self._socket.recv(1024)
-        spl = self._buffer.split('\n',1)
-        self._buffer = spl[1]
-        return spl[0]
-
-    def send(self,data):
-        self._socket.send(data)
-
-    def close(self,):
-        self._socket.close()
+__sink = Blackhole()
 
 def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0):
     bam = pysam.Samfile(bam_fname,"rb")
@@ -87,6 +75,7 @@ def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0
     if robjects and num_alleles:
         sys.stdout.write('\tMean level\t95% CI low\t95% CI high\tCI Range\tlow count\thigh count')
     sys.stdout.write('\n')
+    
 
     printed = False
     for pileup in bam.pileup():
@@ -154,7 +143,11 @@ def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0
 
 def calc_cp_ci(N,count,num_alleles):
     if robjects:
-        return robjects.r['CP.CI'](N,count,num_alleles)
+        stdout = sys.stdout
+        sys.stdout = __sink
+        vals = robjects.r['CP.CI'](N,count,num_alleles)
+        sys.stdout = stdout
+        return vals
 
 if __name__ == '__main__':
     bam = None
