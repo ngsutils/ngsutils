@@ -53,6 +53,9 @@ class Mismatch(object):
     def __init__(self,num):
         self.num = int(num)
     def filter(self,bam,read):
+        if read.is_unmapped:
+            return False
+        
         inserts = 0
         deletions = 0
         indels = 0
@@ -90,6 +93,8 @@ class MismatchRef(object):
         self.ref = pysam.Fastafile(refname)
 
     def filter(self,bam,read):
+        if read.is_unmapped:
+            return False
         chrom = bam.getrname(read.rname)
         start = read.pos
         end = read.aend
