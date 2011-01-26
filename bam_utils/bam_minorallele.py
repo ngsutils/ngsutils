@@ -124,16 +124,24 @@ def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0
 
             cols = [chrom,(pileup.pos+1),refbase,altbase,total,refcount,altcount,background,refback,altback]
             if robjects and num_alleles:
-                ci_low,ci_high = calc_cp_ci(refback+altback,altback,num_alleles)
-                if refback+altback > 0:
-                    cols.append(float(altback) / (refback+altback))
-                else:
-                    cols.append(0)
-                cols.append(ci_low)
-                cols.append(ci_high)
-                cols.append(ci_high-ci_low)
-                cols.append(ci_low * (num_alleles))
-                cols.append(ci_high * (num_alleles))
+                    ci_low,ci_high = calc_cp_ci(refback+altback,altback,num_alleles)
+                    if math.isnan(ci_low) or math.isnan(ci_high):
+                        cols.append(0)
+                        cols.append(0)
+                        cols.append(0)
+                        cols.append(0)
+                        cols.append(0)
+                        cols.append(0)
+                    else:
+                        if refback+altback > 0:
+                            cols.append(float(altback) / (refback+altback))
+                        else:
+                            cols.append(0)
+                        cols.append(ci_low)
+                        cols.append(ci_high)
+                        cols.append(ci_high-ci_low)
+                        cols.append(ci_low * (num_alleles))
+                        cols.append(ci_high * (num_alleles))
             
             sys.stdout.write('%s\n' % '\t'.join([str(x) for x in cols]))
     
