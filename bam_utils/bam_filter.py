@@ -12,6 +12,9 @@ Currently, the available filters are:
                             (requires NM tag in reads)
     mismatch_ref num ref.fa # mismatches or indel - looks up mismatches 
                             directly in a ref FASTA file (if NM not available)
+                            
+    nosecondary             Remove reads that have the 0x100 flag set
+    noqcfail                Remove reads that have the 0x200 flag set
     
     eq  tag_name value
     lt  tag_name value
@@ -139,6 +142,18 @@ class Mapped(object):
     def __repr__(self):
         return 'is mapped'
 
+class SecondaryFlag(object):
+    def __repr__(self):
+        return "no 0x100 (secondary) flag"
+    def filter(self,bam,read):
+        return not read.is_secondary
+
+class QCFailFlag(object):
+    def __repr__(self):
+        return "no 0x200 (qcfail) flag"
+    def filter(self,bam,read):
+        return not read.is_qcfail
+
 class _TagCompare(object):
     def __init__(self,tag,value):
         self.args = '%s %s' % (tag,value)
@@ -198,6 +213,8 @@ class TagEquals(_TagCompare):
 
 _criteria = {
     'mapped': Mapped,
+    'noqcfail': QCFailFlag,
+    'nosecondary': SecondaryFlag,
     'lt': TagLessThan,
     'gt': TagGreaterThan,
     'lte': TagLessThanEquals,

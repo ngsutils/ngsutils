@@ -18,7 +18,7 @@ ref B      4               1               1               0              3
 
 '''
 
-import os,sys
+import os,sys,math
 from support.eta import ETA
 import support.ngs_utils
 import pysam
@@ -32,7 +32,7 @@ def usage():
     print __doc__
     print """\
 Usage: %s {-ns} reference.bed sample1.bed sample2.bed ...
-       %s {-ns} reference.bed -group name sample1-1 sample1-2 ...\
+       %s {-ns} reference.bed -group name sample1-1 sample1-2 ... \\
                               -group name sample2-1 sample2-2 ...
 
 Where the sample BED files are Tabix indexed (sample1.bed.tbi exists).
@@ -84,7 +84,7 @@ def bed_ref_count(refname,group_files,group_names,stranded=True):
         sys.stdout.write('\t')
         sys.stdout.write('\t'.join(samples))
         sys.stdout.write('\tpresent')
-    if len(groups)==2 and robjects:
+    if len(groups)==2:
         sys.stdout.write('\tfisher p-value\tenriched sample')
     sys.stdout.write('\n')
     

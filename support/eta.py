@@ -131,7 +131,8 @@ class _ETA(object):
     def print_status(self,current=None,extra='',overwrite=True, bam_pos=None):
         '''
         bam_pos is a tuple containing the current position in a bam file:
-        (ref_num,pos)
+        (ref_num,pos)  And only returns accurate estimates if the bamfile
+        has roughly continuous coverage (not targetted).
         
         '''
         self.i+=1

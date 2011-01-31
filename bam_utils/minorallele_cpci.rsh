@@ -3,6 +3,11 @@ exec R --vanilla -q --slave -e "source(file=\"$(dirname $0)/minorallele_cpci.R\"
 # this spawns R, reading this file from line #4...
 # see: http://rwiki.sciviews.org/doku.php?id=tips:scriptingr
 
+#
+# Reads in a file produced by bam_minorallele.py.  For each line, calculates 
+# 95% CP CI.  Then outputs a new file (stdout) that includes these calculations
+#
+
 argv = commandArgs(trailingOnly=TRUE)
 if (length(argv) == 2) {
     alleles <- as.integer(argv[1]);
