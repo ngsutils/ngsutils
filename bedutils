@@ -8,6 +8,7 @@ usage(){
     echo "    ref_count   - Given a number of BED files, calculate the number of" 
     echo "                  samples that overlap regions in a reference BED file"
     echo "    sort        - Sorts a BED file (in place)"
+    echo "    stats       - Calculates simple stats for a BED file"
     echo ""
     echo "  Conversions"
     echo "    to_bedgraph - BED to BedGraph"
