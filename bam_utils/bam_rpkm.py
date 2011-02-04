@@ -335,8 +335,10 @@ def calc_alt(bam_fname,refiso_name,stranded=True,multiple='complete',normalizati
                     other_reads += 1
                     
             if other_reads > 0:
-                cols.append(float(count-excl_count) / other_reads)
+                cols.append(float(count) / other_reads)
+                cols.append(float(excl_count) / other_reads)
             else:
+                cols.append('')
                 cols.append('')
                 
             lines.append(cols)
@@ -364,7 +366,7 @@ def calc_alt(bam_fname,refiso_name,stranded=True,multiple='complete',normalizati
     else:
         mil_mapped = 0
 
-    headers.extend("const_count region_num const_alt altEvent chrom strand start end length count excl_count alt_index".split())
+    headers.extend("const_count region_num const_alt altEvent chrom strand start end length count excl_count incl_pct excl_pct".split())
     
     print ""
     print '\t'.join(headers)
