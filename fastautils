@@ -25,6 +25,7 @@ OS=`uname`
 ARCH=`uname -m`
 
 "$DIR"/build_deps.sh
+if [ $? -ne 0 ]; then exit; fi
 export PYTHONPATH=$PYTHONPATH:"$DIR":"$DIR"/ext
 
 "$DIR"/fasta_utils.py $@

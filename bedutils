@@ -30,6 +30,7 @@ OS=`uname`
 ARCH=`uname -m`
 
 "$DIR"/build_deps.sh
+if [ $? -ne 0 ]; then exit; fi
 export PYTHONPATH=$PYTHONPATH:"$DIR":"$DIR"/ext
 
 if [ "$1" == "help" ]; then
