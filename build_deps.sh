@@ -30,18 +30,18 @@ rm -rf *
 
 python -c "import Cython" > /dev/null
 if [ $? -ne 0 ]; then
-    curl -LO "http://pypi.python.org/packages/source/C/Cython/Cython-0.14.1.tar.gz"
-    tar zxvf Cython-0.14.1.tar.gz
+    curl -sLO "http://pypi.python.org/packages/source/C/Cython/Cython-0.14.1.tar.gz"
+    tar zxf Cython-0.14.1.tar.gz
     cd Cython-0.14.1
-    python setup.py build
-    python setup.py install --user
+    python setup.py build >> $WORK/build.log
+    python setup.py install --user >> $WORK/build.log
     cd ..
 fi
 
-curl -LO "http://pysam.googlecode.com/files/pysam-0.3.1.tar.gz"
-tar zxvf pysam-0.3.1.tar.gz
+curl -sLO "http://pysam.googlecode.com/files/pysam-0.3.1.tar.gz"
+tar zxf pysam-0.3.1.tar.gz
 cd pysam-0.3.1
-python setup.py build
+python setup.py build >> $WORK/build.log
 
 cp -r build/lib*/pysam ../..
 cp build/lib*/*.so ../../pysam
