@@ -32,6 +32,7 @@ echo "Downloading and building dependencies..." >&2
 WORK=`dirname $0`/ext/work
 mkdir -p $WORK
 cd $WORK
+touch build.log
 rm -rf *
 
 python -c "import Cython" &> /dev/null
@@ -40,15 +41,18 @@ if [ $? -ne 0 ]; then
     curl -LO "http://pypi.python.org/packages/source/C/Cython/Cython-0.14.1.tar.gz"
     tar zxf Cython-0.14.1.tar.gz
     cd Cython-0.14.1
+
     echo "  [cython] building" >&2
     python setup.py build 2>> $WORK/build.log >> $WORK/build.log
     if [ $? -ne 0 ]; then
-        echo "  [cython] error building" >&2
+        echo "  [cython] error building - see work/build.log" >&2
         exit 1
     fi
+
+    echo "  [cython] installing" >&2
     python setup.py install --user 2>> $WORK/build.log >> $WORK/build.log
     if [ $? -ne 0 ]; then
-        echo "  [cython] error installing" >&2
+        echo "  [cython] error installing - see work/build.log" >&2
         exit 1
     fi
     cd ..
@@ -58,10 +62,13 @@ echo "  [pysam] downloading" >&2
 curl -LO "http://pysam.googlecode.com/files/pysam-0.3.1.tar.gz"
 tar zxf pysam-0.3.1.tar.gz
 cd pysam-0.3.1
+
 echo "  [pysam] building" >&2
+alias gcc='gcc -D_GNU_SOURCE'
 python setup.py build 2>> $WORK/build.log >> $WORK/build.log
+unalias gcc
 if [ $? -ne 0 ]; then
-    echo "  [pysam] error building" >&2
+    echo "  [pysam] error building - see work/build.log" >&2
     exit 1
 fi
 
