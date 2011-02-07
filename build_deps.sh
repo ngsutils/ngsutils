@@ -16,7 +16,7 @@ if [ "$1" == "-h" ]; then
     usage
 fi
 
-if [ -e "`dirname $0/ext/pysam`" ]; then
+if [ -e "`dirname $0`/ext/pysam" ]; then
     exit
 fi
 
