@@ -29,7 +29,7 @@ trap control_c SIGINT
 
 echo "Downloading and building dependencies..." >&2
 
-WORK=`dirname $0`/ext/work
+WORK=`python -c 'import os,sys;print os.path.realpath(sys.argv[1])' "$0"`/ext/work
 mkdir -p $WORK
 cd $WORK
 touch build.log
