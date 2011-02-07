@@ -43,22 +43,8 @@ PYVER=`python -V 2>&1 | awk '{print $2}'`
 OS=`uname`
 ARCH=`uname -m`
 
-PYTHONPATH=$PYTHONPATH:"$DIR":"$DIR"/ext
-
-if [ ! -e "$DIR"/ext/pysam ]; then
-    cd "$DIR"/ext
-    unzip pysam-0.3-Py$PYVER-$OS-$ARCH.zip
-    cd -
-fi
-
-
-for d in "$DIR"/ext/*; do
-    if [ -d "$d" ]; then
-        PYTHONPATH=$PYTHONPATH:"$d"
-    fi
-done
-
-export PYTHONPATH
+"$DIR"/build_deps.sh
+export PYTHONPATH=$PYTHONPATH:"$DIR":"$DIR"/ext
 
 if [ "$1" == "help" ]; then
     if [ "$2" == "" ]; then

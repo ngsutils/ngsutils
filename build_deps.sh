@@ -20,22 +20,25 @@ if [ -e "`dirname $0/ext/pysam`" ]; then
     exit
 fi
 
-echo "Building dependencies..." 2&>1
+echo "Downloading and building dependencies..." >&2
 
 WORK=`dirname $0`/ext/work
 
 mkdir -p $WORK
 cd $WORK
 rm -rf *
-curl -LO "http://pypi.python.org/packages/source/C/Cython/Cython-0.14.1.tar.gz"
+
+python -c "import Cython" > /dev/null
+if [ $? -ne 0 ]; then
+    curl -LO "http://pypi.python.org/packages/source/C/Cython/Cython-0.14.1.tar.gz"
+    tar zxvf Cython-0.14.1.tar.gz
+    cd Cython-0.14.1
+    python setup.py build
+    python setup.py install --user
+    cd ..
+fi
+
 curl -LO "http://pysam.googlecode.com/files/pysam-0.3.1.tar.gz"
-
-tar zxvf Cython-0.14.1.tar.gz
-cd Cython-0.14.1
-python setup.py build
-python setup.py install --user
-cd ..
-
 tar zxvf pysam-0.3.1.tar.gz
 cd pysam-0.3.1
 python setup.py build
