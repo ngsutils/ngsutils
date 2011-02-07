@@ -65,9 +65,7 @@ tar zxf pysam-0.3.1.tar.gz
 cd pysam-0.3.1
 
 echo "  [pysam] building" >&2
-alias gcc='gcc -D_GNU_SOURCE'
 python setup.py build 2>> $WORK/build.log >> $WORK/build.log
-unalias gcc
 if [ $? -ne 0 ]; then
     echo "  [pysam] error building - see work/build.log" >&2
     exit 1
