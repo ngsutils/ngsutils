@@ -27,7 +27,7 @@ fi
 
 trap control_c SIGINT
 
-echo "[depends] Downloading and building dependencies..." >&2
+echo "Downloading and building dependencies..." >&2
 
 WORK=`dirname $0`/ext/work
 mkdir -p $WORK
@@ -36,37 +36,37 @@ rm -rf *
 
 python -c "import Cython" &> /dev/null
 if [ $? -ne 0 ]; then
-    echo "[cython] downloading" >&2
-    curl -sLO "http://pypi.python.org/packages/source/C/Cython/Cython-0.14.1.tar.gz"
+    echo "  [cython] downloading" >&2
+    curl -LO "http://pypi.python.org/packages/source/C/Cython/Cython-0.14.1.tar.gz"
     tar zxf Cython-0.14.1.tar.gz
     cd Cython-0.14.1
-    echo "[cython] building" >&2
+    echo "  [cython] building" >&2
     python setup.py build 2>> $WORK/build.log >> $WORK/build.log
     if [ $? -ne 0 ]; then
-        echo "[cython] error building" >&2
+        echo "  [cython] error building" >&2
         exit 1
     fi
     python setup.py install --user 2>> $WORK/build.log >> $WORK/build.log
     if [ $? -ne 0 ]; then
-        echo "[cython] error installing" >&2
+        echo "  [cython] error installing" >&2
         exit 1
     fi
     cd ..
 fi
 
-echo "[pysam] downloading" >&2
-curl -sLO "http://pysam.googlecode.com/files/pysam-0.3.1.tar.gz"
+echo "  [pysam] downloading" >&2
+curl -LO "http://pysam.googlecode.com/files/pysam-0.3.1.tar.gz"
 tar zxf pysam-0.3.1.tar.gz
 cd pysam-0.3.1
-echo "[pysam] building" >&2
+echo "  [pysam] building" >&2
 python setup.py build 2>> $WORK/build.log >> $WORK/build.log
 if [ $? -ne 0 ]; then
-    echo "[pysam] error building" >&2
+    echo "  [pysam] error building" >&2
     exit 1
 fi
 
 cp -r build/lib*/pysam ../..
 cp build/lib*/*.so ../../pysam
-echo "Done!" >&2
+echo "  Done!" >&2
 echo "" >&2
 
