@@ -145,13 +145,14 @@ def bam_stats(infile,ref_file = None):
                 # reads only count once for this...
                 continue
         
-            eta.print_status(extra="%s:%s" % (bamfile.getrname(read.rname),read.pos),bam_pos=(read.rname,read.pos))
             names.add(read.qname)
             lengths.add(len(read.seq))
             total += 1
             if read.is_unmapped:
                 unmapped += 1
                 continue
+
+            eta.print_status(extra="%s:%s" % (bamfile.getrname(read.rname),read.pos),bam_pos=(read.rname,read.pos))
         
             mapped += 1
             refs[bamfile.getrname(read.rname)]+=1
