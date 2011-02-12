@@ -25,6 +25,13 @@ fi
 REAL=`python -c 'import os,sys;print os.path.realpath(sys.argv[1])' "$0"`
 DIR=`dirname "$REAL"`
 
+if [ "$1" == "update" ]; then
+    cd $DIR
+    git pull
+    "$DIR"/build_deps.sh
+    exit 0
+fi
+
 "$DIR"/build_deps.sh
 if [ $? -ne 0 ]; then exit; fi
 export PYTHONPATH=$PYTHONPATH:"$DIR":"$DIR"/ext
