@@ -1,0 +1,20 @@
+#!/bin/bash
+usage(){
+    echo "Usage: ngsmodel COMMAND"
+    echo ""
+    echo "Commands"
+    echo "    junctions     - Build a junction library from FASTA and RefIso "
+    echo ""
+    echo "    kg            - Create a RefIso model from UCSC KnownGene files"
+    echo "    refflat       - Create a RefIso model from a RefFlat format file"
+    echo ""
+    echo "See 'ngsmodel help CMD' for more information about a specific command"
+    exit -1
+}
+
+PREFIX="model_"
+SUBDIR="ngs_model"
+REAL=`python -c 'import os,sys;print os.path.realpath(sys.argv[1])' "$0"`
+DIR=`dirname "$REAL"`
+
+source "$DIR"/common.sh

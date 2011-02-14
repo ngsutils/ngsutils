@@ -10,8 +10,6 @@ or organisms with a lot of gene duplication, this is and important step.
 """
 
 import sys,os,gzip
-sys.path.append(os.path.join(os.path.dirname(__file__),"..","utils"))
-sys.path.append(os.path.join(os.path.dirname(__file__),"..","ext"))
 from ngs_utils import dictify,gzip_opener
 from eta import ETA
 import pysam
