@@ -470,7 +470,7 @@ def _calc_read_regions(read):
         elif op == 1:
             pass
         elif op == 2:
-            pos += length
+            end += length
         elif op == 3:
             regions.append((start,end))
             end += length

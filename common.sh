@@ -7,6 +7,14 @@ if [ $? -ne 0 ]; then exit; fi
 
 export PYTHONPATH=$PYTHONPATH:"$DIR":"$DIR"/ext
 
+if [ "$1" == "update" ]; then
+    cd $DIR
+    git pull
+    "$DIR"/build_deps.sh
+    exit 0
+fi
+
+
 if [ "$1" == "help" ]; then
     if [ "$2" == "" ]; then
         usage
