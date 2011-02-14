@@ -18,45 +18,9 @@ usage(){
     exit -1
 }
 
-if [ "$1" == "" ]; then
-    usage
-fi
-
+PREFIX="bed_"
+SUBDIR="bed_utils"
 REAL=`python -c 'import os,sys;print os.path.realpath(sys.argv[1])' "$0"`
 DIR=`dirname "$REAL"`
 
-"$DIR"/build_deps.sh
-if [ $? -ne 0 ]; then exit; fi
-export PYTHONPATH=$PYTHONPATH:"$DIR":"$DIR"/ext
-
-if [ "$1" == "help" ]; then
-    if [ "$2" == "" ]; then
-        usage
-    fi
-    
-    if [ "$2" == "sort" ]; then
-        action=bed_sort.sh
-    else
-        action=bed_$2.py
-    fi
-    
-    if [ ! -e "$DIR"/bed_utils/$action ]; then
-        echo "Unknown command '$2'"
-        exit 1
-    fi
-    "$DIR"/bed_utils/$action -h
-else
-    if [ "$1" == "sort" ]; then
-        action=bed_sort.sh
-    else
-        action=bed_$1.py
-    fi
-    
-    if [ ! -e "$DIR"/bed_utils/$action ]; then
-        echo "Unknown command '$1'"
-        exit 1
-    fi
-    shift
-
-    "$DIR"/bed_utils/$action $@
-fi
+source "$DIR"/common.sh

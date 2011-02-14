@@ -32,34 +32,9 @@ usage(){
     exit -1
 }
 
-if [ "$1" == "" ]; then
-    usage
-fi
-
+PREFIX="bam_"
+SUBDIR="bam_utils"
 REAL=`python -c 'import os,sys;print os.path.realpath(sys.argv[1])' "$0"`
 DIR=`dirname "$REAL"`
 
-"$DIR"/build_deps.sh
-if [ $? -ne 0 ]; then exit; fi
-export PYTHONPATH=$PYTHONPATH:"$DIR":"$DIR"/ext
-
-if [ "$1" == "help" ]; then
-    if [ "$2" == "" ]; then
-        usage
-    fi
-    action=bam_$2.py
-    if [ ! -e "$DIR"/bam_utils/$action ]; then
-        echo "Unknown command '$2'"
-        exit 1
-    fi
-    "$DIR"/bam_utils/$action -h
-else
-    action=bam_$1.py
-    if [ ! -e "$DIR"/bam_utils/$action ]; then
-        echo "Unknown command '$1'"
-        exit 1
-    fi
-    shift
-
-    "$DIR"/bam_utils/$action $@
-fi
+source "$DIR"/common.sh
