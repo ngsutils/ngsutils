@@ -5,7 +5,7 @@ Builds a RefIso format gene model from UCSC Known Gene annotations
 
 import os,sys,urllib
 import support.refiso
-from model_refflat import ETAHook
+from refiso_refflat import ETAHook
 
 def usage():
     print __doc__
