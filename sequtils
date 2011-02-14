@@ -1,6 +1,6 @@
 #!/bin/bash
 usage(){
-    echo "Usage: refisoutils COMMAND"
+    echo "Usage: sequtils COMMAND"
     echo ""
     echo "Commands"
     echo "    junctions     - Build a junction library from FASTA and RefIso "
@@ -8,12 +8,12 @@ usage(){
     echo "    kg            - Build a RefIso model from UCSC KnownGene files"
     echo "    refflat       - Build a RefIso model from RefFlat format file"
     echo ""
-    echo "See 'ngsmodel help CMD' for more information about a specific command"
+    echo "See 'sequtils help CMD' for more information about a specific command"
     exit -1
 }
 
-PREFIX="refiso_"
-SUBDIR="refiso_utils"
+PREFIX="seq_"
+SUBDIR="seq_utils"
 REAL=`python -c 'import os,sys;print os.path.realpath(sys.argv[1])' "$0"`
 DIR=`dirname "$REAL"`
 

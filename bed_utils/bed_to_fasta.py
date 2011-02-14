@@ -5,38 +5,42 @@ from support.eta import ETA
 import pysam
 
 def bed2fasta(fname, ref_fasta, min_size=50, stranded=True):
-    f = open(fname)
-    fsize = os.stat(fname).st_size
-    eta = ETA(fsize,fileobj=f,modulo=1000)
-
     if not os.path.exists('%s.fai' % ref_fasta):
         pysam.faidx( ref_fasta )
 
     fasta = pysam.Fastafile(ref_fasta)
-
-    for line in f:
-        if line[0] == '#':
-            continue
-        eta.print_status()
-
-        cols = line.strip().split('\t')
-        
-        ref = cols[0]
-        start = int(cols[1])
-        end = int(cols[2])
-        strand = cols[5]
-        
-        if end-start >= min_size:
-            seq = fasta.fetch(ref,start,end)
-            if stranded:
-                if strand == '-':
-                    seq = revcomp(seq)
-                print '>%s:%d-%d[%s]\n%s' % (ref,start,end,strand,seq)
-            else:
-                print '>%s:%d-%d\n%s' % (ref,start,end,seq)
     
-    eta.done()
-    f.close()
+    refs = set()
+    with open('%s.fai' % ref_fasta) as f:
+        for line in f:
+            refs.add(line.split('\t')[0].strip())
+
+    with open(fname) as f:
+        fsize = os.stat(fname).st_size
+        eta = ETA(fsize,fileobj=f,modulo=1000)
+
+        for line in f:
+            if line[0] == '#':
+                continue
+            eta.print_status()
+
+            cols = line.strip().split('\t')
+        
+            ref = cols[0]
+            start = int(cols[1])
+            end = int(cols[2])
+            strand = cols[5]
+        
+            if end-start >= min_size and ref in refs:
+                seq = fasta.fetch(ref,start,end)
+                if stranded:
+                    if strand == '-':
+                        seq = revcomp(seq)
+                    print '>%s:%d-%d[%s]\n%s' % (ref,start,end,strand,seq)
+                else:
+                    print '>%s:%d-%d\n%s' % (ref,start,end,seq)
+    
+        eta.done()
     fasta.close()
 
 _compliments = {
