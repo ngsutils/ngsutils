@@ -109,7 +109,7 @@ class ExcludeBED(object):
                 if line[0] == '#':
                     continue
                 cols = line.strip().split('\t')
-                self.regions.append((cols[0],cols[1],cols[2]))
+                self.regions.append((cols[0],int(cols[1]),int(cols[2])))
 
     def filter(self,bam,read):
         if not read.is_unmapped:
