@@ -10,11 +10,13 @@ export PYTHONPATH=$PYTHONPATH:"$DIR":"$DIR"/ext
 if [[ -e "$DIR"/.git && "$1" == "update" ]]; then
     cd $DIR
     if [ "$2" == "" ]; then
-        branch="origin stable"
+        branch="stable"
     else
         branch="$2"
     fi
-    git pull
+    echo "Updating from $branch branch"
+    git checkout $branch
+    git pull origin $branch
     "$DIR"/build_deps.sh
     exit 0
 fi
