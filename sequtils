@@ -9,6 +9,9 @@ usage(){
     echo "    refflat       - Build a RefIso model from RefFlat format file"
     echo ""
     echo "See 'sequtils help CMD' for more information about a specific command"
+    echo -n "ngsutils "
+    cat $DIR/VERSION
+    echo ""
     exit -1
 }
 

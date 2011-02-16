@@ -29,6 +29,9 @@ usage(){
     echo "                    (mapped or unmapped)"
     echo ""
     echo "See 'bamutils help CMD' for more information about a specific command"
+    echo -n "ngsutils "
+    cat $DIR/VERSION
+    echo ""
     exit -1
 }
 

@@ -16,6 +16,9 @@ usage(){
     echo "    from_primers  - Converts a list of PCR primer pairs to BED regions"
     echo ""
     echo "See 'bedutils help CMD' for more information about a specific command"
+    echo -n "ngsutils "
+    cat $DIR/VERSION
+    echo ""
     exit -1
 }
 
