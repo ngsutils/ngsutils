@@ -7,8 +7,13 @@ if [ $? -ne 0 ]; then exit; fi
 
 export PYTHONPATH=$PYTHONPATH:"$DIR":"$DIR"/ext
 
-if [ "$1" == "update" ]; then
+if [[ -e "$DIR"/.git && "$1" == "update" ]]; then
     cd $DIR
+    if [ "$2" == "" ]; then
+        branch="origin stable"
+    else
+        branch="$2"
+    fi
     git pull
     "$DIR"/build_deps.sh
     exit 0
