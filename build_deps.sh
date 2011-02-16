@@ -4,8 +4,9 @@ usage(){
     echo "Fetches dependencies required for working with BAM files"
     echo ""
     echo "Dependencies:"
-    echo "  Cython"
-    echo "  pysam"
+    echo "  Cython   (0.14.1)"
+    echo "  pysam    (0.3.1)"
+    echo "  tabix    (tabix-0.2.3)"
     echo ""
     echo "Usage: `basename $0`"
     echo ""
@@ -21,8 +22,45 @@ if [ "$1" == "-h" ]; then
     usage
 fi
 
+if [ "`which tabix`" == "" ]; then
+    mkdir -p ~/bin/src
+    cd ~/bin/src
+
+    if [ ! -e tabix-0.2.3 ]; then
+        echo "[tabix] downloading"
+        curl -LO "http://downloads.sourceforge.net/project/samtools/tabix/tabix-0.2.3.tar.bz2"
+        tar jxvf tabix-0.2.3.tar.bz2
+    fi
+
+    cd tabix-0.2.3
+    echo "[tabix] building"
+    make
+    cd ../..
+    if [ -e tabix ]; then
+        rm tabix
+    fi
+    if [ -e bgzip ]; then
+        rm bgzip
+    fi
+    ln -s src/tabix-0.2.3/tabix .
+    ln -s src/tabix-0.2.3/bgzip .
+    cd src
+
+    FOUND=""
+    for f in `echo $PATH | sed -e 's/:/ /g'`; do
+        if [[ "$f" == "$HOME/bin" || "$f" == "~/bin" ]]; then
+            FOUND="1"
+        fi
+    done
+
+    if [ $FOUND == "" ]; then
+        echo "export PATH=$PATH:$HOME/bin" >> $HOME/.bashrc
+        . $HOME/.bashrc
+    fi
+fi    
+
 if [ -e "`dirname $0`/ext/pysam" ]; then
-    exit
+    exit 0
 fi
 
 trap control_c SIGINT
