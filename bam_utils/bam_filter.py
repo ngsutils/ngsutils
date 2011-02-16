@@ -104,6 +104,8 @@ class ExcludeBED(object):
         self.fname = fname
         with open(fname) as f:
             for line in f:
+                if not line:
+                    continue
                 if line[0] == '#':
                     continue
                 cols = line.strip().split('\t')
