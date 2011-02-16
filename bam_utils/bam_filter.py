@@ -5,22 +5,31 @@ criteria to be written to output. The output is another BAM file with the
 reads not matching the criteria removed.
 
 Currently, the available filters are:
-    mapped
+    -mapped
     
-    mismatch num            # mismatches or indels
-                            indel always counts as 1 regardless of length
-                            (requires NM tag in reads)
-    mismatch_ref num ref.fa # mismatches or indel - looks up mismatches 
-                            directly in a ref FASTA file (if NM not available)
+    -mismatch num              # mismatches or indels
+                               indel always counts as 1 regardless of length
+                               (requires NM tag in reads)
+    -mismatch_ref num ref.fa   # mismatches or indel - looks up mismatches 
+                               directly in a ref FASTA file (if NM not 
+                               available)
                             
-    nosecondary             Remove reads that have the 0x100 flag set
-    noqcfail                Remove reads that have the 0x200 flag set
+    -nosecondary               Remove reads that have the 0x100 flag set
+    -noqcfail                  Remove reads that have the 0x200 flag set
+
+    -exclude ref:start-end     Remove reads in this region (1-based start)
+    -excludebed file.bed       Remove reads that are in any of the regions 
+                               from the given BED file
+                               
+    -include ref:start-end     Remove reads NO this region (can only be one)
+    -includebed file.bed       Remove reads that are NOT any of the regions 
+                               from the given BED file
     
-    eq  tag_name value
-    lt  tag_name value
-    lte tag_name value
-    gt  tag_name value
-    gte tag_name value
+    -eq  tag_name value
+    -lt  tag_name value
+    -lte tag_name value
+    -gt  tag_name value
+    -gte tag_name value
 
     Where tag_name should be the full name, plus the type eg: AS:i
     
@@ -51,6 +60,66 @@ value less than 1000.
     sys.exit(1)
 
 bam_cigar = ['M','I','D','N','S','H','P']
+
+class IncludeRegion(object):
+    def __init__(self,region):
+        self.excl = ExcludeRegion(region)
+    def filter(self,bam,read):
+        return not self.excl.filter(bam,read)
+    def __repr__(self):
+        return 'Including: %s' % (self.excl.region)
+
+class IncludeBED(object):
+    def __init__(self,fname):
+        self.excl = ExcludeBED(fname)
+    def filter(self,bam,read):
+        return not self.excl.filter(bam,read)
+    def __repr__(self):
+        return 'Including from BED: %s' % (self.excl.fname)
+
+    
+class ExcludeRegion(object):
+    def __init__(self,region):
+        self.region = region
+        spl = region.split(':')
+        self.chrom = spl[0]
+        se = [int(x) for x in spl[1].split('-')]
+        self.start = se[0]-1
+        self.end = se[1]
+        
+    def filter(self,bam,read):
+        if not read.is_unmapped:
+            if bam.getrname(read.rname) == self.chrom:
+                if self.start <= read.pos <= self.end:
+                    return False
+                if self.start <= read.aend <= self.end:
+                    return False
+        return True
+    def __repr__(self):
+        return 'Excluding: %s' % (self.region)
+
+class ExcludeBED(object):
+    def __init__(self,fname):
+        self.regions = []
+        self.fname = fname
+        with open(fname) as f:
+            for line in f:
+                if line[0] == '#':
+                    continue
+                cols = line.strip().split('\t')
+                self.regions.append((cols[0],cols[1],cols[2]))
+
+    def filter(self,bam,read):
+        if not read.is_unmapped:
+            for chrom,start,end in self.regions:
+                if bam.getrname(read.rname) == chrom:
+                    if start <= read.pos <= end:
+                        return False
+                    if start <= read.aend <= end:
+                        return False
+        return True
+    def __repr__(self):
+        return 'Excluding from BED: %s' % (self.fname)
 
 class Mismatch(object):
     def __init__(self,num):
@@ -221,7 +290,11 @@ _criteria = {
     'gte': TagGreaterThanEquals,
     'eq': TagEquals,
     'mismatch': Mismatch,
-    'mismatch_ref': MismatchRef
+    'mismatch_ref': MismatchRef,
+    'exclude': ExcludeRegion,
+    'excludebed': ExcludeBED,
+    'include': IncludeRegion,
+    'includebed': IncludeBED
 }
 
 def bam_filter(infile,outfile,criteria,failedfile = None, verbose = False):
