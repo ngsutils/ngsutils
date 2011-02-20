@@ -137,7 +137,13 @@ def bam_minorallele(bam_fname,ref_fname,conn,min_qual=0, min_count=0, num_allele
         return
     
     printed = False
+    c_count=0
     for pileup in bam.pileup():
+        c_count += 1
+        if c_count > 100000:
+            conn.commit()
+            c_count = 0
+            
         chrom = bam.getrname(pileup.tid)
         eta.print_status(extra='%s:%s' % (chrom,pileup.pos),bam_pos=(pileup.tid,pileup.pos))
         
