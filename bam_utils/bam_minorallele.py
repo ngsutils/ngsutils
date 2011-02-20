@@ -129,9 +129,9 @@ def bam_minorallele(bam_fname,ref_fname,db,min_qual=0, min_count=0, num_alleles 
     conn = connect_db(db)
     conn.execute('INSERT INTO samples (name,alleles) VALUES (?,?)', (name,num_alleles))
     conn.commit()
-    conn.close()
     for row in conn.execute('SELECT id FROM samples WHERE name = ?', (name,)):
         sample_id = row[0]
+    conn.close()
     
     try:
         assert sample_id
