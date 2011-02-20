@@ -12,22 +12,18 @@ also ignores indels.
 
 If rpy2 is installed and -alleles is given, this will also calculate a 95% CI.
 
-Outputs a tab-delimited file with the following columns:
-chrom
-position (1-based)
-reference base
-alternative base
-total counts
-ref counts (1st or second highest)
-alternative counts (1st or second highest)
-background (3rd highest count)
-ref-background
-alt-background
+The results are saved to a SQLite database that is created if it doesn't exist.
 """
 
-import os,sys,math
+import os,sys,math,subprocess,sqlite3
 from support.eta import ETA
 import pysam
+
+class Blackhole(object):
+    def write(self, string):
+        pass
+
+__sink = Blackhole()
 
 try:
     __rsrc = os.path.join(os.path.dirname(__file__),'minorallele_cpci.R')
@@ -36,23 +32,42 @@ try:
         robjects.r(f.read())
 except Exception:
     robjects = None
+    rscript = os.path.join(os.path.dirname(__file__),'minorallele_cpci.rsh')
+    if not os.path.exists(rscript):
+        sys.stderr.write('Missing R script: %s\n' % rscript)
+        sys.exit(-1)
+        
+    stdout = sys.stdout
+    sys.stdout = __sink
+    retval = subprocess.call(rscript)
+    sys.stdout = stdout
+    if retval != 0:
+        sys.stderr.write('Error calling R script: %s\n' % rscript)
+        sys.exit(-1)
+    
 
 def usage():
     base = os.path.basename(sys.argv[0])
     print __doc__
     print """
-Usage: %s {opts} in.bam ref.fa
+Usage: %s {opts} in.bam ref.fa output.db
+
+Arguments:
+  in.bam        BAM files to import
+  ref.fa        Genomic reference sequence (indexed FASTA)
+  output.db     The SQLite database to use
 
 Options:
--qual val     Minimum quality level to use in calculations
-              (numeric, Sanger scale) (default 0)
+  -name name    Sample name (default to filename)
+  -qual val     Minimum quality level to use in calculations
+                (numeric, Sanger scale) (default 0)
 
--count val    Report only bases with this minimum number of reads covering it
-              (default 0)
+  -count val    Only report bases with a minimum coverage of {val}
+                (default 0)
 
--alleles val  The number of alleles included in this sample
-              If given, a Clopper-Pearson style confidence interval will be 
-              calculated. (requires rpy2)
+  -alleles val  The number of alleles included in this sample
+                If given, a Clopper-Pearson style confidence interval will be 
+                calculated. (requires rpy2)
 """ % (base)
     if robjects:
         print "rpy2 detected!"
@@ -61,22 +76,66 @@ Options:
     
     sys.exit(1)
 
-class Blackhole(object):
-    def write(self, string):
-        pass
+def connect_db(fname):
+    create = False
+    if not os.path.exists(fname):
+        create = True
 
-__sink = Blackhole()
+    conn = sqlite3.connect(fname)
+    if create:
+        conn.executescript('''
+CREATE TABLE samples (
+id INTEGER PRIMARY KEY,
+name TEXT UNIQUE,
+alleles INTEGER
+);
 
-def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0):
+CREATE TABLE calls (
+sample_id INTEGER,
+chrom TEXT,
+pos INTEGER,
+ref TEXT,
+alt TEXT,
+total_count INTEGER,
+ref_count INTEGER,
+alt_count INTEGER,
+background_count INTEGER,
+ref_back INTEGER,
+alt_back INTEGER,
+ci_low REAL,
+ci_high REAL,
+allele_count_low REAL,
+allele_count_high REAL,
+FOREIGN KEY (sample_id) REFERENCES samples(id),
+PRIMARY KEY(sample_id,chrom,pos)
+);
+
+CREATE INDEX call_pos ON calls (chrom,pos);
+
+''')
+    conn.commit()
+    return conn
+
+
+def bam_minorallele(bam_fname,ref_fname,conn,min_qual=0, min_count=0, num_alleles = 0,name = None):
     bam = pysam.Samfile(bam_fname,"rb")
     ref = pysam.Fastafile(ref_fname)
     eta = ETA(0,bamfile=bam)
-    sys.stdout.write('chrom\tpos\tref\talt\ttotal\tref count\talt count\tbackground count\tref-background\talt-background')
-    if robjects and num_alleles:
-        sys.stdout.write('\tMean level\t95% CI low\t95% CI high\tCI Range\tlow count\thigh count')
-    sys.stdout.write('\n')
     
+    if not name:
+        name = os.path.basename(bam_fname)
 
+    sample_id = None
+    conn.execute('INSERT INTO samples (name,alleles) VALUES (?,?)', (name,num_alleles))
+    conn.commit()
+    for row in conn.execute('SELECT id FROM samples WHERE name = ?', (name,)):
+        sample_id = row[0]
+    
+    try:
+        assert sample_id
+    except:
+        return
+    
     printed = False
     for pileup in bam.pileup():
         chrom = bam.getrname(pileup.tid)
@@ -122,48 +181,49 @@ def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0
             refback = refcount-background
             altback = altcount-background
 
-            cols = [chrom,(pileup.pos+1),refbase,altbase,total,refcount,altcount,background,refback,altback]
-            if robjects and num_alleles:
-                    ci_low,ci_high = calc_cp_ci(refback+altback,altback,num_alleles)
-                    if math.isnan(ci_low) or math.isnan(ci_high):
-                        cols.append(0)
-                        cols.append(0)
-                        cols.append(0)
-                        cols.append(0)
-                        cols.append(0)
-                        cols.append(0)
-                    else:
-                        if refback+altback > 0:
-                            cols.append(float(altback) / (refback+altback))
-                        else:
-                            cols.append(0)
-                        cols.append(ci_low)
-                        cols.append(ci_high)
-                        cols.append(ci_high-ci_low)
-                        cols.append(ci_low * (num_alleles))
-                        cols.append(ci_high * (num_alleles))
-            
-            sys.stdout.write('%s\n' % '\t'.join([str(x) for x in cols]))
-    
+            if num_alleles:
+                ci_low,ci_high = calc_cp_ci(refback+altback,altback,num_alleles)
+                allele_low = ci_low * num_alleles
+                allele_high = ci_high * num_alleles
+            else:
+                ci_low, ci_high, allele_low, allele_high = 0
+
+            if not math.isnan(ci_low) and ci_low > 0.0:
+                args = (sample_id, chrom, pileup.pos+1, refbase, altbase, total, refcount, altcount, background, refback, altback, ci_low, ci_high, allele_low, allele_high)
+                conn.execute('INSERT INTO calls (sample_id,chrom,pos,ref,alt,total_count,ref_count,alt_count,background_count,ref_back,alt_back,ci_low,ci_high,allele_count_low,allele_count_high) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', args)
+
+    conn.commit()
     eta.done()
     bam.close()
     ref.close()
 
+__ci_cache={}
 def calc_cp_ci(N,count,num_alleles):
+    if (N,count,num_alleles) in __ci_cache:
+        return __ci_cache[(N,count,num_alleles)]
+
+    vals = (float('nan'),float('nan'))
+
     if robjects:
         stdout = sys.stdout
         sys.stdout = __sink
         vals = robjects.r['CP.CI'](N,count,num_alleles)
         sys.stdout = stdout
-        return vals
+    else:
+        vals = [float(x) for x in subprocess.Popen([str(x) for x in [rscript,N,count,num_alleles]],stdout=subprocess.PIPE).communicate()[0].split()]
+
+    __ci_cache[(N,count,num_alleles)] = vals
+    return vals
 
 if __name__ == '__main__':
     bam = None
     ref = None
+    db = None
     
     min_qual = 0
     min_count = 0
     num_alleles = 0
+    name = None
     
     last = None
     for arg in sys.argv[1:]:
@@ -176,19 +236,26 @@ if __name__ == '__main__':
         elif last == '-alleles':
             num_alleles = int(arg)
             last = None
+        elif last == '-name':
+            name = arg
+            last = None
         elif arg == '-h':
             usage()
-        elif arg in ['-qual','-count','-alleles']:
+        elif arg in ['-qual','-count','-alleles','-name']:
             last = arg
         elif not bam and os.path.exists(arg) and os.path.exists('%s.bai' % arg):
             bam = arg
         elif not ref and os.path.exists(arg) and os.path.exists('%s.fai' % arg):
             ref = arg
+        elif not db:
+            db = arg
         else:
             print "Unknown option or missing index: %s" % arg
             usage()
 
-    if not bam or not ref:
+    if not bam or not ref or not db:
         usage()
     else:
-        bam_minorallele(bam,ref,min_qual,min_count,num_alleles)
+        conn = connect_db(db)
+        bam_minorallele(bam,ref,conn,min_qual,min_count,num_alleles,name)
+        conn.close()
