@@ -117,7 +117,7 @@ CREATE INDEX call_pos ON calls (chrom,pos);
     return conn
 
 
-def bam_minorallele(bam_fname,ref_fname,conn,min_qual=0, min_count=0, num_alleles = 0,name = None, min_ci_low = None):
+def bam_minorallele(bam_fname,ref_fname,db,min_qual=0, min_count=0, num_alleles = 0,name = None, min_ci_low = None):
     bam = pysam.Samfile(bam_fname,"rb")
     ref = pysam.Fastafile(ref_fname)
     eta = ETA(0,bamfile=bam)
@@ -126,8 +126,10 @@ def bam_minorallele(bam_fname,ref_fname,conn,min_qual=0, min_count=0, num_allele
         name = os.path.basename(bam_fname)
 
     sample_id = None
+    conn = connect_db(db)
     conn.execute('INSERT INTO samples (name,alleles) VALUES (?,?)', (name,num_alleles))
     conn.commit()
+    conn.close()
     for row in conn.execute('SELECT id FROM samples WHERE name = ?', (name,)):
         sample_id = row[0]
     
@@ -137,13 +139,7 @@ def bam_minorallele(bam_fname,ref_fname,conn,min_qual=0, min_count=0, num_allele
         return
     
     printed = False
-    c_count=0
     for pileup in bam.pileup():
-        c_count += 1
-        if c_count > 100000:
-            conn.commit()
-            c_count = 0
-            
         chrom = bam.getrname(pileup.tid)
         eta.print_status(extra='%s:%s' % (chrom,pileup.pos),bam_pos=(pileup.tid,pileup.pos))
         
@@ -196,9 +192,10 @@ def bam_minorallele(bam_fname,ref_fname,conn,min_qual=0, min_count=0, num_allele
 
             if not math.isnan(ci_low) and (min_ci_low is None or ci_low > min_ci_low):
                 args = (sample_id, chrom, pileup.pos+1, refbase, altbase, total, refcount, altcount, background, refback, altback, ci_low, ci_high, allele_low, allele_high)
+                conn = connect_db(db)
                 conn.execute('INSERT INTO calls (sample_id,chrom,pos,ref,alt,total_count,ref_count,alt_count,background_count,ref_back,alt_back,ci_low,ci_high,allele_count_low,allele_count_high) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', args)
-
-    conn.commit()
+                conn.commit()
+                conn.close()
     eta.done()
     bam.close()
     ref.close()
@@ -266,6 +263,4 @@ if __name__ == '__main__':
     if not bam or not ref or not db:
         usage()
     else:
-        conn = connect_db(db)
-        bam_minorallele(bam,ref,conn,min_qual,min_count,num_alleles,name,min_ci)
-        conn.close()
+        bam_minorallele(bam,ref,db,min_qual,min_count,num_alleles,name,min_ci)
