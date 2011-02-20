@@ -61,10 +61,10 @@ Options:
   -name name    Sample name (default to filename)
   -qual val     Minimum quality level to use in calculations
                 (numeric, Sanger scale) (default 0)
-
   -count val    Only report bases with a minimum coverage of {val}
                 (default 0)
-
+  -ci-low val   Only report bases where the 95%% CI low is greater than {val}
+                (default: show all)
   -alleles val  The number of alleles included in this sample
                 If given, a Clopper-Pearson style confidence interval will be 
                 calculated. (requires rpy2)
@@ -117,7 +117,7 @@ CREATE INDEX call_pos ON calls (chrom,pos);
     return conn
 
 
-def bam_minorallele(bam_fname,ref_fname,conn,min_qual=0, min_count=0, num_alleles = 0,name = None):
+def bam_minorallele(bam_fname,ref_fname,conn,min_qual=0, min_count=0, num_alleles = 0,name = None, min_ci_low = None):
     bam = pysam.Samfile(bam_fname,"rb")
     ref = pysam.Fastafile(ref_fname)
     eta = ETA(0,bamfile=bam)
@@ -188,7 +188,7 @@ def bam_minorallele(bam_fname,ref_fname,conn,min_qual=0, min_count=0, num_allele
             else:
                 ci_low, ci_high, allele_low, allele_high = 0
 
-            if not math.isnan(ci_low) and ci_low > 0.0:
+            if not math.isnan(ci_low) and (min_ci_low is None or ci_low > min_ci_low):
                 args = (sample_id, chrom, pileup.pos+1, refbase, altbase, total, refcount, altcount, background, refback, altback, ci_low, ci_high, allele_low, allele_high)
                 conn.execute('INSERT INTO calls (sample_id,chrom,pos,ref,alt,total_count,ref_count,alt_count,background_count,ref_back,alt_back,ci_low,ci_high,allele_count_low,allele_count_high) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', args)
 
@@ -222,6 +222,7 @@ if __name__ == '__main__':
     
     min_qual = 0
     min_count = 0
+    min_ci = None
     num_alleles = 0
     name = None
     
@@ -236,12 +237,15 @@ if __name__ == '__main__':
         elif last == '-alleles':
             num_alleles = int(arg)
             last = None
+        elif last == '-ci-low':
+            min_ci = int(arg)
+            last = None
         elif last == '-name':
             name = arg
             last = None
         elif arg == '-h':
             usage()
-        elif arg in ['-qual','-count','-alleles','-name']:
+        elif arg in ['-qual','-count','-alleles','-name','-ci-low']:
             last = arg
         elif not bam and os.path.exists(arg) and os.path.exists('%s.bai' % arg):
             bam = arg
@@ -257,5 +261,5 @@ if __name__ == '__main__':
         usage()
     else:
         conn = connect_db(db)
-        bam_minorallele(bam,ref,conn,min_qual,min_count,num_alleles,name)
+        bam_minorallele(bam,ref,conn,min_qual,min_count,num_alleles,name,min_ci)
         conn.close()
