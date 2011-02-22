@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 '''
-Ouputs the names of reads in the BAM file.
+Ouputs the names and positions of reads in the BAM file.
 '''
-import sys,gzip,os
+import sys,os
 from support.eta import ETA
 import pysam
 
@@ -13,11 +13,9 @@ def bam_read_names(fname,mapped=False,unmapped=False):
     for read in bamfile:
         eta.print_status(extra=read.qname,bam_pos=(read.rname,read.pos))
         if mapped and not read.is_unmapped:
-            sys.stdout.write(read.qname)
-            sys.stdout.write('\n')
+            print '%s\t%s\t%s\t%s' % (read.qname, bamfile.getrname(read.rname), read.pos, ''.join(['%s%s' % (length,bam_cigar[op]) for op,length in read.cigar]))
         elif unmapped and read.is_unmapped:
-            sys.stdout.write(read.qname)
-            sys.stdout.write('\n')
+            print '%s\t*\t0\t\n' % (read.qname)
     
     eta.done()
     bamfile.close()
