@@ -10,9 +10,12 @@ def bam_read_names(fname,mapped=False,unmapped=False):
     bamfile = pysam.Samfile(fname,"rb")
     eta = ETA(0,bamfile=bamfile)
 
-    for read in bamfile.fetch():
+    for read in bamfile:
         eta.print_status(extra=read.qname,bam_pos=(read.rname,read.pos))
-        if show_all or not read.is_unmapped:
+        if mapped and not read.is_unmapped:
+            sys.stdout.write(read.qname)
+            sys.stdout.write('\n')
+        elif unmapped and read.is_unmapped:
             sys.stdout.write(read.qname)
             sys.stdout.write('\n')
     
