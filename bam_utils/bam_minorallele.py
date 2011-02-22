@@ -50,24 +50,24 @@ def usage():
     base = os.path.basename(sys.argv[0])
     print __doc__
     print """
-Usage: %s {opts} in.bam ref.fa output.db
+Usage: %s {opts} in.bam ref.fa
 
 Arguments:
   in.bam        BAM files to import
   ref.fa        Genomic reference sequence (indexed FASTA)
-  output.db     The SQLite database to use
 
 Options:
-  -name name    Sample name (default to filename)
-  -qual val     Minimum quality level to use in calculations
-                (numeric, Sanger scale) (default 0)
-  -count val    Only report bases with a minimum coverage of {val}
-                (default 0)
-  -ci-low val   Only report bases where the 95%% CI low is greater than {val}
-                (default: show all)
-  -alleles val  The number of alleles included in this sample
-                If given, a Clopper-Pearson style confidence interval will be 
-                calculated. (requires rpy2)
+  -name    name  Sample name (default to filename)
+  -db      name  Output results into a SQLite database
+  -qual    val   Minimum quality level to use in calculations
+                 (numeric, Sanger scale) (default 0)
+  -count   val   Only report bases with a minimum coverage of {val}
+                 (default 0)
+  -ci-low  val   Only report bases where the 95%% CI low is greater than {val}
+                 (default: show all)
+  -alleles val   The number of alleles included in this sample
+                 If given, a Clopper-Pearson style confidence interval will 
+                 be calculated. (requires rpy2 or R)
 """ % (base)
     if robjects:
         print "rpy2 detected!"
@@ -117,7 +117,7 @@ CREATE INDEX call_pos ON calls (chrom,pos);
     return conn
 
 
-def bam_minorallele(bam_fname,ref_fname,db,min_qual=0, min_count=0, num_alleles = 0,name = None, min_ci_low = None):
+def bam_minorallele(bam_fname,ref_fname,db=None,min_qual=0, min_count=0, num_alleles = 0,name = None, min_ci_low = None):
     bam = pysam.Samfile(bam_fname,"rb")
     ref = pysam.Fastafile(ref_fname)
     eta = ETA(0,bamfile=bam)
@@ -126,17 +126,22 @@ def bam_minorallele(bam_fname,ref_fname,db,min_qual=0, min_count=0, num_alleles 
         name = os.path.basename(bam_fname)
 
     sample_id = None
-    conn = connect_db(db)
-    conn.execute('INSERT INTO samples (name,alleles) VALUES (?,?)', (name,num_alleles))
-    conn.commit()
-    for row in conn.execute('SELECT id FROM samples WHERE name = ?', (name,)):
-        sample_id = row[0]
-    conn.close()
+
+    if db:
+        conn = connect_db(db)
+        conn.execute('INSERT INTO samples (name,alleles) VALUES (?,?)', (name,num_alleles))
+        conn.commit()
+        for row in conn.execute('SELECT id FROM samples WHERE name = ?', (name,)):
+            sample_id = row[0]
+        conn.close()
     
-    try:
-        assert sample_id
-    except:
-        return
+        try:
+            assert sample_id
+        except:
+            return
+    else:
+        print '\t'.join("chrom pos refbase altbase total refcount altcount background refback altback ci_low ci_high allele_low allele_high".split())
+        
     
     printed = False
     for pileup in bam.pileup():
@@ -191,11 +196,16 @@ def bam_minorallele(bam_fname,ref_fname,db,min_qual=0, min_count=0, num_alleles 
                 ci_low, ci_high, allele_low, allele_high = 0
 
             if not math.isnan(ci_low) and (min_ci_low is None or ci_low > min_ci_low):
-                args = (sample_id, chrom, pileup.pos+1, refbase, altbase, total, refcount, altcount, background, refback, altback, ci_low, ci_high, allele_low, allele_high)
-                conn = connect_db(db)
-                conn.execute('INSERT INTO calls (sample_id,chrom,pos,ref,alt,total_count,ref_count,alt_count,background_count,ref_back,alt_back,ci_low,ci_high,allele_count_low,allele_count_high) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', args)
-                conn.commit()
-                conn.close()
+                cols = [chrom, pileup.pos+1, refbase, altbase, total, refcount, altcount, background, refback, altback, ci_low, ci_high, allele_low, allele_high]
+                args = [sample_id,]
+                args.extend(cols)
+                if db:
+                    conn = connect_db(db)
+                    conn.execute('INSERT INTO calls (sample_id,chrom,pos,ref,alt,total_count,ref_count,alt_count,background_count,ref_back,alt_back,ci_low,ci_high,allele_count_low,allele_count_high) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', args)
+                    conn.commit()
+                    conn.close()
+                else:
+                    print '\t'.join([str(x) for x in cols])
     eta.done()
     bam.close()
     ref.close()
@@ -246,21 +256,22 @@ if __name__ == '__main__':
         elif last == '-name':
             name = arg
             last = None
+        elif last == '-db':
+            db = arg
+            last = None
         elif arg == '-h':
             usage()
-        elif arg in ['-qual','-count','-alleles','-name','-ci-low']:
+        elif arg in ['-qual','-count','-alleles','-name','-ci-low','-db']:
             last = arg
         elif not bam and os.path.exists(arg) and os.path.exists('%s.bai' % arg):
             bam = arg
         elif not ref and os.path.exists(arg) and os.path.exists('%s.fai' % arg):
             ref = arg
-        elif not db:
-            db = arg
         else:
             print "Unknown option or missing index: %s" % arg
             usage()
 
-    if not bam or not ref or not db:
+    if not bam or not ref:
         usage()
     else:
         bam_minorallele(bam,ref,db,min_qual,min_count,num_alleles,name,min_ci)
