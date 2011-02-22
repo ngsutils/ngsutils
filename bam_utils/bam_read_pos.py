@@ -19,9 +19,9 @@ def bam_read_pos(fname,readname=None,ref=None,pos=None):
     bamfile.close()
 
     if readname:
-        print "%s position: %s of %s (%s%%)" % (readname,i,count,float(i)*100/count)
+        print "%s position: %s of %s (%.2f%%)" % (readname,i,count,float(i)*100/count)
     else:
-        print "%s:%s position: %s of %s (%s%%)" % (ref,pos,i,count,float(i)*100/count)
+        print "%s:%s position: %s of %s (%.2f%%)" % (ref,pos,i,count,float(i)*100/count)
         
 
 def usage():
