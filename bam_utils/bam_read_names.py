@@ -1,10 +1,12 @@
 #!/usr/bin/env python
-
+'''
+Ouputs the names of reads in the BAM file.
+'''
 import sys,gzip,os
 from support.eta import ETA
 import pysam
 
-def bam_read_names(fname,show_all=False):
+def bam_read_names(fname,mapped=False,unmapped=False):
     bamfile = pysam.Samfile(fname,"rb")
     eta = ETA(0,bamfile=bamfile)
 
@@ -18,22 +20,34 @@ def bam_read_names(fname,show_all=False):
     bamfile.close()
 
 def usage():
+    print __doc__
     print """\
-Usage: %s {-all} bamfile
-
-Ouputs the names of all mapped reads.
+Usage: %s {-mapped} bamfile
 
 Options
--all   Output all reads, even if they are unmapped
+-mapped     Output only mapped reads
+-unmapped   Output only unmapped reads
 
 """ % os.path.basename(sys.argv[0])
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2 or not os.path.exists(sys.argv[-1]):
+    mapped = False
+    unmapped = False
+    fname = None
+    for arg in sys.argv[1:]:
+        if arg == '-unmapped':
+            unmapped = True
+        elif arg == '-mapped':
+            mapped = True
+        elif os.path.exists(arg):
+            fname = arg
+            
+    if not fname
         usage()
         sys.exit(1)
 
-    if sys.argv[1] == '-all':
-        bam_read_names(sys.argv[-1],True)
+    if not unmapped and not mapped:
+        bam_read_names(fname,True,True)
     else:
-        bam_read_names(sys.argv[-1])
+        bam_read_names(fname,mapped,unmapped)
+
