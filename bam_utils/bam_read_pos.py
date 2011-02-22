@@ -3,29 +3,57 @@
 import sys,os
 import pysam
 
-def bam_read_pos(fname,readname):
+def bam_read_pos(fname,readname=None,ref=None,pos=None):
     bamfile = pysam.Samfile(fname,"rb")
     count = 0
-    pos = 0
+    i = 0
     
     for read in bamfile:
-        if read.qname == readname:
-            pos = count
+        if readname and read.qname == readname:
+            i = count
+        elif bamfile.getrname(read.rname) == ref:
+            if not i and read.pos >= pos:
+                i = count
         count += 1
         
     bamfile.close()
-    print "%s position: %s of %s" % (readname,pos,count)
+
+    if readname:
+        print "%s position: %s of %s" % (readname,i,count)
+    else:
+        print "%s:%s position: %s of %s" % (ref,pos,i,count)
+        
 
 def usage():
     print """\
-Usage: %s bamfile read_name
+Usage: %s bamfile { -read read_name} {-pos chr:pos}
 
 """ % os.path.basename(sys.argv[0])
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3 or not os.path.exists(sys.argv[1]):
+    readname = None
+    ref = None
+    pos = None
+    fname = None
+    
+    last = None
+    for arg in sys.argv[1:]:
+        if last == '-read':
+            readname = arg
+            last = None
+        elif last == '-pos':
+            ref = arg.split(':')[0]
+            pos = int(arg.split(':')[1])
+            last = None
+        elif arg in ['-pos','-read']:
+            last = arg
+        elif os.path.exists(arg):
+            fname = arg
+    
+    if readname and fname:
+        bam_read_pos(fname,read=readname)
+    elif ref and pos and fname:
+        bam_read_pos(fname,ref=ref,pos=pos)
+    else:
         usage()
         sys.exit(1)
-
-    bam_read_pos(sys.argv[1], sys.argv[2])
-
