@@ -215,7 +215,11 @@ if __name__ == '__main__':
             print "Unknown option or missing index: %s" % arg
             usage()
 
+    if min_ci and not num_alleles:
+        print "Can't specify a minimum CI level without specifying the number of alleles!"
+        usage()
+
     if not bam or not ref:
         usage()
-    else:
-        bam_minorallele(bam,ref,min_qual,min_count,num_alleles,name,min_ci)
+
+    bam_minorallele(bam,ref,min_qual,min_count,num_alleles,name,min_ci)
