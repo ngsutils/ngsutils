@@ -85,7 +85,10 @@ def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0
     if num_alleles:
         print "# %s" % num_alleles
         
-    print '\t'.join("chrom pos refbase altbase total refcount altcount background refback altback ci_low ci_high allele_low allele_high".split())
+    sys.stdout.write('\t'.join("chrom pos refbase altbase total refcount altcount background refback altback".split()))
+    if num_alleles and rscript:
+        sys.stdout.write("\tci_low\tci_high\tallele_lowt\tallele_high")
+    sys.stdout.write('\n')
         
     
     printed = False
@@ -133,15 +136,20 @@ def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0
             refback = refcount-background
             altback = altcount-background
 
+            cols = [chrom, pileup.pos+1, refbase, altbase, total, refcount, altcount, background, refback, altback]
             if num_alleles and rscript:
                 ci_low,ci_high = calc_cp_ci(refback+altback,altback,num_alleles)
                 allele_low = ci_low * num_alleles
                 allele_high = ci_high * num_alleles
+                
+                cols.append(ci_low)
+                cols.append(ci_high)
+                cols.append(allele_low)
+                cols.append(allele_high)
             else:
-                ci_low, ci_high, allele_low, allele_high = 0
+                ci_low = 0
 
             if not math.isnan(ci_low) and (min_ci_low is None or ci_low > min_ci_low):
-                cols = [chrom, pileup.pos+1, refbase, altbase, total, refcount, altcount, background, refback, altback, ci_low, ci_high, allele_low, allele_high]
                 print '\t'.join([str(x) for x in cols])
     eta.done()
     bam.close()
