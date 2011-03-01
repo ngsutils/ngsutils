@@ -4,8 +4,7 @@ Extends BED regions to be a fixed size
 '''
 
 import os,sys
-sys.path.append(os.path.join(os.path.dirname(__file__),"..","utils")) #eta
-import ngs_utils
+import support.ngs_utils
 
 def usage():
     print __doc__
@@ -22,7 +21,7 @@ SIZE bases, regardless of how long it is to start with.
     sys.exit(1)
 
 def bed_extend(fname,size,relative=False):
-    with ngs_utils.gzip_opener(fname) as f:
+    with support.ngs_utils.gzip_opener(fname) as f:
         for line in f:
             chrom,start,end,name,score,strand = line.strip().split('\t')
 

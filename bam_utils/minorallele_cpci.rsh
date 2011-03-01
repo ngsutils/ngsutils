@@ -18,7 +18,7 @@ if (length(argv) == 2) {
     line <- readLines(con, 1);
     cat(line);
     
-    cat("\tMean level\t95% CI low\t95% CI high\tCI Range\tlow count\thigh count\n");
+    cat("\t95% CI low\t95% CI high\tlow count\thigh count\n");
     
     while (length(line <- readLines(con,1,warn=FALSE)) > 0) {
         cols <- strsplit(line,'\t')[[1]];
@@ -30,15 +30,13 @@ if (length(argv) == 2) {
         ci_high = val[2];
         ci_low = val[1];
 
-        cols[11] <- alt / (alt+ref);
-        cols[12] <- ci_low;
-        cols[13] <- ci_high;
-        cols[14] <- ci_high-ci_low;
-        cols[15] <- ci_low * alleles;
-        cols[16] <- ci_high * alleles;
+        cols[11] <- ci_low;
+        cols[12] <- ci_high;
+        cols[13] <- ci_low * alleles;
+        cols[14] <- ci_high * alleles;
         
         i <- 1;
-        while (i<17) {
+        while (i<15) {
             if (i > 1) {
                 cat("\t");
             }

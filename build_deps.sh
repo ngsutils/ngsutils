@@ -22,6 +22,10 @@ if [ "$1" == "-h" ]; then
     usage
 fi
 
+if [ "`which curl`" == "" ]; then
+    echo "Missing dependency: curl"
+fi
+
 if [ "`which tabix`" == "" ]; then
     mkdir -p ~/bin/src
     cd ~/bin/src
