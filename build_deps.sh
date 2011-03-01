@@ -24,6 +24,7 @@ fi
 
 if [ "`which curl`" == "" ]; then
     echo "Missing dependency: curl"
+    exit 1
 fi
 
 if [ "`which tabix`" == "" ]; then
@@ -50,14 +51,14 @@ if [ "`which tabix`" == "" ]; then
     ln -s src/tabix-0.2.3/bgzip .
     cd src
 
-    FOUND=""
+    FOUND="0"
     for f in `echo $PATH | sed -e 's/:/ /g'`; do
         if [[ "$f" == "$HOME/bin" || "$f" == "~/bin" ]]; then
             FOUND="1"
         fi
     done
 
-    if [ $FOUND == "" ]; then
+    if [ "$FOUND" == "0" ]; then
         echo "export PATH=$PATH:$HOME/bin" >> $HOME/.bashrc
         . $HOME/.bashrc
     fi
