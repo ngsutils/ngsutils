@@ -402,6 +402,12 @@ if __name__ == '__main__':
         criteria.append(_criteria[crit_args[0][1:]](*crit_args[1:]))
     
     if not infile or not outfile or not criteria:
+        if not infile:
+            print "Missing: input bamfile"
+        if not outfile:
+            print "Missing: output bamfile"
+        if not criteria:
+            print "Missing: filtering criteria"
         usage()
     else:
         bam_filter(infile,outfile,criteria,failed,verbose)

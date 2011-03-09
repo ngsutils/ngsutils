@@ -54,5 +54,5 @@ else
         ARGS="$ARGS \"$1\""
         shift
     done
-    "$DIR"/$SUBDIR/$action $ARG
+    "$DIR"/$SUBDIR/$action $ARGS
 fi
