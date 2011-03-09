@@ -49,5 +49,10 @@ else
     fi
     shift
 
-    "$DIR"/$SUBDIR/$action $@
+    ARGS=""
+    while [ "$1" != "" ]; do
+        ARGS="$ARGS \"$1\""
+        shift
+    done
+    "$DIR"/$SUBDIR/$action $ARG
 fi
