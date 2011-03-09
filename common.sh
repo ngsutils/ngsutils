@@ -51,7 +51,8 @@ else
 
     ARGS=""
     while [ "$1" != "" ]; do
-        ARGS="$ARGS \"$1\""
+        ARG=`echo "$1" | sed -e 's/ /\\ /g'`
+        ARGS="$ARGS $ARG"
         shift
     done
     "$DIR"/$SUBDIR/$action $ARGS

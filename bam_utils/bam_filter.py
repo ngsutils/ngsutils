@@ -384,7 +384,7 @@ if __name__ == '__main__':
             last = arg
         elif arg == '-v':
             verbose = True
-        elif not infile:
+        elif not infile and os.path.exists(arg):
             infile = arg
         elif not outfile:
             outfile = arg
@@ -397,6 +397,8 @@ if __name__ == '__main__':
             crit_args = [arg,]
         elif crit_args:
             crit_args.append(arg)
+        else:
+            print "Unknown argument: %s" % arg
 
     if crit_args:
         criteria.append(_criteria[crit_args[0][1:]](*crit_args[1:]))
