@@ -19,11 +19,11 @@ def usage():
 Usage: %s {opts} in.bam {in.bam...}
 
 Options:
-    -flanking N      The number of flanking bases on either side to report
-                     [default: 12]
-                     
     -fasta ref.fa    Ouput in FASTA format (requires reference genome.fa)
                      [default: BED output]
+
+    -flanking N      The number of flanking bases on either side to report
+                     (FASTA output only) [default: 12]
                      
     -cutoff N        Cut-off %% for deletions - if the %% of reads that 
                      include a deletion at a position is higher than this 
