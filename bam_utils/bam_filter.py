@@ -62,10 +62,23 @@ value less than 1000.
 bam_cigar = ['M','I','D','N','S','H','P']
 
 class IncludeRegion(object):
+    _excludes = []
+    _last = None
     def __init__(self,region):
-        self.excl = ExcludeRegion(region)
+        IncludeRegion._excludes.append(ExcludeRegion(region))
+        # self.excl = ExcludeRegion(region)
     def filter(self,bam,read):
-        return not self.excl.filter(bam,read)
+        if read == IncludeRegion._last:
+            return True
+        
+        IncludeRegion._last = read
+        
+        for excl in IncludeRegion._excludes:
+            if not excl.filter(bam,read):
+                return True
+        return False
+        
+        # return not self.excl.filter(bam,read)
     def __repr__(self):
         return 'Including: %s' % (self.excl.region)
 
@@ -373,8 +386,9 @@ if __name__ == '__main__':
     crit_args=[]
     last = None
     verbose = False
+    fail = False
+    
     for arg in sys.argv[1:]:
-            
         if last == '-failed':
             failed = arg
             last = None
@@ -391,7 +405,7 @@ if __name__ == '__main__':
         elif arg[0] == '-':
             if not arg[1:] in _criteria:
                 print "Unknown criterion: %s" % arg
-                usage()
+                fail = True
             if crit_args:
                 criteria.append(_criteria[crit_args[0][1:]](*crit_args[1:]))
             crit_args = [arg,]
@@ -399,11 +413,12 @@ if __name__ == '__main__':
             crit_args.append(arg)
         else:
             print "Unknown argument: %s" % arg
+            fail = True
 
     if crit_args:
         criteria.append(_criteria[crit_args[0][1:]](*crit_args[1:]))
     
-    if not infile or not outfile or not criteria:
+    if fail or not infile or not outfile or not criteria:
         if not infile:
             print "Missing: input bamfile"
         if not outfile:

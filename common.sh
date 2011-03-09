@@ -49,11 +49,12 @@ else
     fi
     shift
 
-    ARGS=""
-    while [ "$1" != "" ]; do
-        ARG=`echo "$1" | sed -e 's/ /\\ /g'`
-        ARGS="$ARGS $ARG"
-        shift
+    ARGS=()
+    i=0
+    for arg in "$@"; do
+        ARGS[$i]="$arg"
+        ((++i))
     done
-    "$DIR"/$SUBDIR/$action $ARGS
+    
+    exec "$DIR"/$SUBDIR/$action "${ARGS[@]}"
 fi
