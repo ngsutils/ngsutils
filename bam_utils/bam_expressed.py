@@ -128,7 +128,6 @@ Options:
                 merged if w/in this distance
                 (default: 10)
            
-         
 -mincount N     The minimum number of reads required in a region
                 (default: 2)
 
