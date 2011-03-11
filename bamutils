@@ -15,6 +15,7 @@ usage(){
     echo ""
     echo "  Generic"
     echo "    expressed     - Finds regions expressed in a BAM file"
+    echo "    extract       - Extracts reads based on regions in a BED file"
     echo "    filter        - Removes reads from a BAM file based on criteria"
     echo "    region_to_ref - Converts region mapping to genomic mapping"
     echo "    split         - Splits a BAM file into smaller pieces"

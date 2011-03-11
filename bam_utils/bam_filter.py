@@ -24,6 +24,8 @@ Currently, the available filters are:
     -include ref:start-end     Remove reads NO this region (can only be one)
     -includebed file.bed       Remove reads that are NOT any of the regions 
                                from the given BED file
+                               Note: If this is a large dataset, use 
+                               "bamutils extract" instead.
     
     -eq  tag_name value
     -lt  tag_name value
