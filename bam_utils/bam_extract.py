@@ -2,7 +2,6 @@
 """
 Given a BAM file and a BED file, this script will extract only reads that
 map to the given BED regions.
-
 """
 
 import os,sys,gzip
@@ -17,7 +16,7 @@ Usage: %s {opts} in.bam out.bam regions.bed
 
 Options:
   -ns    Ignore strandedness of reads and regions
-""" % (base,base)
+""" % (base,)
     sys.exit(1)
 
 
