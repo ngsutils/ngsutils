@@ -24,10 +24,6 @@ def bam_extract(infile,outfile,bedfile,nostrand=False):
     with open(bedfile) as f:
         bamfile = pysam.Samfile(infile,"rb")
         outfile = pysam.Samfile(outfile,"wb",template=bamfile)
-        if failedfile:
-            failed_out = open(failedfile,'w')
-        else:
-            failed_out = None
         eta = ETA(os.stat(bedfile).st_size,fileobj=f)
     
         passed = 0
