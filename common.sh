@@ -10,7 +10,7 @@ export PYTHONPATH=$PYTHONPATH:"$DIR":"$DIR"/ext
 if [[ -e "$DIR"/.git && "$1" == "update" ]]; then
     cd $DIR
     if [ "$2" == "" ]; then
-        branch="stable"
+        branch="master"
     else
         branch="$2"
     fi
