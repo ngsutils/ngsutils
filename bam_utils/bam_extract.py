@@ -33,6 +33,9 @@ def bam_extract(infile,outfile,bedfile,nostrand=False):
             if line[0] == '#':
                 continue
             cols = line.strip().split('\t')
+            if not cols or len(cols)<6:
+                continue
+
             chrom = cols[0]
             start = int(cols[1])
             end = int(cols[2])
