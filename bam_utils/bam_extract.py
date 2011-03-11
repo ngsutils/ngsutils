@@ -2,6 +2,10 @@
 """
 Given a BAM file and a BED file, this script will extract only reads that
 map to the given BED regions.
+
+Specifically, if a read starts or ends within a BED region, it is extracted.
+However, if a read completely spans a region (starting before and ending 
+after), it is ignored.
 """
 
 import os,sys,gzip
