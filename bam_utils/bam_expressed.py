@@ -83,7 +83,7 @@ def bam_find_regions(bam_name, merge_distance = 10, min_read_count = 2, only_uni
     region_plus = None
     region_minus = None
 
-    for pileup in bamfile.pileup():
+    for pileup in bamfile.pileup(stepper='all'):
         chrom = bamfile.getrname(pileup.tid)
         eta.print_status(extra='%s:%s' % (chrom,pileup.pos),bam_pos=(pileup.tid,pileup.pos))
         
