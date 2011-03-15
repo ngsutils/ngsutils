@@ -103,7 +103,7 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "  [pysam] downloading" >&2
-curl -LO "http://pysam.googlecode.com/files/pysam-0.3.1.tar.gz"
+curl -LO "http://pysam.googlecode.com/files/pysam-0.4.1.tar.gz"
 tar zxf pysam-0.3.1.tar.gz
 cd pysam-0.3.1
 
