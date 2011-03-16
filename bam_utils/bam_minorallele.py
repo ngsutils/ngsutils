@@ -92,7 +92,7 @@ def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0
         
     
     printed = False
-    for pileup in bam.pileup():
+    for pileup in bam.pileup(mask=1540):
         chrom = bam.getrname(pileup.tid)
         eta.print_status(extra='%s:%s' % (chrom,pileup.pos),bam_pos=(pileup.tid,pileup.pos))
         

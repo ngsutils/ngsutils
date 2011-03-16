@@ -91,7 +91,7 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, noperfect=False, m
     eta = ETA(0,bamfile=bam)
     sys.stdout.write('chrom\tpos\tref\tcount\tave mappings\tvar\tentropy\tA\tC\tG\tT\tInserts\tDeletions\n')
     printed = False
-    for pileup in bam.pileup():
+    for pileup in bam.pileup(mask=1540):
         chrom = bam.getrname(pileup.tid)
         eta.print_status(extra='%s:%s' % (chrom,pileup.pos),bam_pos=(pileup.tid,pileup.pos))
         
