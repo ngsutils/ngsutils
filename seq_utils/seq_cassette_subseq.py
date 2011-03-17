@@ -53,7 +53,6 @@ def combinations_with_replacement(iterable, r):
         indices[i:] = [indices[i] + 1] * (r - i)
         yield tuple(pool[i] for i in indices)
 
-### TODO: FIXME - Doesn't generate all nmers correctly...
 def generate_nmers(size,seed=None):
     ret=[]
     if not seed:
