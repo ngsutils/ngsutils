@@ -32,7 +32,7 @@ def bam_extract(infile,outfile,bedfile,nostrand=False):
     
         passed = 0
     
-        for line in bedfile:
+        for line in f:
             eta.print_status(extra="extracted:%s" % (passed,))
             if line[0] == '#':
                 continue
