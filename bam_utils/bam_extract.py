@@ -52,7 +52,7 @@ def bam_extract(infile,outfile,bedfile,nostrand=False):
             for read in bamfile.fetch(chrom,start,end):
                 checked+=1
                 if nostrand or (read.is_reverse and strand == '-') or (not read.is_reverse and strand == '+'):
-                    if start <= read.pos <= end or start <= read.apos <= end:
+                    if start <= read.pos <= end or start <= read.aend <= end:
                         outfile.write(read)
                         passed += 1
 
