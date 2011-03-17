@@ -88,6 +88,8 @@ def bam_find_regions(bam_name, merge_distance = 10, min_read_count = 2, only_uni
         eta.print_status(extra='%s:%s' % (chrom,pileup.pos),bam_pos=(pileup.tid,pileup.pos))
         
         for read in pileup.pileups:
+            if read.is_del:
+                continue
             if nostrand or not read.alignment.is_reverse:
                 if not region_plus or region_plus.chrom != chrom or (region_plus.end+merge_distance) < pileup.pos:
                     if region_plus and region_plus.read_count >= min_read_count:
