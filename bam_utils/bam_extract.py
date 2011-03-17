@@ -31,9 +31,9 @@ def bam_extract(infile,outfile,bedfile,nostrand=False):
         eta = ETA(os.stat(bedfile).st_size,fileobj=f)
     
         passed = 0
-    
+        checked = 0
         for line in f:
-            eta.print_status(extra="extracted:%s" % (passed,))
+            eta.print_status(extra="extracted:%s, checked:%s" % (passed,checked))
             if line[0] == '#':
                 continue
             cols = line.strip().split('\t')
@@ -50,6 +50,7 @@ def bam_extract(infile,outfile,bedfile,nostrand=False):
             strand = cols[5]
             
             for read in bamfile.fetch(chrom,start,end):
+                checked+=1
                 if nostrand or (read.is_reverse and strand == '-') or (not read.is_reverse and strand == '+'):
                     if start <= read.pos <= end or start <= read.apos <= end:
                         outfile.write(read)
