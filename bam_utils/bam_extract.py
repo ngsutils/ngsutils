@@ -41,6 +41,10 @@ def bam_extract(infile,outfile,bedfile,nostrand=False):
                 continue
 
             chrom = cols[0]
+            
+            if not chrom in bamfile.references:
+                continue
+            
             start = int(cols[1])
             end = int(cols[2])
             strand = cols[5]
