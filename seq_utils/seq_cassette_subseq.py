@@ -55,6 +55,20 @@ def combinations_with_replacement(iterable, r):
 
 ### TODO: FIXME - Doesn't generate all nmers correctly...
 def generate_nmers(size,seed=None):
+    ret=[]
+    if not seed:
+        seed = ''
+    if size == 1:
+        for n in 'ACGT':
+            ret.extend(['%s%s' % (seed,n)])
+    else:
+        for n in 'ACGT':
+            ret.extend(generate_nmers(size-1,'%s%s' % (seed,n)))
+        
+    return ret
+    
+    
+    
     l = []
     for tup in combinations_with_replacement('ACGT',size):
         l.append(''.join(tup))
@@ -99,9 +113,14 @@ def find_nmers(ref,chrom,start,end,strand,size):
     
     return nmers
     
-def extract_nmers(ref_fname,cassette_fname,output_template,nmer_size=6,intron_span=200,exon_span=400):
+def extract_nmers(ref_fname,cassette_fname,output_template,nmer_size=6,intron_span=200,exon_span=400,bed_fname = None):
     ref = pysam.Fastafile(ref_fname)
     known_nmers = generate_nmers(nmer_size)
+    
+    if bed_fname:
+        bed = open(bed_fname,'w')
+    else:
+        bed = None
     
     outfiles = {}
     regions = ['up_exon','up_intron','alt_5_intron','alt_exon','alt_3_intron','down_intron','down_exon',]
@@ -153,6 +172,15 @@ def extract_nmers(ref_fname,cassette_fname,output_template,nmer_size=6,intron_sp
                     down_end = down_start + exon_span
                 
                 output_mers(outfiles['down_exon'],event,find_nmers(ref,down[0],down_start,down_end,down[3],nmer_size),known_nmers)
+
+                if bed:
+                    bed.write('%s\t%s\t%s\tup_exon\t0\t%s\n' % (up[0],up_start,up_end,up[3]))
+                    bed.write('%s\t%s\t%s\tup_intron\t0\t%s\n' % (up[0],up_end,up_end+intron_span,up[3]))
+                    bed.write('%s\t%s\t%s\talt_5_intron\t0\t%s\n' % (alt[0],alt_start-intron_span,alt_start,alt[3]))
+                    bed.write('%s\t%s\t%s\talt_exon\t0\t%s\n' % (alt[0],alt_start,alt_end,alt[3]))
+                    bed.write('%s\t%s\t%s\talt_3_intron\t0\t%s\n' % (alt[0],alt_end,alt_end+intron_span,alt[3]))
+                    bed.write('%s\t%s\t%s\tdown_intron\t0\t%s\n' % (up[0],down_start-intron_span,down_start,down[3]))
+                    bed.write('%s\t%s\t%s\tdown_exon\t0\t%s\n' % (up[0],down_start,down_end,down[3]))
             else:
                 # reverse strand
                 # MISO event format is strange.  It has the order for events correct (5->3, with strand correct)
@@ -179,7 +207,18 @@ def extract_nmers(ref_fname,cassette_fname,output_template,nmer_size=6,intron_sp
                     down_start = down_end - exon_span
                 
                 output_mers(outfiles['down_exon'],event,find_nmers(ref,down[0],down_start,down_end,down[3],nmer_size),known_nmers)
+
+                if bed:
+                    bed.write('%s\t%s\t%s\tup_exon\t0\t%s\n' % (up[0],up_start,up_end,up[3]))
+                    bed.write('%s\t%s\t%s\tup_intron\t0\t%s\n' % (up[0],up_start-intron_span,up_start,up[3]))
+                    bed.write('%s\t%s\t%s\talt_3_intron\t0\t%s\n' % (alt[0],alt_start-intron_span,alt_start,alt[3]))
+                    bed.write('%s\t%s\t%s\talt_exon\t0\t%s\n' % (alt[0],alt_start,alt_end,alt[3]))
+                    bed.write('%s\t%s\t%s\talt_5_intron\t0\t%s\n' % (alt[0],alt_end,alt_end+intron_span,alt[3]))
+                    bed.write('%s\t%s\t%s\tdown_intron\t0\t%s\n' % (up[0],down_end,down_end+intron_span,down[3]))
+                    bed.write('%s\t%s\t%s\tdown_exon\t0\t%s\n' % (up[0],down_start,down_end,down[3]))
         eta.done()
+    if bed:
+        bed.close()
             
 
 
@@ -215,6 +254,7 @@ Options:
                     (default: 400)
   -size         N   Size of the fragments to extract 
                     (default: 6)
+  -bed filename     Output the regions to this BED file.
 """
     sys.exit(1)
 
@@ -222,6 +262,7 @@ if __name__ == '__main__':
     ref_fname = None
     cassette_fname = None
     out_template = None
+    bed_fname = None
     intron_span = 200
     exon_span = 400
     nmer_size = 6
@@ -243,7 +284,10 @@ if __name__ == '__main__':
         elif last == '-size':
             nmer_size = int(arg)
             last = None
-        elif arg in ['-intron_span','-exon_span','-size']:
+        elif last == '-bed':
+            bed_fname = arg
+            last = None
+        elif arg in ['-intron_span','-exon_span','-size','-bed']:
             last = arg
         elif not ref_fname and os.path.exists(arg) and os.path.exists('%s.fai' % arg):
             ref_fname = arg
@@ -260,4 +304,4 @@ if __name__ == '__main__':
     
     
     
-    extract_nmers(ref_fname,cassette_fname,out_template,nmer_size,intron_span,exon_span)
+    extract_nmers(ref_fname,cassette_fname,out_template,nmer_size,intron_span,exon_span,bed_fname)
