@@ -65,13 +65,6 @@ def generate_nmers(size,seed=None):
             ret.extend(generate_nmers(size-1,'%s%s' % (seed,n)))
         
     return ret
-    
-    
-    
-    l = []
-    for tup in combinations_with_replacement('ACGT',size):
-        l.append(''.join(tup))
-    return l
 
 def output_mers(fileobj,name,nmers,known):
     fileobj.write(name)
