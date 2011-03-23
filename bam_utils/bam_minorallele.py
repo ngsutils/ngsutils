@@ -26,6 +26,7 @@ __sink = Blackhole()
 try:
     __rsrc = os.path.join(os.path.dirname(__file__),'minorallele_cpci.R')
     import rpy2.robjects as robjects
+    rscript = True
     with open(__rsrc) as f:
         robjects.r(f.read())
 except Exception:
