@@ -2,6 +2,9 @@ if [ "$1" == "" ]; then
     usage
 fi
 
+REAL=`python -c 'import os,sys;print os.path.realpath(sys.argv[1])' "$0"`
+DIR=`dirname "$REAL"`
+
 "$DIR"/build_deps.sh
 if [ $? -ne 0 ]; then exit; fi
 

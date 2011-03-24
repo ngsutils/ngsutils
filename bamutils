@@ -38,7 +38,5 @@ usage(){
 
 PREFIX="bam_"
 SUBDIR="bam_utils"
-REAL=`python -c 'import os,sys;print os.path.realpath(sys.argv[1])' "$0"`
-DIR=`dirname "$REAL"`
 
 source "$DIR"/common.sh
