@@ -35,24 +35,6 @@ import sys,os,itertools
 import pysam
 from support.eta import ETA
 
-def combinations_with_replacement(iterable, r):
-    # copied from Python 2.7
-    # combinations_with_replacement('ABC', 2) --> AA AB AC BB BC CC
-    pool = tuple(iterable)
-    n = len(pool)
-    if not n and r:
-        return
-    indices = [0] * r
-    yield tuple(pool[i] for i in indices)
-    while True:
-        for i in reversed(range(r)):
-            if indices[i] != n - 1:
-                break
-        else:
-            return
-        indices[i:] = [indices[i] + 1] * (r - i)
-        yield tuple(pool[i] for i in indices)
-
 def generate_nmers(size,seed=None):
     ret=[]
     if not seed:
@@ -94,14 +76,21 @@ def find_nmers(ref,chrom,start,end,strand,size):
         seq = revcomp(seq)
     
     nmers = {}
-    
+    last = []
     while len(seq) > size:
+        while len(last) > size:
+            last = last[1:]
+            
         sub = seq[:size]
-        if not sub in nmers:
-            nmers[sub] = 1
+        if sub in last:
+            last.append('')
         else:
-            nmers[sub] += 1
-        seq = seq[1:]
+            if not sub in nmers:
+                nmers[sub] = 1
+            else:
+                nmers[sub] += 1
+            seq = seq[1:]
+            last.append(sub)
     
     return nmers
     
