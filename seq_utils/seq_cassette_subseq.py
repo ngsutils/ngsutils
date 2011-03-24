@@ -75,6 +75,9 @@ def find_nmers(ref,chrom,start,end,strand,size):
     if strand == '-':
         seq = revcomp(seq)
     
+    return count_nmers_in_seq(seq,size)
+    
+def count_nmers_in_seq(seq,size):    
     nmers = {}
     last = []
     while len(seq) > size:
@@ -83,6 +86,8 @@ def find_nmers(ref,chrom,start,end,strand,size):
             
         sub = seq[:size]
         if sub in last:
+            # This ensures that a poly-repeat will eventually get counted more
+            # than once.  Ex: AAAAAAAAAAAA will have 'AAAAAA' counted twice
             last.append('')
         else:
             if not sub in nmers:
