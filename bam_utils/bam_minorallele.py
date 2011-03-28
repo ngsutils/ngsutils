@@ -137,7 +137,10 @@ def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0
             refback = refcount-background
             altback = altcount-background
             
-            altfreq = float(altback) / (altback + refback)
+            if (altback+refback) == 0:
+                altfreq = 0
+            else:
+                altfreq = float(altback) / (altback + refback)
 
             cols = [chrom, pileup.pos+1, refbase, altbase, total, refcount, altcount, background, refback, altback, altfreq]
             if num_alleles and rscript:
