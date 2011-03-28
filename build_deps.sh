@@ -1,11 +1,14 @@
 #!/bin/bash
+CYTHON_VER=0.14.1
+PYSAM_VER=0.4.1
+TABIX_VER=0.2.3
 
 usage(){
     echo "Fetches dependencies required for working with BAM files"
     echo ""
     echo "Dependencies:"
     echo "  Cython   (0.14.1)"
-    echo "  pysam    (0.3.1)"
+    echo "  pysam    (0.4.1)"
     echo "  tabix    (tabix-0.2.3)"
     echo ""
     echo "Usage: `basename $0`"

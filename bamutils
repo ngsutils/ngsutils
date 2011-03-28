@@ -39,4 +39,4 @@ usage(){
 PREFIX="bam_"
 SUBDIR="bam_utils"
 
-source "$DIR"/common.sh
+source "`dirname $0`"/common.sh

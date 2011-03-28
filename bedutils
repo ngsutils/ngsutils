@@ -25,4 +25,4 @@ usage(){
 PREFIX="bed_"
 SUBDIR="bed_utils"
 
-source "$DIR"/common.sh
+source "`dirname $0`"/common.sh
