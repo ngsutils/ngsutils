@@ -18,4 +18,4 @@ usage(){
 PREFIX="seq_"
 SUBDIR="seq_utils"
 
-source "$DIR"/common.sh
+source "`dirname $0`"/common.sh
