@@ -10,7 +10,7 @@ import os,sys,gzip
 def read_fastq(fname):
     
     if fname[-3:].lower() == '.gz':
-        f = gzip.open()
+        f = gzip.open(fname)
     else:
         f = open(fname)
         
