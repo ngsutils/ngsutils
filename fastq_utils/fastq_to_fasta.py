@@ -6,26 +6,31 @@ Same format as SOLiD csfasta / qual files.
 '''
 
 import os,sys,gzip
+from support.eta import ETA
 
 def read_fastq(fname):
-    
     if fname[-3:].lower() == '.gz':
         f = gzip.open(fname)
     else:
         f = open(fname)
-        
-    try:
-        while f:
+    eta = ETA(os.stat(fname).st_size, fileobj = f)
+    
+    while f:
+        eta.print_status()
+
+        try:
             name = f.next()
             seq = f.next()
             f.next() # plus
             qual = f.next()
-            quals = ' '.join([ord(x)-33 for x in qual])
-            
-            yield (name[1:],seq,quals)
-    except:
-        pass
+        except:
+            break
+
+        quals = ' '.join([str(ord(x)-33) for x in qual])
+        yield (name[1:],seq,quals)
+        
     f.close()
+    eta.done()
 
 def export_seq(fname):
     for name,seq,quals in read_fastq(fname):
