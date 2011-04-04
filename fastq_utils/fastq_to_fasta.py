@@ -5,40 +5,17 @@ Convert FASTQ to FASTA.  Optionally outputs just the quality values.
 Same format as SOLiD csfasta / qual files.
 '''
 
-import os,sys,gzip
-from support.eta import ETA
+import os,sys
 
-def read_fastq(fname):
-    if fname[-3:].lower() == '.gz':
-        f = gzip.open(fname)
-    else:
-        f = open(fname)
-    eta = ETA(os.stat(fname).st_size, fileobj = f)
-    
-    while f:
-        eta.print_status()
-
-        try:
-            name = f.next().strip()
-            seq = f.next().strip()
-            f.next() # plus
-            qual = f.next().strip()
-        except:
-            break
-
-        quals = ' '.join([str(ord(x)-33) for x in qual])
-        yield (name[1:],seq,quals)
-        
-    f.close()
-    eta.done()
+from fastq_utils import read_fastq
 
 def export_seq(fname):
-    for name,seq,quals in read_fastq(fname):
-        sys.stdout.write('>%s\n%s\n' % (name,seq))
+    for name,seq,quals in read_fastq(fname,quiet=False):
+        sys.stdout.write('>%s\n%s\n' % (name[1:],seq))
 
 def export_qual(fname):
-    for name,seq,quals in read_fastq(fname):
-        sys.stdout.write('>%s\n%s\n' % (name,quals))
+    for name,seq,quals in read_fastq(fname,quiet=False):
+        sys.stdout.write('>%s\n%s\n' % (name[1:],' '.join([str(ord(x)-33) for x in quals])))
 
 def usage():
     print """Usage: %s {-qual} filename.fastq{.gz}
