@@ -77,7 +77,13 @@ def find_nmers(ref,chrom,start,end,strand,size):
     
     return count_nmers_in_seq(seq,size)
     
-def count_nmers_in_seq(seq,size):    
+def count_nmers_in_seq(seq,size):
+    '''
+    Counts the number of nmers in a sequence.  This uses a sliding window to
+    find nmers of length {size}.  It keeps track of the last {size} nmers 
+    found so that duplicates or repeating regions can be counted sanely.  
+    Repeats will be counted only once within a window.
+    '''
     nmers = {}
     last = []
     while len(seq) > size:
