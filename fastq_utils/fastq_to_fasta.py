@@ -19,10 +19,10 @@ def read_fastq(fname):
         eta.print_status()
 
         try:
-            name = f.next()
-            seq = f.next()
+            name = f.next().strip()
+            seq = f.next().strip()
             f.next() # plus
-            qual = f.next()
+            qual = f.next().strip()
         except:
             break
 
