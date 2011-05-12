@@ -6,7 +6,7 @@ be considered isoforms of each other.
 
 For well annotated organisms, these is somewhat redundant as the gene-name 
 should be unique among genes.  However, for less well annotated organisms, 
-or organisms with a lot of gene duplication, this is and important step.
+or organisms with a lot of gene duplication, this is a required step.
 """
 
 import sys,os,gzip
