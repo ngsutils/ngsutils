@@ -7,7 +7,7 @@ import pysam
 def bam2fasta(sam_fname,colorspace=False,only_mapped=False,only_unmapped=False):
     if only_mapped == False and only_unmapped == False:
         return
-    if sam_fname[-4:].lower == '.bam':
+    if sam_fname[-4:].lower() == '.bam':
         samfile = pysam.Samfile(sam_fname,'rb')
     else:
         samfile = pysam.Samfile(sam_fname,'r')
