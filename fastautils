@@ -1,34 +1,27 @@
 #!/bin/bash
-# usage(){
-#     echo "Usage: bedutils COMMAND"
-#     echo ""
-#     echo "Commands"
-#     echo "    extend    - Extends BED regions (3' end)"
-#     echo "    reduce    - Merges overlapping BED regions"
-#     echo "    ref_count - Given a number of BED files, calculate the number of" 
-#     echo "                samples that overlap regions in a reference BED file"
-#     echo "    sort      - Sorts a BED file (in place)"
-#     echo ""
-#     echo "See 'bedutils help CMD' for more information about a specific command"
-#     exit -1
-# }
-# 
-# if [ "$1" == "" ]; then
-#     usage
-# fi
+usage(){
+     echo "Usage: fastautils COMMAND"
+     echo ""
+     echo "Commands"
+     echo "    to_fastq      - Converts FASTA/qual to FASTQ format"
+     echo ""
+     echo "See 'fastautils help CMD' for more information about a specific command"
+     exit -1
+}
+ 
 
 REAL=`python -c 'import os,sys;print os.path.realpath(sys.argv[1])' "$0"`
 DIR=`dirname "$REAL"`
-
-if [ "$1" == "update" ]; then
-    cd $DIR
-    git pull
-    "$DIR"/build_deps.sh
-    exit 0
-fi
+PREFIX="fasta_"
+SUBDIR="fasta_utils"
 
 "$DIR"/build_deps.sh
 if [ $? -ne 0 ]; then exit; fi
+
 export PYTHONPATH=$PYTHONPATH:"$DIR":"$DIR"/ext
 
-"$DIR"/fasta_utils.py $@
+if [ -e "$DIR"/$SUBDIR/${PREFIX}$1.py ]; then
+    source "$DIR"/common.sh
+else
+    "$DIR"/fasta_utils.py $@
+fi

@@ -33,124 +33,192 @@ Options:
     -ns              Don't take the strand of the read into account
     
     -window N        The maximum length of a deletion window
-                     [default: 10]
+                     [default: 20]
 """ % (base)
     sys.exit(1)
 
-def _output_bed(chrom,start,end,num,strand,region_pcts):
-    ave_acc = 0.0
-    for pct in region_pcts:
-        ave_acc += pct
-    ave = int(100*ave_acc / len(region_pcts))
+class BEDEmitter(object):
+    def __init__(self):
+        self.num = 1
+        pass
+    def emit(self,chrom,start,end,strand):
+        if not strand:
+            strand = '+'
+        sys.stdout.write('%s\t%s\t%s\tregion_%s\t%s\t%s\n' % (chrom,start,end,self.num,0,strand))
+        self.num += 1
     
+    def close(self):
+        pass
+
+class FASTAEmitter(object):
+    def __init__(self, ref_fname, flanking=12):
+        self.num = 1
+        self.ref = pysam.Fastafile(ref_fname)
+
+        assert flanking > 0
+        self.flanking = flanking
+
+    def close(self):
+        self.ref.close()
+
+    def emit(self,chrom,start,end,strand):
+        seq = self.ref.fetch(chrom,start-self.flanking,end+self.flanking)
+        seq = '%s%s%s' % (seq[:self.flanking].upper(),seq[self.flanking:end-start+self.flanking].lower(),seq[-self.flanking:].upper())
+
+        if strand == '-':
+            rc = []
+            for base in seq[::-1]:
+                if base == 'A':
+                    rc.append('T')
+                elif base == 'T':
+                    rc.append('A')
+                elif base == 'C':
+                    rc.append('G')
+                elif base == 'G':
+                    rc.append('C')
+                elif base == 'a':
+                    rc.append('t')
+                elif base == 't':
+                    rc.append('a')
+                elif base == 'c':
+                    rc.append('g')
+                elif base == 'g':
+                    rc.append('c')
+            seq=''.join(rc)
+
+        sys.stdout.write('>%s:%s%s%s\n%s\n' % (chrom,start-self.flanking,strand,end+self.flanking,seq))
+
+
+class RegionManager(object):
+    def __init__(self, emitter, strand = '', max_window = 20):
+        self.emitter = emitter
+
+        self.strand = strand
+        self.max_window = max_window
     
-    sys.stdout.write('%s\t%s\t%s\tregion_%s\t%s\t%s\n' % (chrom,start,end,num,ave,strand))
+        self.last_chrom = None
+        self.start = 0
+        self.end = 0
+        self.del_reads = set()
+        self.total_reads = set()
 
-def _output_fasta(chrom,start,end,strand,ref,flanking,region_pcts):
-    ave_acc = 0.0
-    for pct in region_pcts:
-        ave_acc += pct
-    ave = ave_acc / len(region_pcts)
+    def emit(self):
+        if self.last_chrom:
+            self.emitter.emit(self.last_chrom,self.start,self.end,self.strand)
 
-    seq = ref.fetch(chrom,start-flanking,end+flanking)
-    seq = '%s%s%s' % (seq[:flanking].upper(),seq[flanking:end-start+flanking].lower(),seq[-flanking:].upper())
+    def reset(self,new_chrom,new_pos):
+        self.last_chrom = new_chrom
+        self.start = new_pos
+        self.end = new_pos
+        self.del_reads = set()
+        self.total_reads = set()
+        
+    def add(self,chrom, pos, strand,del_reads,total_reads):
+        if self.strand and strand != self.strand:
+            # ignore this if the strand doesn't match
+            return
+            
+        if chrom != self.last_chrom:
+            self.emit()
+            self.reset(chrom,pos)
+        elif pos - self.start >= self.max_window:
+            self.emit()
+            self.reset(chrom,pos)
 
-    if strand == '-':
-        rc = []
-        for base in seq:
-            if base == 'A':
-                rc.append('T')
-            elif base == 'T':
-                rc.append('A')
-            elif base == 'C':
-                rc.append('G')
-            elif base == 'G':
-                rc.append('C')
-            elif base == 'a':
-                rc.append('t')
-            elif base == 't':
-                rc.append('a')
-            elif base == 'c':
-                rc.append('g')
-            elif base == 'g':
-                rc.append('c')
-        rc.reverse()
-        seq=''.join(rc)
+        self.end = pos
+        self.del_reads |= del_reads
+        self.total_reads |= total_reads
     
-    sys.stdout.write('>%s:%s%s%s %s\n%s\n' % (chrom,start-flanking,strand,end+flanking,ave,seq))
+    def close(self):
+        self.emit()
 
+def is_read_del_at_pos(read,pos,ppos=0):
+    last_op = None
+    idx = 0
+    for op,length in read.cigar:
+        if op in [0,1]:
+            idx += length
+        
+        if pos < idx:
+            if op == 2 and last_op != 3:
+                return True
+        last_op = op
+        
+    return False
 
-def bam_cims_finder(bam_fnames,output='bed',ref_fname=None,flanking=12,cutoff=0.1,stranded=True,window_size=10):
+#TODO: Check this...
+def is_read_match_at_pos(read,pos):
+    idx = 0
+    for op,length in read.cigar:
+        if op in [0,1]:
+            idx += length
+        
+        if pos < idx:
+            if op == 2 or op == 0:
+                return True
+        
+    return False
+
+def bam_cims_finder(bam_fnames,output='bed',ref_fname=None,flanking=12,cutoff=0.1,stranded=True,window_size=20):
     regions = []
     for bam_fname in bam_fnames:
         sys.stderr.write('%s\n' % bam_fname)
         bam = pysam.Samfile(bam_fname,"rb")
-        if output == 'fasta' and ref_fname:
-            ref = pysam.Fastafile(ref_fname)
+        
+        
+        if output == 'fasta':
+            emitter = FASTAEmitter(ref_fname,flanking)
         else:
-            ref = None
+            emitter = BEDEmitter()
 
-        printed = False
-    
-        region_start = None
-        region_end = None
-        last_chrom = None
-        last_strand = None
         region_pcts = []
         region_num = 1
     
         if stranded:
             strands = ['+','-']
         else:
-            strands = ['+']
+            strands = ['']
     
         for strand in strands:
+            manager = RegionManager(emitter,strand,window_size)
             eta = ETA(0,bamfile=bam)
-            for pileup in bam.pileup():
+            for pileup in bam.pileup(mask=1540):
                 chrom = bam.getrname(pileup.tid)
                 eta.print_status(extra='%s:%s' % (chrom,pileup.pos),bam_pos=(pileup.tid,pileup.pos))
-        
-                if region_start and (chrom != last_chrom or pileup.pos-region_start > window_size):
-                    if not (last_chrom,region_start,region_end) in regions:
-                        if output == 'bed':
-                            _output_bed(last_chrom,region_start,region_end,region_num,strand,region_pcts)
-                        else:
-                            _output_fasta(last_chrom,region_start,region_end,strand,ref,flanking,region_pcts)
-
-                    regions.append((last_chrom,region_start,region_end))
-
-                    region_num += 1
-                    region_start = None
-                    region_end = None
-                    region_pcts = []
                 
-                last_chrom = chrom
-        
-                deletions = 0
-                total = 0
-        
+                deletions = 0.0
+                total = 0.0
+                
+                del_reads = set()
+                total_reads = set()
+                
                 for pileupread in pileup.pileups:
-                    if not stranded or (strand == '+' and not pileupread.alignment.is_reverse) or (strand == '-' and pileupread.alignment.is_reverse):
-                        total += 1
-                        if pileupread.is_del:
+                    if not strand or (strand == '+' and not pileupread.alignment.is_reverse) or (strand == '-' and pileupread.alignment.is_reverse):
+                        if is_read_match_at_pos(pileupread.alignment,pileupread.qpos):
+                            total += 1
+                            total_reads.add(pileupread.alignment.qname)
+                        
+                        if is_read_del_at_pos(pileupread.alignment,pileupread.qpos):
                             deletions += 1
-                    if total > 0 and float(deletions)/total > cutoff:
-                        if not region_start:
-                            region_start = pileup.pos
-                        region_end = pileup.pos+1
-                        region_pcts.append(float(deletions)/total)
+                            del_reads.add(pileupread.alignment.qname)
+                            # print ""
+                            # print chrom
+                            # print pileup.pos
+                            # print pileupread.alignment.qname
+                            # print pileupread.alignment.pos
+                            # print pileupread.alignment.cigar
+                            # print pileupread.qpos
 
-            if region_start and not (last_chrom,region_start,region_end) in regions:
-                if output == 'bed':
-                    _output_bed(last_chrom,region_start,region_end,region_num,strand,region_pcts)
-                else:
-                    _output_fasta(last_chrom,region_start,region_end,strand,ref,flanking,region_pcts)
-                regions.append((last_chrom,region_start,region_end))
+                if total > 0:
+                    pct = deletions/total
+                    
+                    if pct > cutoff:
+                        manager.add(chrom,pileup.pos,strand,del_reads,total_reads)
+                
+            manager.close()
             eta.done()
         bam.close()
-
-    if ref:
-        ref.close()
+        emitter.close()
 
 if __name__ == '__main__':
     bams = []
@@ -159,7 +227,7 @@ if __name__ == '__main__':
     cutoff = 0.1
     flanking = 12
     stranded = True
-    window = 10
+    window = 20
     
     last = None
     for arg in sys.argv[1:]:
