@@ -309,7 +309,7 @@ if __name__ == '__main__':
     if not infile or not outfile or not chrom_sizes:
         usage()
     else:
-        import cProfile
-        cProfile.run('bam_region_to_ref(infile,outfile,chrom_sizes,overlap)','prof')
-        #bam_region_to_ref(infile,outfile,chrom_sizes,overlap)
+        # import cProfile
+        # cProfile.run('bam_region_to_ref(infile,outfile,chrom_sizes,overlap)','prof')
+        bam_region_to_ref(infile,outfile,chrom_sizes,overlap)
         
