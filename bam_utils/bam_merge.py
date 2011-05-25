@@ -52,10 +52,10 @@ def bam_merge(fname,infiles,tag='AS'):
     
     while True:
         found = False
-        for i in xrange(bamgens):
+        for i,bamgen in enumerate(bamgens):
             if last_reads[i] == None:
                 try:
-                    last_reads[i] = bamgens[i].next()
+                    last_reads[i] = bamgen.next()
                     if last_reads[i]:
                         found = True
                 except:
