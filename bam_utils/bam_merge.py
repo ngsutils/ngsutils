@@ -92,7 +92,7 @@ def bam_merge(fname, infiles, tag = 'AS', discard = False):
                 
             match = False
             for read in last_reads[i]:
-                if read.qname == first_group[0].qname
+                if read.qname == first_group[0].qname:
                     match = True
                     if not read.is_unmapped:
                         tag_val = int(read.opt(tag))
