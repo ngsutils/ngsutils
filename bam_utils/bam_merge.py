@@ -68,13 +68,14 @@ def bam_merge(fname,infiles,tag='AS'):
         best_val = None
         best_reads = None
         
-        for fn,reads in zip(infiles,last_reads):
-            print os.path.basename(fn),reads[0].qname,reads[0].is_unmapped,reads[0].opt(tag)
-        print
-        
-        for i in xrange(last_reads):
+        # for fn,reads in zip(infiles,last_reads):
+        #     print os.path.basename(fn),reads[0].qname,reads[0].is_unmapped,reads[0].opt(tag)
+        # print
+        # 
+        for i in xrange(len(last_reads)):
             if not last_reads[i]:
                 continue
+                
             for read in last_reads[i].reads:
                 if read.qname == last_reads[0][0].qname:
                     if not read.is_unmapped:
