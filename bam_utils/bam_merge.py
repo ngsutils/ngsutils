@@ -28,7 +28,11 @@ def usage():
     base = os.path.basename(sys.argv[0])
     print __doc__
     print """
-Usage: %s {-tag VAL} out.bam in1.bam in2.bam ...
+Usage: %s {opts} out.bam in1.bam in2.bam ...
+
+Options
+  -tag VAL    Tag to use to determine from which file reads will be taken
+  -discard    Discard reads that aren't mapped in any file.
 
 """ % (base,)
     sys.exit(1)
@@ -46,7 +50,7 @@ def bam_reads_batch(bam):
     if reads:
         yield reads
 
-def bam_merge(fname,infiles,tag='AS'):
+def bam_merge(fname, infiles, tag = 'AS', discard = False):
     bams = []
     last_reads = []
     bamgens = []
@@ -66,7 +70,6 @@ def bam_merge(fname,infiles,tag='AS'):
         found = False
         for i,bamgen in enumerate(bamgens):
             if last_reads[i] == None:
-#                print 'loading from %s' % infiles[i]
                 try:
                     last_reads[i] = bamgen.next()
                     if last_reads[i]:
@@ -82,19 +85,14 @@ def bam_merge(fname,infiles,tag='AS'):
         best_reads = None
         best_source = 0
         
-#        for fn,reads in zip(infiles,last_reads):
-#            print os.path.basename(fn),reads[0].qname,reads[0].is_unmapped,reads[0].opt(tag)
-#        print
-#        print last_reads[0][0].qname
-       
-        first_qname = last_reads[0][0].qname 
+        first_group = last_reads[0]
         for i in xrange(len(last_reads)):
             if not last_reads[i]:
                 continue
                 
             match = False
             for read in last_reads[i]:
-                if read.qname == first_qname:
+                if read.qname == first_group[0].qname
                     match = True
                     if not read.is_unmapped:
                         tag_val = int(read.opt(tag))
@@ -113,6 +111,9 @@ def bam_merge(fname,infiles,tag='AS'):
                 outfile.write(read)
         else:
             unmapped += 1
+            
+            if not discard:
+                outfile.write(first_group[0])
 
     for fn,cnt in zip(infiles,counts):
         print "%s\t%s" % (fn,cnt)
@@ -127,6 +128,7 @@ if __name__ == '__main__':
     infiles = []
     outfile = None
     last = None
+    discard = False
     tag = 'AS'
 
     for arg in sys.argv[1:]:
@@ -137,6 +139,8 @@ if __name__ == '__main__':
             last = None
         elif arg in ['-tag']:
             last = arg
+        elif arg == '-discard':
+            discard = True
         elif not outfile:
             outfile = arg
         elif os.path.exists(arg):
@@ -145,5 +149,5 @@ if __name__ == '__main__':
     if not infiles or not outfile:
         usage()
     else:
-        bam_merge(outfile,infiles,tag)
+        bam_merge(outfile,infiles,tag,discard)
         
