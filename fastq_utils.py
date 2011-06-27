@@ -212,6 +212,7 @@ def fastq_trim(fname,linker_5=None,linker_3=None,out=sys.stdout,pct_identity=0.8
     pct_identity - the percentage of matches that must be present in the alignment to strip away linkers
     min_trim - the distance away from the edges that the linkers much match w/in
     '''
+    cs = fastq_is_colorspace(fname)
     sw = support.localalign.LocalAlignment(support.localalign.NucleotideScoringMatrix(2,-1),-1)
     removed = 0
     trimmed = 0
@@ -233,7 +234,10 @@ def fastq_trim(fname,linker_5=None,linker_3=None,out=sys.stdout,pct_identity=0.8
         if len(s) >= min_len:
             if left > 0 or right < len(seq):
                 trimmed += 1
-            out.write('%s\n%s\n+\n%s\n' % (name,s,qual[left:right]))
+            if cs and len(seq) != len(qual) and left == 0:
+                out.write('%s\n%s\n+\n%s\n' % (name,s,qual[left:right-1]))
+            else:
+                out.write('%s\n%s\n+\n%s\n' % (name,s,qual[left:right]))
         else:
             removed += 1
 
