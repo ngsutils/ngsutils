@@ -32,7 +32,7 @@ pseudo count = genomic freq * sqrt(N)
 We use the following genomic frequencies: A 0.3, C 0.2, G 0.2, T 0.3
 """
 
-import os,sys,math
+import os,sys,math,collections
 from support.eta import ETA
 import pysam
 
@@ -40,33 +40,26 @@ def usage():
     base = os.path.basename(sys.argv[0])
     print __doc__
     print """
-Usage: %s {opts} in.bam ref.fa
+Usage: %s {opts} in.bam {chrom:start-end}
 
 Options:
--qual val     Minimum quality level to use in calculations
+-ref   val    Include reference basecalls from this file
+-qual  val    Minimum quality level to use in calculations
               (numeric, Sanger scale) (default 0)
             
 -count val    Report only bases with this minimum number of reads covering it
               (default 0)
 
--noperfect    Don't output bases that perfectly match reference
-
--var val      Report only bases with this minimum variation
-              Valid values: 0.0->1.0 (default 0)
+-mask  val    The bitmask to use for filtering reads (default 1540)
 
 """ % (base)
     sys.exit(1)
 
 __genomic_freq = {'A': 0.3, 'C': 0.2, 'G': 0.2,'T': 0.3}
 
-def calc_entropy(counts):
-    '''
-    counts = dict('A','T','C','G')
-    '''
-    for base in 'ATCG':
-        if not base in counts:
-            counts[base] = 0
-    
+def calc_entropy(a,c,t,g):
+    counts = {'A':a,'C':c,'G':g,'T':t,}
+
     N = counts['A'] + counts['C'] + counts['G'] + counts['T']
     N_sqrt = math.sqrt(N)
     
@@ -83,68 +76,198 @@ def calc_entropy(counts):
         acc += (p * math.log(p,2))
     
     return acc
-    
 
-def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, noperfect=False, min_var=0):
-    bam = pysam.Samfile(bam_fname,"rb")
-    ref = pysam.Fastafile(ref_fname)
-    eta = ETA(0,bamfile=bam)
-    sys.stdout.write('chrom\tpos\tref\tcount\tave mappings\tvar\tentropy\tA\tC\tG\tT\tInserts\tDeletions\n')
-    printed = False
-    for pileup in bam.pileup(mask=1540):
-        chrom = bam.getrname(pileup.tid)
-        eta.print_status(extra='%s:%s' % (chrom,pileup.pos),bam_pos=(pileup.tid,pileup.pos))
+MappingRecord = collections.namedtuple('MappingRecord','qpos cigar_op base qual read')
+MappingPos = collections.namedtuple('MappingPos','tid pos records')
+BasePosition = collections.namedtuple('BasePosition','tid pos total a c g t n deletions gaps insertions reads')
+
+class BamBaseCaller(object):
+    def __init__(self, bam_fname, min_qual=0, min_count=0, chrom=None, start=0, end=0, mask=1540,quiet=False):
+        self.bam = pysam.Samfile(bam_fname,'rb')
+        self.min_qual = min_qual
+        self.min_count = 0
+
+        self.chrom = chrom
+        self.start = start
+        self.end = end
+
+        self.mask = mask
+        self.quiet = quiet
         
-        counts = {'A':0,'C':0,'G':0,'T':0}
-        inserts = 0
+
+        if chrom and start and end:
+            def _gen():
+                for p in self.bam.fetch(chrom,start,end):
+                    yield p
+        else:
+            def _gen():
+                for p in self.bam:
+                    yield p
+        self._gen = _gen
+
+        self.buffer = None
+        self.current_tid = None
+    
+    def close(self):
+        self.bam.close()
+        
+    def _pos_gen(self,tid,pos,records):
+        counts = {'A':0,'C':0,'G':0,'T':0,'N':0}
+        insertions = {}
         deletions = 0
+        gaps = 0
         total = 0
-        
-        read_ih_acc = 0
-        read_count = 0
-        for pileupread in pileup.pileups:
-            read_ih_acc += int(pileupread.alignment.opt('IH'))
-            read_count += 1
-            if pileupread.is_del:
+        reads = []
+
+        for qpos,cigar_op,base,qual,read in records:
+            if cigar_op == 0: # M
+                if qual >= self.min_qual and (read.flag & self.mask) == 0 :
+                    total += 1
+                    reads.append(read)
+
+                    counts[base] += 1
+            elif cigar_op == 1: # I
+                if qual >= self.min_qual and (read.flag & self.mask) == 0 :
+                    total += 1
+                    reads.append(read)
+
+                    if not base in insertions:
+                        insertions[base] = 1
+                    else:
+                        insertions[base] += 1
+            elif cigar_op == 2: # D
                 deletions += 1
-            else:
-                if min_qual:
-                    if pileupread.alignment.qual[pileupread.qpos] < min_qual:
-                        continue
-                if pileupread.indel == 0:
-                    base = pileupread.alignment.seq[pileupread.qpos].upper()
-                    if base != 'N':
-                        counts[base]+=1
-                        total += 1
-                elif pileupread.indel > 0:
-                    inserts += 1
+                total += 1
+                reads.append(read)
+            elif cigar_op == 3: # N
+                total += 1
+                gaps += 1
+                reads.append(read)
         
-        if total > 0 or inserts > 0 or deletions > 0:
-            refbase = ref.fetch(chrom,pileup.pos,pileup.pos+1).upper()
-            if not refbase in counts:
+        if total >= self.min_count:
+            return BasePosition(tid,pos,total,counts['A'],counts['C'],counts['G'],counts['T'],counts['N'],deletions,gaps,insertions,reads)
+            
+
+    def fetch(self):
+        self.current_tid = None
+        self.buffer = collections.deque()
+        if not self.quiet:
+            eta = ETA(0,bamfile=self.bam)
+        else:
+            eta = None
+
+        for read in self._gen():
+            if eta:
+                eta.print_status(extra='%s:%s (%s)' % (self.bam.references[read.tid],read.pos,len(self.buffer)),bam_pos=(read.tid,read.pos))
+            
+            if self.current_tid != read.tid:
+                while self.buffer:
+                    tid,pos,records = self.buffer.popleft()
+                    yield self._pos_gen(tid,pos,records)
+                
+                self.current_tid = read.tid
+            
+            while self.buffer and read.pos > self.buffer[0].pos:
+                tid,pos,records = self.buffer.popleft()
+                yield self._pos_gen(tid,pos,records)
+                
+            self._push_read(read)
+                
+        while self.buffer:
+            tid,pos,records = self.buffer.popleft()
+            yield self._pos_gen(tid,pos,records)
+        
+        if eta:
+            eta.done()
+        
+    def _push_read(self,read):
+        
+        if not self.buffer:
+            self.buffer.append(MappingPos(read.tid, read.pos, []))
+        
+        while self.buffer[-1].pos < read.aend:
+            self.buffer.append(MappingPos(read.tid, self.buffer[-1].pos+1, []))
+        
+        buf_idx = 0
+        while self.buffer[0].pos < read.pos:
+            buf_idx += 1
+            
+        read_idx = 0
+        for op,length in read.cigar:
+            if op == 0:
+                for i in xrange(length):
+                    self.buffer[buf_idx].records.append(MappingRecord(read_idx,op,read.seq[read_idx],read.qual[read_idx],read))
+                    buf_idx += 1
+                    read_idx += 1
+            elif op == 1:
+                inseq = ''
+                inqual = 0
+                for i in xrange(length):
+                    inseq += read.seq[read_idx]
+                    inqual += ord(read.qual[read_idx])-33
+                    read_idx += 1
+                
+                inqual = inqual / len(inseq)
+                
+                self.buffer[buf_idx].records.append(MappingRecord(read_idx,op,inseq,inqual,read))
+                
+            elif op == 2:
+                for i in xrange(length):
+                    self.buffer[buf_idx].records.append(MappingRecord(read_idx,op,None,None,read))
+                    buf_idx += 1
+                
+        
+def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=None,end=None,mask=1540,quiet = False):
+    if ref_fname:
+        ref = pysam.Fastafile(ref_fname)
+    else:
+        ref = None
+
+    sys.stdout.write('chrom\tpos\tref\tcount\tave mappings\tentropy\tA\tC\tG\tT\tN\tDeletions\tGaps\tInsertions\tInserts\n')
+    bbc = BamBaseCaller(bam_fname,min_qual,min_count,chrom,start,end,mask,quiet)
+    for basepos in bbc.fetch():
+        if start and end:
+            if basepos.pos < start or basepos.pos > end:
                 continue
                 
-            if noperfect and total == counts[refbase]:
-                continue
+        if basepos.total == 0:
+            continue
+        if ref:
+            refbase = ref.fetch(bbc.bam.references[basepos.tid],basepos.pos,basepos.pos+1).upper()
+        else:
+            refbase = 'N'
 
-            if total+inserts+deletions == 0 or total == counts[refbase]:
-                var = 0
-            else:
-                var = float(total - counts[refbase] + inserts + deletions)/(total + inserts + deletions)
-            
-            if total > 0:
-                entropy = calc_entropy(counts)
-            else:
+        if basepos.total > 0:
+            try:
+                entropy = calc_entropy(basepos.a,basepos.c,basepos.g,basepos.t)
+            except:
                 entropy = 0
-            
-            ave_mappings = float(read_ih_acc) / read_count
-            
-            if total >= min_count and var >= min_var:
-                sys.stdout.write('%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' % (chrom,(pileup.pos+1),refbase,total,ave_mappings,var,entropy,counts['A'],counts['C'],counts['G'],counts['T'],inserts,deletions))
+        else:
+            entropy = 0
     
-    eta.done()
-    bam.close()
-    ref.close()
+        read_ih_acc = 0
+        for read in basepos.reads:
+            read_ih_acc += int(read.opt('IH'))
+        
+        inserts = []
+        for insert in basepos.insertions:
+            inserts.append((basepos.insertions[insert],insert))
+        inserts.sort()
+        inserts.reverse()
+        
+        insert_str_ar = []
+        incount = 0
+        for count,insert in inserts:
+            insert_str_ar.append('%s:%s' % (insert,count))
+            incount += count
+        
+        ave_mapping = (float(read_ih_acc) / basepos.total)
+        
+        sys.stdout.write('%s\n' % '\t'.join([str(x) for x in (bbc.bam.references[basepos.tid],basepos.pos+1,refbase,basepos.total,ave_mapping,entropy,basepos.a,basepos.c,basepos.g,basepos.t,basepos.n,basepos.deletions,basepos.gaps,incount,','.join(insert_str_ar))]))
+
+    bbc.close()
+    if ref:
+        ref.close()
 
 if __name__ == '__main__':
     bam = None
@@ -152,36 +275,54 @@ if __name__ == '__main__':
     
     min_qual = 0
     min_count = 0
-    min_var = 0
-    noperfect = False
+    mask = 1540
+    chrom = None
+    start = None
+    end = None
+    quiet = False
     
     last = None
     for arg in sys.argv[1:]:
         if last == '-qual':
             min_qual = int(arg)
             last = None
+        elif last == '-ref':
+            if os.path.exists(arg) and os.path.exists('%s.fai' % arg):
+                ref = arg
+            else:
+                print "Missing FASTA file or index: %s" % arg
+                usage()
+            last = None
         elif last == '-count':
             min_count = int(arg)
             last = None
-        elif last == '-var':
-            min_var = float(arg)
+        elif last == '-mask':
+            mask = int(arg)
             last = None
         elif arg == '-h':
             usage()
-        elif arg in ['-qual','-count','-var']:
+        elif arg == '-q':
+            quiet = True
+        elif arg in ['-qual','-count','-mask','-ref']:
             last = arg
-        elif arg == '-noperfect':
-            noperfect = True
         elif not bam and os.path.exists(arg) and os.path.exists('%s.bai' % arg):
             bam = arg
         elif not ref and os.path.exists(arg) and os.path.exists('%s.fai' % arg):
             ref = arg
+        elif not chrom:
+            chrom,startend = arg.split(':')
+            if '-' in startend:
+                start,end = [int(x) for x in startend.split('-')]
+            else:
+                start = int(startend)
+                end = start
+            start = start - 1
         else:
             print "Unknown option or missing index: %s" % arg
             usage()
 
-    if not bam or not ref:
+    if not bam:
         usage()
     else:
-        bam_basecall(bam,ref,min_qual,min_count,noperfect,min_var)
+        bam_basecall(bam,ref,min_qual,min_count,chrom,start,end,mask,quiet)
         
