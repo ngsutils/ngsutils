@@ -16,6 +16,8 @@ Currently, the available filters are:
                             
     -nosecondary               Remove reads that have the 0x100 flag set
     -noqcfail                  Remove reads that have the 0x200 flag set
+    
+    -mask bitmask              Remove reads that match the mask (base 10/hex)
 
     -exclude ref:start-end     Remove reads in this region (1-based start)
     -excludebed file.bed       Remove reads that are in any of the regions 
@@ -228,11 +230,23 @@ class Mapped(object):
     def __repr__(self):
         return 'is mapped'
 
+class MaskFlag(object):
+    def __init__(self,value):
+        if value[0:2] == '0x':
+            self.flag = int(value,16)
+        else:
+            self.flag = int(value)
+    def __repr__(self):
+        return "Doesn't match flag: %s" % self.flag
+    def filter(self,bam,read):
+        return (read.flag & self.flag) == 0
+
 class SecondaryFlag(object):
     def __repr__(self):
         return "no 0x100 (secondary) flag"
     def filter(self,bam,read):
         return not read.is_secondary
+
 
 class QCFailFlag(object):
     def __repr__(self):
@@ -301,6 +315,7 @@ _criteria = {
     'mapped': Mapped,
     'noqcfail': QCFailFlag,
     'nosecondary': SecondaryFlag,
+    'mask': MaskFlag,
     'lt': TagLessThan,
     'gt': TagGreaterThan,
     'lte': TagLessThanEquals,
@@ -358,7 +373,7 @@ def bam_filter(infile,outfile,criteria,failedfile = None, verbose = False):
     outfile.close()
     if failed_out:
         failed_out.close()
-    sys.stderr.write("%s kept\n%s failed\n" % (passed,failed))
+    sys.stdout.write("%s kept\n%s failed\n" % (passed,failed))
 
 def read_to_unmapped(read):
     '''
