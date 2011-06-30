@@ -18,8 +18,9 @@ Entropy
 # C calls
 # G calls
 # T calls
-# inserts
 # deletions
+# gaps
+# inserts
 
 Entropy is sum(a..t) { p log2 p } where p = freq(+pseudocount) / genomic freq.
 pseudo count = genomic freq * sqrt(N)
