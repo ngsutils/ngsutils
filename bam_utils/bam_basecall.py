@@ -135,6 +135,7 @@ class BamBaseCaller(object):
                         insertions[base] += 1
             elif cigar_op == 2: # D
                 deletions += 1
+                total += 1 # not sure why this is included, but samtools mpileup includes these in the count.
                 reads.append(read)
             elif cigar_op == 3: # N
                 gaps += 1
@@ -223,11 +224,12 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=N
     bbc = BamBaseCaller(bam_fname,min_qual,min_count,chrom,start,end,mask,quiet)
     for basepos in bbc.fetch():
         if start and end:
-            if basepos.pos < start or basepos.pos > end:
+            if basepos.pos < start or basepos.pos >= end:
                 continue
                 
-        if basepos.total == 0:
+        if basepos.total == 0 or basepos.total < min_count:
             continue
+            
         if ref:
             refbase = ref.fetch(bbc.bam.references[basepos.tid],basepos.pos,basepos.pos+1).upper()
         else:
