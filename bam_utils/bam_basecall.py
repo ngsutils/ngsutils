@@ -13,7 +13,6 @@ chromosome
 position (1-based)
 reference base
 # reads that contain this base
-Variation [0..1]
 Entropy
 # A calls
 # C calls
@@ -22,10 +21,6 @@ Entropy
 # inserts
 # deletions
 
-Variation is calculated as: (# calls not matching ref + # inserts + # dels)
-                            -----------------------------------------------
-                                 total calls + # inserts + # deletions
-                                 
 Entropy is sum(a..t) { p log2 p } where p = freq(+pseudocount) / genomic freq.
 pseudo count = genomic freq * sqrt(N)
 
@@ -61,6 +56,9 @@ def calc_entropy(a,c,t,g):
     counts = {'A':a,'C':c,'G':g,'T':t,}
 
     N = counts['A'] + counts['C'] + counts['G'] + counts['T']
+    if N == 0:
+        return 0
+        
     N_sqrt = math.sqrt(N)
     
     count_pseudo = {}
@@ -234,13 +232,7 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=N
         else:
             refbase = 'N'
 
-        if basepos.total > 0:
-            try:
-                entropy = calc_entropy(basepos.a,basepos.c,basepos.g,basepos.t)
-            except:
-                entropy = 0
-        else:
-            entropy = 0
+        entropy = calc_entropy(basepos.a,basepos.c,basepos.g,basepos.t)
     
         read_ih_acc = 0
         for read in basepos.reads:
