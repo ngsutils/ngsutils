@@ -111,7 +111,7 @@ class BamBaseCaller(object):
     def close(self):
         self.bam.close()
         
-    def _pos_gen(self,tid,pos,records):
+    def _calc_pos(self,tid,pos,records):
         counts = {'A':0,'C':0,'G':0,'T':0,'N':0}
         insertions = {}
         deletions = 0
@@ -128,7 +128,6 @@ class BamBaseCaller(object):
                     counts[base] += 1
             elif cigar_op == 1: # I
                 if qual >= self.min_qual and (read.flag & self.mask) == 0 :
-                    total += 1
                     reads.append(read)
 
                     if not base in insertions:
@@ -137,10 +136,8 @@ class BamBaseCaller(object):
                         insertions[base] += 1
             elif cigar_op == 2: # D
                 deletions += 1
-                total += 1
                 reads.append(read)
             elif cigar_op == 3: # N
-                total += 1
                 gaps += 1
                 reads.append(read)
         
@@ -163,19 +160,19 @@ class BamBaseCaller(object):
             if self.current_tid != read.tid:
                 while self.buffer:
                     tid,pos,records = self.buffer.popleft()
-                    yield self._pos_gen(tid,pos,records)
+                    yield self._calc_pos(tid,pos,records)
                 
                 self.current_tid = read.tid
             
             while self.buffer and read.pos > self.buffer[0].pos:
                 tid,pos,records = self.buffer.popleft()
-                yield self._pos_gen(tid,pos,records)
+                yield self._calc_pos(tid,pos,records)
                 
             self._push_read(read)
                 
         while self.buffer:
             tid,pos,records = self.buffer.popleft()
-            yield self._pos_gen(tid,pos,records)
+            yield self._calc_pos(tid,pos,records)
         
         if eta:
             eta.done()
