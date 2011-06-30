@@ -8,6 +8,8 @@ usage(){
     echo "    kg            - Build a RefIso model from UCSC KnownGene files"
     echo "    refflat       - Build a RefIso model from RefFlat format file"
     echo ""
+    echo "    extract_sizes - Extract genomic/transcript sizes for genes (in RefIso)"
+    echo ""
     echo "See 'sequtils help CMD' for more information about a specific command"
     echo -n "ngsutils "
     cat $DIR/VERSION
