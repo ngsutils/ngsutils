@@ -12,13 +12,32 @@ def usage():
     base = os.path.basename(sys.argv[0])
     print __doc__
     print """
-Usage: %s in.bam {refiso.txt}
+Usage: %s in.bam {-model refiso.txt} {region}
 
 If a RefIso file is given, counts corresponding to exons, introns, promoters,
 junctions, intergenic, and mitochondrial regions will be calculated.
 
+If a region is given, only reads that map to that region will be counted. 
+Regions should be be in the format: 'ref:start-end' or 'ref:start' using 
+1-based start coordinates.
+
+
 """ % (base)
     sys.exit(1)
+
+flag_descriptions = {
+0x1: 'Multiple fragments',
+0x2: 'All fragments aligned',
+0x4: 'Unmapped',
+0x8: 'Next unmapped',
+0x10: 'Reverse complimented',
+0x20: 'Next reverse complimented',
+0x40: 'First fragment',
+0x80: 'Last fragment',
+0x100: 'Secondary alignment',
+0x200: 'QC Fail',
+0x400: 'PCR/Optical duplicate'
+}
 
 class RangeMatch(object):
     '''
@@ -85,12 +104,18 @@ class Bins(object):
         return len(self.bins)-1
         
 
-def bam_stats(infile,ref_file = None):
+def bam_stats(infile,ref_file = None, region = None):
     bamfile = pysam.Samfile(infile,"rb")
     eta = ETA(0,bamfile=bamfile)
     
     regions = []
     counts = {}
+    flag_counts = {}
+    
+    ref = None
+    start = None
+    end = None
+    
     if ref_file:
         sys.stderr.write('Loading gene model: %s\n' % ref_file)
         refiso = RefIso(ref_file)
@@ -124,7 +149,17 @@ def bam_stats(infile,ref_file = None):
         counts['junction']=0
         counts['intergenic']=0
         counts['mitochondrial']=0
-        
+    
+    if region:
+        ref,startend=region.split(':')
+        if '-' in startend:
+            start,end = [int(x) for x in startend.split('-')]
+            start = start - 1
+            sys.stderr.write('Region: %s:%s-%s\n' % (ref,start+1,end))
+        else:
+            start = int(startend)-1
+            end = int(startend)
+            sys.stderr.write('Region: %s:%s\n' % (ref,start+1))
     
     total = 0
     mapped = 0
@@ -137,14 +172,29 @@ def bam_stats(infile,ref_file = None):
 
     for rname in bamfile.references:
         refs[rname] = 0
+
+    if region:
+        def read_gen():
+            for read in bamfile.fetch(ref,start,end):
+                yield read
+    else:
+        def read_gen():
+            for read in bamfile:
+                yield read
+    
     
     sys.stderr.write('Calculating Read stats...\n')
     try:
-        for read in bamfile:
+        for read in read_gen():
             if read.qname in names:
                 # reads only count once for this...
                 continue
-        
+            
+            if not read.flag in flag_counts:
+                flag_counts[read.flag]=1
+            else:
+                flag_counts[read.flag]+=1
+            
             names.add(read.qname)
             lengths.add(len(read.seq))
             total += 1
@@ -201,44 +251,67 @@ def bam_stats(infile,ref_file = None):
     print "Reads:\t%s" % total
     print "Mapped:\t%s" % mapped
     print "Unmapped:\t%s" % unmapped
-    print ""
-    print "Ave length:\t%s" % lengths.mean()
-    print ""
-    print "Ave # alignments (IH):\t%s" % alignments.mean()
-    print "Max # alignments (IH):\t%s" % alignments.max()
-    print
-    print "Ave edit distance (NM):\t%s" % edits.mean()
-    print "Max edit distance (NM):\t%s" % edits.max()
-    print ""
-    print "Read lengths"
-    for i,v in enumerate(lengths.bins[::-1]):
-        if v:
-            print "%s\t%s" % (lengths.max()-i,v)
-    print ""
-    print "# of alignments (IH)"
-    for i,v in enumerate(alignments.bins):
-        if v:
-            print "%s\t%s" % (i,v)
-
-    print ""
-    print "Edit distances (NM)"
-    for i,v in enumerate(edits.bins):
-        if v:
-            print "%s\t%s" % (i,v)
-    print ""
     
-    print "Reference distribution"
-    print "ref\tlength\tcount\tcount per million bases"
-    for refname,reflen in zip(bamfile.references,bamfile.lengths):
-        print "%s\t%s\t%s\t%s" % (refname,reflen,refs[refname],refs[refname]/(float(reflen)/1000000))
-
-    if regions:
+    if total > 0:
         print ""
-        print "Mapping regions"
-        sorted_matches = [x for x in counts]
-        sorted_matches.sort()
-        for match in sorted_matches:
-            print "%s\t%s" % (match,counts[match])
+        print "Flag distribution"
+        
+        tmp = []
+        maxsize = 0
+        for flag in flag_descriptions:
+            if flag in flag_counts:
+                tmp.append(flag)
+                maxsize = max(maxsize,len(flag_descriptions[flag]))
+        tmp.sort()
+        
+        for flag in tmp:
+            count = 0
+            for f in flag_counts:
+                if (f & flag) > 0:
+                    count += flag_counts[f]
+                    
+            if count > 0:
+                print "[0x%03x] %-*s:\t%s (%.1f%%)" % (flag,maxsize,flag_descriptions[flag],count,(float(count)*100/total))
+                
+        print ""
+        print ""
+        print "Ave length:\t%s" % lengths.mean()
+        print ""
+        print "Ave # alignments (IH):\t%s" % alignments.mean()
+        print "Max # alignments (IH):\t%s" % alignments.max()
+        print
+        print "Ave edit distance (NM):\t%s" % edits.mean()
+        print "Max edit distance (NM):\t%s" % edits.max()
+        print ""
+        print "Read lengths"
+        for i,v in enumerate(lengths.bins[::-1]):
+            if v:
+                print "%s\t%s" % (lengths.max()-i,v)
+        print ""
+        print "# of alignments (IH)"
+        for i,v in enumerate(alignments.bins):
+            if v:
+                print "%s\t%s" % (i,v)
+
+        print ""
+        print "Edit distances (NM)"
+        for i,v in enumerate(edits.bins):
+            if v:
+                print "%s\t%s" % (i,v)
+        print ""
+    
+        print "Reference distribution"
+        print "ref\tlength\tcount\tcount per million bases"
+        for refname,reflen in zip(bamfile.references,bamfile.lengths):
+            print "%s\t%s\t%s\t%s" % (refname,reflen,refs[refname],refs[refname]/(float(reflen)/1000000))
+
+        if regions:
+            print ""
+            print "Mapping regions"
+            sorted_matches = [x for x in counts]
+            sorted_matches.sort()
+            for match in sorted_matches:
+                print "%s\t%s" % (match,counts[match])
         
         
     
@@ -248,17 +321,24 @@ def bam_stats(infile,ref_file = None):
 if __name__ == '__main__':
     infile = None
     refiso = None
+    region = None
     
+    last = None
     for arg in sys.argv[1:]:
         if arg == '-h':
             usage()
         elif not infile and os.path.exists(arg):
             infile = arg
-        elif not refiso and os.path.exists(arg):
+        elif last == '-model':
             refiso = arg
+            last = None
+        elif arg in ['-model']:
+            last = arg
+        else:
+            region = arg
 
     if not infile:
         usage()
     else:
-        bam_stats(infile,refiso)
+        bam_stats(infile,refiso,region)
         
