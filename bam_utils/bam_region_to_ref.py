@@ -194,7 +194,7 @@ def bam_region_to_ref(infile,outfile,chrom_sizes, enforce_overlap=False):
     
     outfile = pysam.Samfile(outfile,"wb",header=header)
     
-    eta = ETA(0,bamfile=bamfile)
+    # eta = ETA(0,bamfile=bamfile)
     count = 0
     converted_count = 0
     invalid_count = 0
@@ -206,10 +206,10 @@ def bam_region_to_ref(infile,outfile,chrom_sizes, enforce_overlap=False):
 
         if count > 100:
             count = 0
-            if enforce_overlap:
-                eta.print_status(extra="conv:%d inv:%d un:%d" % (converted_count,invalid_count,unmapped_count),bam_pos=(batch[0].rname,batch[0].pos))
-            else:
-                eta.print_status(bam_pos=(batch[0].rname,batch[0].pos))
+            # if enforce_overlap:
+            #     eta.print_status(extra="conv:%d inv:%d un:%d" % (converted_count,invalid_count,unmapped_count),bam_pos=(batch[0].rname,batch[0].pos))
+            # else:
+            #     eta.print_status(bam_pos=(batch[0].rname,batch[0].pos))
             
         for read in batch:
             if read.is_unmapped and not read.is_secondary:
@@ -276,7 +276,7 @@ def bam_region_to_ref(infile,outfile,chrom_sizes, enforce_overlap=False):
         # 
         #     outfile.write(read)
             
-    eta.done()
+    # eta.done()
     bamfile.close()
     outfile.close()
 
@@ -310,6 +310,11 @@ if __name__ == '__main__':
         usage()
     else:
         # import cProfile
-        # cProfile.run('bam_region_to_ref(infile,outfile,chrom_sizes,overlap)','prof')
+        # pf = 'prof'
+        # i=0
+        # while os.path.exists(pf):
+        #     pf = 'prof_%s' % i
+        #     i+=1
+        # cProfile.run('bam_region_to_ref(infile,outfile,chrom_sizes,overlap)',pf)
         bam_region_to_ref(infile,outfile,chrom_sizes,overlap)
         
