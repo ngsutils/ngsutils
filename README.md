@@ -1,7 +1,14 @@
 ngsutils - Utility programs for analysis of next-gen sequencing data
 ===
 
-bamutils
+Usage
+===
+Run the `bamutils`, `bedutils`, `fastautils`, `fastqutils`, or `sequtils` scripts. These are the main driver script 
+that setup the appropriate environment (loading pysam). This will give you a list of command possible for each module.
+
+Running `bamutils command` will give you the parameters required for that command (or `bedutils`, etc...)
+
+bamutils module
 ---
 
 Commands available with bamutils:
@@ -16,7 +23,7 @@ Commands available with bamutils:
 * stats         - Calculates simple stats for a BAM file
 
 
-bedutils
+bedutils module
 ---
 
 Commands available with bedutils:
@@ -27,6 +34,16 @@ Commands available with bedutils:
 * sort      - Sorts a BED file (in place)
 
 
-If not otherwise specified:
+Installing
+===
 
-Author: Marcus Breese <mbreese@iupui.edu>
+Checkout the code and run `build_deps.sh`. This will download and compile `pysam` (and optionally `Cython`, if needed). 
+
+Requires
+---
+* Python 2.6+
+* curl
+
+
+
+If not otherwise specified, the author is: Marcus Breese <mbreese@iupui.edu>
