@@ -6,10 +6,10 @@ contain the region of interest.
 
 Example:
 ref           (A)========        (B)============================
-sample 1       ===    ====              ====    = ======   ====
-sample 2           ====           =============     
-sample 3                                                     =====
-sample 4          ==== 
+sample 1       ---    ----              -----  -- ------   ----
+sample 2           ----           ------------     
+sample 3                                                     -----
+sample 4          ---- 
 
 Would return:
         sample 1        sample 2        sample 3        sample 4        total
@@ -35,7 +35,7 @@ Usage: %s {-ns} reference.bed sample1.bed sample2.bed ...
        %s {-ns} reference.bed -group name sample1-1 sample1-2 ... \\
                               -group name sample2-1 sample2-2 ...
 
-Where the sample BED files are Tabix indexed (sample1.bed.tbi exists).
+Where the sample BED files are Tabix indexed (sample1.bed.tgz.tbi exists).
 The sample names are calculated using the names of the files.  
 
 The reference BED file shouldn't be Tabix indexed (it is read directly)/
