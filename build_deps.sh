@@ -1,7 +1,6 @@
 #!/bin/bash
 CYTHON_VER=0.14.1
 PYSAM_VER=0.4.1
-TABIX_VER=0.2.3
 
 usage(){
     echo "Fetches dependencies required for working with BAM files"
@@ -9,7 +8,6 @@ usage(){
     echo "Dependencies:"
     echo "  Cython   (0.14.1)"
     echo "  pysam    (0.4.1)"
-    echo "  tabix    (tabix-0.2.3)"
     echo ""
     echo "Usage: `basename $0`"
     echo ""
@@ -17,7 +15,7 @@ usage(){
 }
 
 control_c() {
-    rm -rf `dirname $0`/ext/*
+    rm -rf "`dirname $0`/work/*"
     exit 1
 }
 
@@ -30,42 +28,17 @@ if [ "`which curl`" == "" ]; then
     exit 1
 fi
 
-if [ "`which tabix`" == "" ]; then
-    mkdir -p ~/bin/src
-    cd ~/bin/src
+PYMAJOR=`python -V 2>&1 | awk '{print $2}' | sed -e 's/\./ /g' | awk '{print $1}'`
+PYMINOR=`python -V 2>&1 | awk '{print $2}' | sed -e 's/\./ /g' | awk '{print $2}'`
 
-    if [ ! -e tabix-0.2.3 ]; then
-        echo "[tabix] downloading"
-        curl -LO "http://downloads.sourceforge.net/project/samtools/tabix/tabix-0.2.3.tar.bz2"
-        tar jxvf tabix-0.2.3.tar.bz2
-    fi
-
-    cd tabix-0.2.3
-    echo "[tabix] building"
-    make
-    cd ../..
-    if [ -e tabix ]; then
-        rm tabix
-    fi
-    if [ -e bgzip ]; then
-        rm bgzip
-    fi
-    ln -s src/tabix-0.2.3/tabix .
-    ln -s src/tabix-0.2.3/bgzip .
-    cd src
-
-    FOUND="0"
-    for f in `echo $PATH | sed -e 's/:/ /g'`; do
-        if [[ "$f" == "$HOME/bin" || "$f" == "~/bin" ]]; then
-            FOUND="1"
-        fi
-    done
-
-    if [ "$FOUND" == "0" ]; then
-        echo "export PATH=$PATH:$HOME/bin" >> $HOME/.bashrc
-        . $HOME/.bashrc
-    fi
-fi    
+if [ "$PYMAJOR" != "2" ]; then
+    echo "ngsutils requires Python version 2.6+. It has not been tested with Python 3."
+    exit 0
+fi
+if [ $PYMINOR -lt 6 ]; then
+    echo "ngsutils requires Python version 2.6+. It has not been tested with Python 3."
+    exit 0
+fi
 
 if [ -e "`dirname $0`/ext/pysam" ]; then
     exit 0
@@ -77,8 +50,8 @@ echo "Downloading and building dependencies..." >&2
 
 ABSPATH=`python -c 'import os,sys;print os.path.realpath(sys.argv[1])' "$0"`
 WORK=`dirname $ABSPATH`/ext/work
-mkdir -p $WORK
-cd $WORK
+mkdir -p "$WORK"
+cd "$WORK"
 touch build.log
 rm -rf *
 

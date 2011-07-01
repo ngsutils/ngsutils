@@ -5,13 +5,16 @@ fi
 REAL=`python -c 'import os,sys;print os.path.realpath(sys.argv[1])' "$0"`
 DIR=`dirname "$REAL"`
 
-"$DIR"/build_deps.sh
-if [ $? -ne 0 ]; then exit; fi
+# "$DIR"/build_deps.sh
+# if [ $? -ne 0 ]; then exit; fi
 
 export PYTHONPATH=$PYTHONPATH:"$DIR":"$DIR"/ext
 
 if [[ -e "$DIR"/.git && "$1" == "update" ]]; then
-    cd $DIR
+    cd "$DIR"
+    
+    OLD_PYSAM_VER=`grep 'PYSAM_VER' build_deps.sh`
+    
     if [ "$2" != "" ]; then
         echo "Updating from $2 branch"
         git checkout $2
@@ -20,7 +23,15 @@ if [[ -e "$DIR"/.git && "$1" == "update" ]]; then
         echo "Updating from current branch"
         git pull
     fi
-    "$DIR"/build_deps.sh
+
+    NEW_PYSAM_VER=`grep 'PYSAM_VER' build_deps.sh`
+
+    if [ "$OLD_PYSAM_VER" != "$NEW_PYSAM_VER" ]; then
+        rm -rf ext/pysam
+        echo "Updating dependencies..."
+        ./build_deps.sh
+    fi
+
     exit 0
 fi
 
