@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 '''
-Reduces BED regions to overlap them.
+Reduces BED regions to overlap them. The BED file *must* be sorted in order 
+to merge them.
 '''
 
 import os,sys
@@ -37,8 +38,21 @@ def bed_reduce(fname,extend=[0,0], stranded = True, count = False):
     last_score = 0
     last_strand = None
     
+    # these are just for checking that the file is sorted
+    lchrom = None
+    lstart = None
+    lend = None
+    
     for line in f:
         chrom,start,end,name,score,strand = line.strip().split('\t')
+        if lchrom == chrom:
+            if start < lstart or (start == lstart and end < lend):
+                sys.stderr.write('BED file is not sorted!\n')
+                sys.exit(1)
+        
+        lchrom = chrom
+        lstart = start
+        lend = end
 
         if strand == '+':
             start = int(start) - extend[0]
