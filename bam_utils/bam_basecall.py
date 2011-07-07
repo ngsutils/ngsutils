@@ -135,8 +135,9 @@ class BamBaseCaller(object):
                         insertions[base] += 1
             elif cigar_op == 2: # D
                 deletions += 1
-                total += 1 # not sure why these are included, 
-                           # but samtools mpileup includes these in the count.
+                #total += 1 # not sure these should be included, 
+                           # samtools mpileup includes them
+                           # IGV doesn't
                            
                 reads.append(read)
             elif cigar_op == 3: # N
@@ -159,19 +160,21 @@ class BamBaseCaller(object):
             if eta:
                 eta.print_status(extra='%s:%s (%s)' % (self.bam.references[read.tid],read.pos,len(self.buffer)),bam_pos=(read.tid,read.pos))
             
-            if self.current_tid != read.tid:
+            if self.current_tid != read.tid: # new chromosome
                 while self.buffer:
                     tid,pos,records = self.buffer.popleft()
                     yield self._calc_pos(tid,pos,records)
                 
                 self.current_tid = read.tid
             
+            # handle all positions that are 5' of the current one
             while self.buffer and read.pos > self.buffer[0].pos:
                 tid,pos,records = self.buffer.popleft()
                 yield self._calc_pos(tid,pos,records)
                 
             self._push_read(read)
-                
+        
+        # flush buffer for the end
         while self.buffer:
             tid,pos,records = self.buffer.popleft()
             yield self._calc_pos(tid,pos,records)
@@ -233,8 +236,10 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=N
         if start and end:
             if basepos.pos < start or basepos.pos >= end:
                 continue
-                
-        if basepos.total == 0 or basepos.total < min_count:
+        
+        big_total = basepos.total + basepos.deletions + basepos.gaps + len(basepos.insertions)
+        
+        if big_total < min_count:
             continue
             
         if ref:
@@ -260,7 +265,10 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=N
             insert_str_ar.append('%s:%s' % (insert,count))
             incount += count
         
-        ave_mapping = (float(read_ih_acc) / basepos.total)
+        if big_total > 0:
+            ave_mapping = (float(read_ih_acc) / big_total)
+        else:
+            ave_mapping = 0
         
         sys.stdout.write('%s\n' % '\t'.join([str(x) for x in (bbc.bam.references[basepos.tid],basepos.pos+1,refbase,basepos.total,ave_mapping,entropy,basepos.a,basepos.c,basepos.g,basepos.t,basepos.n,basepos.deletions,basepos.gaps,incount,','.join(insert_str_ar))]))
 
