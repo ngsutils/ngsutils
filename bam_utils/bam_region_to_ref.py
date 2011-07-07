@@ -192,7 +192,7 @@ def bam_region_to_ref(infile,outfile,chrom_sizes, enforce_overlap=False):
                 cols = line.strip().split('\t')
                 header['SQ'].append({'LN':int(cols[1]),'SN':cols[0]})
     
-    outfile = pysam.Samfile(outfile,"wb",header=header)
+    outfile = pysam.Samfile('.%s' % outfile,"wb",header=header)
     
     # eta = ETA(0,bamfile=bamfile)
     count = 0
@@ -204,7 +204,7 @@ def bam_region_to_ref(infile,outfile,chrom_sizes, enforce_overlap=False):
         count += 1
         outreads = []
 
-        if count > 100:
+        if count > 10000:
             count = 0
             # if enforce_overlap:
             #     eta.print_status(extra="conv:%d inv:%d un:%d" % (converted_count,invalid_count,unmapped_count),bam_pos=(batch[0].rname,batch[0].pos))
@@ -256,6 +256,9 @@ def bam_region_to_ref(infile,outfile,chrom_sizes, enforce_overlap=False):
                         newtags.append((key,val))
                 read.tags = newtags
                 outfile.write(read)
+        #
+        # If a read doesn't overlap, just skip it in the output, don't reset the values
+        #
         # else:
         #     read = pysam.AlignedRead()
         #     read.is_unmapped = True
@@ -279,6 +282,8 @@ def bam_region_to_ref(infile,outfile,chrom_sizes, enforce_overlap=False):
     # eta.done()
     bamfile.close()
     outfile.close()
+    
+    os.rename('.%s' % outfile,outfile)
 
 def test():
     
