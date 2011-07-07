@@ -135,7 +135,9 @@ class BamBaseCaller(object):
                         insertions[base] += 1
             elif cigar_op == 2: # D
                 deletions += 1
-                total += 1 # not sure why this is included, but samtools mpileup includes these in the count.
+                total += 1 # not sure why these are included, 
+                           # but samtools mpileup includes these in the count.
+                           
                 reads.append(read)
             elif cigar_op == 3: # N
                 gaps += 1
@@ -209,6 +211,11 @@ class BamBaseCaller(object):
                 self.buffer[buf_idx].records.append(MappingRecord(read_idx,op,inseq,inqual,read))
                 
             elif op == 2:
+                for i in xrange(length):
+                    self.buffer[buf_idx].records.append(MappingRecord(read_idx,op,None,None,read))
+                    buf_idx += 1
+            
+            elif op == 3:
                 for i in xrange(length):
                     self.buffer[buf_idx].records.append(MappingRecord(read_idx,op,None,None,read))
                     buf_idx += 1
