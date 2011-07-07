@@ -45,9 +45,14 @@ def bed_reduce(fname,extend=[0,0], stranded = True, count = False):
     
     for line in f:
         chrom,start,end,name,score,strand = line.strip().split('\t')
+        start = int(start)
+        end = int(end)
         if lchrom == chrom:
             if start < lstart or (start == lstart and end < lend):
                 sys.stderr.write('BED file is not sorted!\n')
+                sys.stderr.write('chrom: %s\t%s (= %s)\n' % (lchrom,chrom,(chrom==lchrom)))
+                sys.stderr.write('start: %s\t%s (< %s)\n' % (lstart,start, (lstart < start)))
+                sys.stderr.write('end: %s\t%s\n' % (lend,end))
                 sys.exit(1)
         
         lchrom = chrom
@@ -55,13 +60,13 @@ def bed_reduce(fname,extend=[0,0], stranded = True, count = False):
         lend = end
 
         if strand == '+':
-            start = int(start) - extend[0]
-            end = int(end) + extend[1]
+            start = start - extend[0]
+            end = end + extend[1]
             if start < 0 :
                 start = 0
         else:
-            start = int(start) - extend[1]
-            end = int(end) + extend[0]
+            start = start - extend[1]
+            end = end + extend[0]
             if start < 0 :
                 start = 0
         
