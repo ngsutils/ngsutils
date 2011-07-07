@@ -195,17 +195,17 @@ def bam_region_to_ref(infile,outfile,chrom_sizes, enforce_overlap=False):
     outfile = pysam.Samfile('.%s' % outfile,"wb",header=header)
     
     # eta = ETA(0,bamfile=bamfile)
-    count = 0
+    # count = 0
     converted_count = 0
     invalid_count = 0
     unmapped_count = 0
 
     for batch in bam_batch_reads(bamfile):
-        count += 1
+        # count += 1
         outreads = []
 
-        if count > 10000:
-            count = 0
+        # if count > 10000:
+            # count = 0
             # if enforce_overlap:
             #     eta.print_status(extra="conv:%d inv:%d un:%d" % (converted_count,invalid_count,unmapped_count),bam_pos=(batch[0].rname,batch[0].pos))
             # else:
@@ -282,6 +282,8 @@ def bam_region_to_ref(infile,outfile,chrom_sizes, enforce_overlap=False):
     # eta.done()
     bamfile.close()
     outfile.close()
+    
+    sys.stderr.write("converted:%d\ninvalid:%d\nunmapped:%d\n" % (converted_count,invalid_count,unmapped_count))
     
     os.rename('.%s' % outfile,outfile)
 
