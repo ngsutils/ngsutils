@@ -64,7 +64,7 @@ def bam_merge(fname, infiles, tag = 'AS', discard = False):
         counts.append(0)
         bamgens.append(bam_reads_batch(bam))
         
-    outfile = pysam.Samfile(fname,"wb",template=bams[0])
+    outfile = pysam.Samfile('.%s' % fname,"wb",template=bams[0])
     
     while True:
         found = False
@@ -122,7 +122,8 @@ def bam_merge(fname, infiles, tag = 'AS', discard = False):
     outfile.close()
     for bam in bams:
         bam.close()
-
+    
+    os.rename('.%s' % fname,fname)
 
 if __name__ == '__main__':
     infiles = []
