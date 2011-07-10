@@ -192,7 +192,7 @@ def bam_region_to_ref(infile,outfile,chrom_sizes, enforce_overlap=False):
                 cols = line.strip().split('\t')
                 header['SQ'].append({'LN':int(cols[1]),'SN':cols[0]})
     
-    outfile = pysam.Samfile('.%s' % outfile,"wb",header=header)
+    outfile = pysam.Samfile('%s.tmp' % outfile,"wb",header=header)
     
     # eta = ETA(0,bamfile=bamfile)
     # count = 0
@@ -285,7 +285,7 @@ def bam_region_to_ref(infile,outfile,chrom_sizes, enforce_overlap=False):
     
     sys.stderr.write("converted:%d\ninvalid:%d\nunmapped:%d\n" % (converted_count,invalid_count,unmapped_count))
     
-    os.rename('.%s' % outfile,outfile)
+    os.rename('%s.tmp' % outfile,outfile)
 
 def test():
     
