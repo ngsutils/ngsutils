@@ -3,25 +3,25 @@ usage(){
      echo "Usage: fastqutils COMMAND"
      echo ""
      echo "Commands"
-     echo "    to_fasta      - Converts to FASTA format"
+     echo "    names             - Write out the read names"
+     echo "    split             - Splits a FASTQ file into N chunks"
+     echo "    stats             - Calculate summary statistics for a FASTQ file"
+     echo "    trim              - Remove 5' and 3' linker sequences (S/W aligned)"
+     echo "    truncate          - Truncates reads to a maximum length"
+     echo ""
+     echo "Conversions"
+     echo "    convert_illumina  - Converts qual values from Illumina to Sanger scale"
+     echo "    to_fasta          - Converts to FASTA format (seq or qual)"
+     echo "    from_qseq         - Converts Illumina qseq (export/sorted) files to FASTQ"
      echo ""
      echo "See 'fastqutils help CMD' for more information about a specific command"
      exit -1
 }
- 
+
 
 REAL=`python -c 'import os,sys;print os.path.realpath(sys.argv[1])' "$0"`
 DIR=`dirname "$REAL"`
 PREFIX="fastq_"
 SUBDIR="fastq_utils"
 
-"$DIR"/build_deps.sh
-if [ $? -ne 0 ]; then exit; fi
-
-export PYTHONPATH=$PYTHONPATH:"$DIR":"$DIR"/ext
-
-if [ -e "$DIR"/$SUBDIR/${PREFIX}$1.py ]; then
-    source "$DIR"/common.sh
-else
-    "$DIR"/fastq_utils.py $@
-fi
+source "$DIR"/common.sh
