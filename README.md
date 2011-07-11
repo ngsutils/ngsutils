@@ -39,6 +39,9 @@ Installing
 
 Checkout the code and run `build_deps.sh`. This will download and compile `pysam` (and optionally `Cython`, if needed). 
 
+If you need read-only access use:
+`git clone git://github.iu.edu/mbreese/ngsutils.git`
+
 Requires
 ---
 * Python 2.6+
