@@ -12,6 +12,7 @@ usage(){
      echo "Conversions"
      echo "    convert_illumina  - Converts qual values from Illumina to Sanger scale"
      echo "    to_fasta          - Converts to FASTA format (seq or qual)"
+     echo "    from_fasta        - Converts FASTA/Qual files to FASTQ format"
      echo "    from_qseq         - Converts Illumina qseq (export/sorted) files to FASTQ"
      echo ""
      echo "See 'fastqutils help CMD' for more information about a specific command"

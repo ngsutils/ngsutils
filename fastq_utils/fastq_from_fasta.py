@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Merges a (cs)fasta file and a qual file into a fastq file
+Merges a (cs)fasta file and a qual file into a FASTQ file
 
 This assumes that the fasta and qual files have the same reads in the same 
 order (so we don't have to load all the data and merge it).  Unless the 
