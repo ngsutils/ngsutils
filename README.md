@@ -3,7 +3,7 @@ ngsutils - Utility programs for analysis of next-gen sequencing data
 
 Usage
 ===
-Run the `bamutils`, `bedutils`, `fastautils`, `fastqutils`, or `sequtils` scripts. These are the main driver script 
+Run the `bamutils`, `bedutils`, `fastqutils`, or `sequtils` scripts. These are the main driver script 
 that setup the appropriate environment (loading pysam). This will give you a list of command possible for each module.
 
 Running `bamutils command` will give you the parameters required for that command (or `bedutils`, etc...)
