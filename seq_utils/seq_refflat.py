@@ -65,8 +65,9 @@ if __name__ == '__main__':
         if not os.path.exists(refflat):
             hook = ETAHook()
             sys.stderr.write('%s\n' % url)
-            urllib.urlretrieve(url, refflat, hook)
+            urllib.urlretrieve(url, '%s.tmp' % refflat, hook)
             hook.done()
+            os.rename('%s.tmp' % refflat, refflat)
 
     if not refflat:
         usage()

@@ -64,22 +64,26 @@ if __name__ == '__main__':
             hook = ETAHook()
             url = 'http://hgdownload.cse.ucsc.edu/goldenPath/%s/database/knownGene.txt.gz' % org
             sys.stderr.write('%s\n' % url)
-            urllib.urlretrieve(url, kg, hook)
+            urllib.urlretrieve(url, '%s.tmp' % kg, hook)
             hook.done()
+            os.rename('%s.tmp' % kg,kg)
 
         if not os.path.exists(xref):
             hook = ETAHook()
             url = 'http://hgdownload.cse.ucsc.edu/goldenPath/%s/database/kgXref.txt.gz' % org
             sys.stderr.write('%s\n' % url)
-            urllib.urlretrieve(url, xref, hook)
+            urllib.urlretrieve(url, '%s.tmp' % xref, hook)
             hook.done()
+            os.rename('%s.tmp' % xref,xref)
+            
 
         if not os.path.exists(isof):
             hook = ETAHook()
             url = 'http://hgdownload.cse.ucsc.edu/goldenPath/%s/database/knownIsoforms.txt.gz' % org
             sys.stderr.write('%s\n' % url)
-            urllib.urlretrieve(url, isof, hook)
+            urllib.urlretrieve(url, '%s.tmp' % isof, hook)
             hook.done()
+            os.rename('%s.tmp' % isof,isof)
     
     if not kg or not xref or not isof:
         usage()
