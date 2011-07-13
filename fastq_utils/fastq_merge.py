@@ -56,7 +56,11 @@ def fastq_merge(fnames,split_slashes=False):
 
 def usage():
     print __doc__
-    print """Usage: %s file1.fastq{.gz} file2.fastq{.gz} ... """ % os.path.basename(sys.argv[0])
+    print """Usage: %s {-slash} file1.fastq{.gz} file2.fastq{.gz} ... 
+
+-slash    Split the read name at a '/' (Illumina paired format)
+    
+    """ % os.path.basename(sys.argv[0])
     sys.exit(1)
 
 if __name__ == '__main__':
