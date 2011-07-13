@@ -44,9 +44,11 @@ Options:
               (numeric, Sanger scale) (default 0)
             
 -count val    Report only bases with this minimum number of reads covering it
-              (default 0)
+              (matches, inserts, deletions counted) (default 0)
 
 -mask  val    The bitmask to use for filtering reads (default 1540)
+
+-showgaps     Report gaps/splice-junctions in RNA-seq data
 
 """ % (base)
     sys.exit(1)
@@ -118,16 +120,17 @@ class BamBaseCaller(object):
         total = 0
         reads = []
 
-        for qpos,cigar_op,base,qual,read in records:
+        for record in records:
+            qpos,cigar_op,base,qual,read = record
             if cigar_op == 0: # M
                 if qual >= self.min_qual and (read.flag & self.mask) == 0 :
                     total += 1
-                    reads.append(read)
+                    reads.append(record)
 
                     counts[base] += 1
             elif cigar_op == 1: # I
                 if qual >= self.min_qual and (read.flag & self.mask) == 0 :
-                    reads.append(read)
+                    reads.append(record)
 
                     if not base in insertions:
                         insertions[base] = 1
@@ -139,10 +142,10 @@ class BamBaseCaller(object):
                            # samtools mpileup includes them
                            # IGV doesn't
                            
-                reads.append(read)
+                reads.append(record)
             elif cigar_op == 3: # N
                 gaps += 1
-                reads.append(read)
+                reads.append(record)
         
         if total >= self.min_count:
             return BasePosition(tid,pos,total,counts['A'],counts['C'],counts['G'],counts['T'],counts['N'],deletions,gaps,insertions,reads)
@@ -224,7 +227,7 @@ class BamBaseCaller(object):
                     buf_idx += 1
                 
         
-def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=None,end=None,mask=1540,quiet = False):
+def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=None,end=None,mask=1540,quiet = False, showgaps=False):
     if ref_fname:
         ref = pysam.Fastafile(ref_fname)
     else:
@@ -237,9 +240,12 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=N
             if basepos.pos < start or basepos.pos >= end:
                 continue
         
-        big_total = basepos.total + basepos.deletions + basepos.gaps + len(basepos.insertions)
+        big_total = basepos.total + basepos.deletions + len(basepos.insertions)
         
         if big_total < min_count:
+            continue
+        
+        if big_total == 0 and not (showgaps and basepos.gaps > 0):
             continue
             
         if ref:
@@ -250,8 +256,9 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=N
         entropy = calc_entropy(basepos.a,basepos.c,basepos.g,basepos.t)
     
         read_ih_acc = 0
-        for read in basepos.reads:
-            read_ih_acc += int(read.opt('IH'))
+        for qpos,cigar_op,base,qual,read in basepos.reads:
+            if cigar_op in [0,1,2]:
+                read_ih_acc += int(read.opt('IH'))
         
         inserts = []
         for insert in basepos.insertions:
@@ -287,6 +294,7 @@ if __name__ == '__main__':
     start = None
     end = None
     quiet = False
+    showgaps = False
     
     last = None
     for arg in sys.argv[1:]:
@@ -308,6 +316,8 @@ if __name__ == '__main__':
             last = None
         elif arg == '-h':
             usage()
+        elif arg == '-showgaps':
+            showgaps = True
         elif arg == '-q':
             quiet = True
         elif arg in ['-qual','-count','-mask','-ref']:
@@ -331,5 +341,5 @@ if __name__ == '__main__':
     if not bam:
         usage()
     else:
-        bam_basecall(bam,ref,min_qual,min_count,chrom,start,end,mask,quiet)
+        bam_basecall(bam,ref,min_qual,min_count,chrom,start,end,mask,quiet,showgaps)
         
