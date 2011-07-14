@@ -33,7 +33,7 @@ DNA
 RNA
 
 * cims          - Finds regions of unusual deletions (CLIP-Seq)
-* rpkm          - Calculates RPKM/counts for genes/regions/repeats
+* rpkm          - Calculates RPKM/counts for genes/regions/repeats (Note: gene counts require a *RefIso* file - see `sequtils` below)
 
 General
 
