@@ -12,10 +12,13 @@ will give you the parameters required for that command (or `bedutils`, etc...)
 
 General usage format:
 
-`bamutils command {options} filename  
-bedutils command {options} filename  
-fastqutils command {options} filename  
-sequtils command {options} filename`  
+`bamutils command {options} filename`  
+
+`bedutils command {options} filename`  
+
+`fastqutils command {options} filename`  
+
+`sequtils command {options} filename`  
 
 bamutils
 ---
