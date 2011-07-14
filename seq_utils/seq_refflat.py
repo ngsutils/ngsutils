@@ -3,7 +3,7 @@
 Builds a RefIso format gene model from RefFlat formatted file (RefSeq)
 '''
 
-import os,sys,urllib
+import os,sys,urllib,tempfile,shutil
 import support.refiso
 from support.eta import ETA
 
@@ -24,13 +24,13 @@ class ETAHook(object):
 def usage():
     print __doc__
     print """\
-Usage: %s {opts} refflat.txt{.gz} 
+Usage: sequtils refflat {opts} refflat.txt{.gz} 
 
 Options
   -org    org     Download refFlat file from UCSC for org (hg18, mm9, etc)
   -extend num     merge isoforms if they are {num} bases away from each other
                   [default 0]
-""" % (os.path.basename(sys.argv[0]),)
+"""
     sys.exit(1)
 
 if __name__ == '__main__':
@@ -53,7 +53,7 @@ if __name__ == '__main__':
             refflat = arg
     
     if org:
-        path = os.path.join(os.path.expanduser('~'),'.annotations',org)
+        path = tempfile.mkdtemp()
         try:
             os.makedirs(path)
         except:
@@ -68,8 +68,15 @@ if __name__ == '__main__':
             urllib.urlretrieve(url, '%s.tmp' % refflat, hook)
             hook.done()
             os.rename('%s.tmp' % refflat, refflat)
-
+        
+        
     if not refflat:
+        if org:
+            shutil.rmtree(path)
         usage()
 
     support.refiso.refflat_to_refiso(refflat,extend)
+    
+    if org:
+        shutil.rmtree(path)
+        

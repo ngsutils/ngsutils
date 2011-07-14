@@ -14,15 +14,15 @@ from support.eta import ETA
 def usage():
     print __doc__
     print """
-Usage: %s { -tag tag } {-c} {-z} {-q val} {-maxlen val} filename.[cs]fasta [filename.qual]
+Usage: fastqutils fromfasta {opts} filename.[cs]fasta [filename.qual]
 
--q val       Use a constant value for quality (should be char, such as '*'=10)
--maxlen VAL  Trim sequences and quality scores to be a maximum of VAL bases
--c           output to stdout (can only have one fasta file)
--z           output gzip compressed files
--tag tag     add a tag as a suffix to all read names like: readname:suffix
-
-""" % os.path.basename(sys.argv[0])
+Options:
+  -q val       Use a constant value for quality (Phred char; e.g. '*' = 10)
+  -maxlen VAL  Trim sequences and quality scores to be a maximum of VAL bases
+  -c           output to stdout (can only have one fasta file)
+  -z           output gzip compressed files
+  -tag tag     add a tag as a suffix to all read names like: readname:suffix
+"""
     sys.exit(-1)
 
 

@@ -29,16 +29,14 @@ from support.eta import ETA
 import pysam
 
 def usage():
-    base = os.path.basename(sys.argv[0])
     print __doc__
     print """
-Usage: %s {-overlap} in.bam out.bam chrom.sizes
+Usage: bamutils convertregion {-overlap} in.bam out.bam chrom.sizes
 
 Options:
 -overlap    Require that all reads must overlap a splice junction
             by 4 bases. (Also removes unmapped reads)
-
-""" % (base,)
+"""
     sys.exit(1)
 
 bam_cigar = ['M','I','D','N','S','H','P']
@@ -181,7 +179,7 @@ def bam_batch_reads(bam):
     if reads:
         yield reads
 
-def bam_region_to_ref(infile,outfname,chrom_sizes, enforce_overlap=False):
+def bam_convertregion(infile,outfname,chrom_sizes, enforce_overlap=False):
     bamfile = pysam.Samfile(infile,"rb")
     header = bamfile.header
     header['SQ'] = []
@@ -316,12 +314,5 @@ if __name__ == '__main__':
     if not infile or not outfile or not chrom_sizes:
         usage()
     else:
-        # import cProfile
-        # pf = 'prof'
-        # i=0
-        # while os.path.exists(pf):
-        #     pf = 'prof_%s' % i
-        #     i+=1
-        # cProfile.run('bam_region_to_ref(infile,outfile,chrom_sizes,overlap)',pf)
-        bam_region_to_ref(infile,outfile,chrom_sizes,overlap)
+        bam_convertregion(infile,outfile,chrom_sizes,overlap)
         

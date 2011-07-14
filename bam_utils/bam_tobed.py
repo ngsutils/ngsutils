@@ -4,7 +4,7 @@ import sys,gzip,os
 from support.eta import ETA
 import pysam
 
-def bam_read_pos(fname):
+def bam_tobed(fname):
     bamfile = pysam.Samfile(fname,"rb")
     eta = ETA(0,bamfile=bamfile)
 
@@ -18,16 +18,14 @@ def bam_read_pos(fname):
 
 def usage():
     print """\
-Usage: %s bamfile
+Usage: bamutils tobed bamfile
 
-Ouputs the read positions of all mapped reads in BED format.
-
-
-""" % os.path.basename(sys.argv[0])
+Ouputs the read positions of all mapped reads in BED6 format.
+"""
 
 if __name__ == "__main__":
     if len(sys.argv) < 2 or not os.path.exists(sys.argv[-1]):
         usage()
         sys.exit(1)
 
-    bam_read_pos(sys.argv[1])
+    bam_tobed(sys.argv[1])

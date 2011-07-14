@@ -9,15 +9,13 @@ from support.eta import ETA
 from support.refiso import RefIso
 
 def usage():
-    base = os.path.basename(sys.argv[0])
     print __doc__
     print """
-Usage: %s in.bed {refiso.txt}
+Usage: bedutils stats in.bed {refiso.txt}
 
 If a RefIso file is given, counts corresponding to exons, introns, promoters,
 junctions, intergenic, and mitochondrial regions will be calculated.
-
-""" % (base)
+"""
     sys.exit(1)
 
 class RangeMatch(object):

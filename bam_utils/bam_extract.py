@@ -13,14 +13,13 @@ from support.eta import ETA
 import pysam
 
 def usage():
-    base = os.path.basename(sys.argv[0])
     print __doc__
     print """
-Usage: %s {opts} in.bam out.bam regions.bed
+Usage: bamutils extract {opts} in.bam out.bam regions.bed
 
 Options:
   -ns    Ignore strandedness of reads and regions
-""" % (base,)
+"""
     sys.exit(1)
 
 

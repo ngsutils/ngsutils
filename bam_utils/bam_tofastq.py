@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 '''
-Takes a SAM file and exports a FASTQ file
+Takes a SAM/BAM file and exports a FASTQ file
 '''
 
 import sys,os
 from support.eta import ETA
 import pysam
 
-def bam2fastq(sam_fname,colorspace=False,only_mapped=False,only_unmapped=False):
+def bam_tofastq(sam_fname,colorspace=False,only_mapped=False,only_unmapped=False):
     if only_mapped == False and only_unmapped == False:
         return
         
@@ -37,7 +37,7 @@ def bam2fastq(sam_fname,colorspace=False,only_mapped=False,only_unmapped=False):
 
 def usage():
     print __doc__
-    print "Usage: %s [-cs] {-mapped} {-unmapped} file.[sam|bam]" % os.path.basename(sys.argv[0])
+    print "Usage: bamutils tofastq [-cs] {-mapped} {-unmapped} file.[sam|bam]"
     sys.exit(1)
     
 
@@ -66,4 +66,4 @@ if __name__ == '__main__':
         mapped = True
         unmapped = True
     
-    bam2fastq(samf,cs,mapped,unmapped)
+    bam_tofastq(samf,cs,mapped,unmapped)

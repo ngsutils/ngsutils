@@ -25,16 +25,15 @@ import os,sys,gzip
 import pysam
 
 def usage():
-    base = os.path.basename(sys.argv[0])
     print __doc__
     print """
-Usage: %s {opts} out.bam in1.bam in2.bam ...
+Usage: bamutils merge {opts} out.bam in1.bam in2.bam ...
 
 Options
-  -tag VAL    Tag to use to determine from which file reads will be taken
+  -tag VAL    Tag to use to determine from which file reads will be taken 
+              (must be type :i or :f) [default: AS]
   -discard    Discard reads that aren't mapped in any file.
-
-""" % (base,)
+"""
     sys.exit(1)
 
 def bam_reads_batch(bam):

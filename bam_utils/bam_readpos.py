@@ -1,9 +1,16 @@
 #!/usr/bin/env python
+'''
+Finds the realtive position of a read or reference:position in a BAM file.
+This is returned as a line number out of the total number of lines in the 
+file.
+'''
+
+
 
 import sys,os
 import pysam
 
-def bam_read_pos(fname,readname=None,ref=None,pos=None):
+def bam_readpos(fname,readname=None,ref=None,pos=None):
     bamfile = pysam.Samfile(fname,"rb")
     count = 0
     i = 0
@@ -25,10 +32,10 @@ def bam_read_pos(fname,readname=None,ref=None,pos=None):
         
 
 def usage():
-    print """\
-Usage: %s {-read read_name} {-pos chr:pos}  bamfile
-
-""" % os.path.basename(sys.argv[0])
+    print __doc__
+    print """
+Usage: bamutils readpos {-read read_name} {-pos chr:pos}  bamfile
+"""
 
 if __name__ == "__main__":
     readname = None
@@ -51,9 +58,9 @@ if __name__ == "__main__":
             fname = arg
     
     if readname and fname:
-        bam_read_pos(fname,read=readname)
+        bam_readpos(fname,read=readname)
     elif ref and pos and fname:
-        bam_read_pos(fname,ref=ref,pos=pos)
+        bam_readpos(fname,ref=ref,pos=pos)
     else:
         usage()
         sys.exit(1)

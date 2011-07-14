@@ -4,7 +4,7 @@ import sys,gzip,os
 from support.eta import ETA
 import pysam
 
-def bed2fasta(fname, ref_fasta, min_size=50, stranded=True):
+def bed_tofasta(fname, ref_fasta, min_size=50, stranded=True):
     if not os.path.exists('%s.fai' % ref_fasta):
         pysam.faidx( ref_fasta )
 
@@ -67,15 +67,14 @@ def revcomp(seq):
 
 def usage():
     print """\
-Usage: %s {-min size} {-ns} bedfile ref.fasta
+Usage: bedutils tofasta {-min size} {-ns} bedfile ref.fasta
 
 Outputs the sequences of each BED region to FASTA format.
 
 Option: 
 -min  The minumum size of a region
 -ns   Ignore the strand of a region (always return seq from the + strand)
-
-""" % os.path.basename(sys.argv[0])
+"""
 
 if __name__ == "__main__":
 
@@ -102,4 +101,4 @@ if __name__ == "__main__":
         usage()
         sys.exit(1)
 
-    bed2fasta(bed,ref,min_size=min_size,stranded=stranded)
+    bed_tofasta(bed,ref,min_size=min_size,stranded=stranded)

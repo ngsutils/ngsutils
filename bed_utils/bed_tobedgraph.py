@@ -44,7 +44,7 @@ def write_regions(regions,normalize = None):
     
     pass
     
-def bed_to_bedgraph(fname,only_strand=None,normalize=None):
+def bed_tobedgraph(fname,only_strand=None,normalize=None):
     with open(fname) as f:
         eta = ETA(os.stat(fname).st_size,fileobj=f)
         
@@ -77,7 +77,7 @@ def bed_to_bedgraph(fname,only_strand=None,normalize=None):
 def usage():
     print __doc__
     print """\
-Usage: %s [-plus | -minus] {-norm N} bamfile
+Usage: bedutils tobedgraph [-plus | -minus] {-norm N} bamfile
 
 Options:
     -plus             only count reads on the plus strand 
@@ -86,7 +86,7 @@ Options:
     
     -norm VAL         the count at every position is calculated as:
                       floor(count * VAL).
-""" % os.path.basename(sys.argv[0])
+"""
     sys.exit(1)
 
 if __name__ == "__main__":
@@ -114,4 +114,4 @@ if __name__ == "__main__":
     if not bed:
         usage()
     
-    bed_to_bedgraph(bed,strand,norm)
+    bed_tobedgraph(bed,strand,norm)

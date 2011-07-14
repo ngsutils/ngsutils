@@ -58,18 +58,18 @@ def fastq_trim(fname,linker_5=None,linker_3=None,out=sys.stdout,pct_identity=0.8
 
 def usage():
     print __doc__
-    print """Usage: %s {opts} filename.fastq{.gz}
+    print """Usage: fastqutils trim {opts} filename.fastq{.gz}
     
 You must specify at least one of the following:
   -5 seq      5' linker sequence to remove
   -3 seq      3' linker sequence to remove
 
 Options
-  -len val    Minimum length of a read (discard shorter) [default: 25]
-  -pct val    Required percent identity [default: 0.8]
-  -min val    Minumum amount to trim (distance from the 5/3' end) [default: 4]
-
-""" % os.path.basename(sys.argv[0])
+  -len val    Minimum length of a read (discards shorter) [default: 25]
+  -pct val    Required percent identity (0->1.0) [default: 0.8]
+  -min val    Minumum number of bases to trim (or minumum dist. from the ends) 
+              [default: 4]
+"""
     sys.exit(1)
 
 if __name__ == '__main__':

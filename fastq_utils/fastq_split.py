@@ -40,7 +40,7 @@ def fastq_split(fname,outbase,chunks):
 
 def usage():
     print __doc__
-    print """Usage: %s filename.fastq{.gz} out_template chunks""" % os.path.basename(sys.argv[0])
+    print "Usage: fastqutils split filename.fastq{.gz} out_template num_chunks"
     sys.exit(1)
 
 if __name__ == '__main__':

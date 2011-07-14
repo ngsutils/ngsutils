@@ -49,18 +49,19 @@ from support.eta import ETA
 import pysam
 
 def usage():
-    base = os.path.basename(sys.argv[0])
     print __doc__
     print """
-Usage: %s in.bam out.bam {-failed out.txt} criteria...
+Usage: bamutils filter in.bam out.bam {-failed out.txt} criteria...
 
 If given, -failed, will be a text file containing the read names of all reads 
 that were removed with filtering.
 
-Example: %s filename.bam output.bam -mapped -gte AS:i 1000
+Example: 
+bamutils filter filename.bam output.bam -mapped -gte AS:i 1000
+
 This will remove all unmapped reads, as well as any reads that have an AS:i 
 value less than 1000.
-""" % (base,base)
+"""
     sys.exit(1)
 
 bam_cigar = ['M','I','D','N','S','H','P']
@@ -436,6 +437,9 @@ if __name__ == '__main__':
         criteria.append(_criteria[crit_args[0][1:]](*crit_args[1:]))
     
     if fail or not infile or not outfile or not criteria:
+        if not infile and not outfile and not criteria:
+            usage()
+        
         if not infile:
             print "Missing: input bamfile"
         if not outfile:

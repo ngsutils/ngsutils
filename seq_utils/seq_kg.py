@@ -3,14 +3,14 @@
 Builds a RefIso format gene model from UCSC Known Gene annotations
 '''
 
-import os,sys,urllib
+import os,sys,urllib,tempfile,shutil
 import support.refiso
 from seq_refflat import ETAHook
 
 def usage():
     print __doc__
     print """\
-Usage: %s {opts} knownGene.txt{.gz} kgXref.txt{.gz} knownIsoforms.txt{.gz} 
+Usage: sequtils kg {opts} knownGene.txt{.gz} kgXref.txt{.gz} knownIsoforms.txt{.gz} 
 
 Arguments
   knownGene       Known Gene model from UCSC
@@ -21,7 +21,7 @@ Options
   -org    org     Download Known Gene files from UCSC for org (hg18, mm9, etc)
   -extend num     merge isoforms if they are {num} bases away from each other
                   [default 0]
-""" % (os.path.basename(sys.argv[0]),)
+"""
     sys.exit(1)
 
 if __name__ == '__main__':
@@ -50,11 +50,7 @@ if __name__ == '__main__':
             isof = arg
 
     if org:
-        path = os.path.join(os.path.expanduser('~'),'.annotations',org)
-        try:
-            os.makedirs(path)
-        except:
-            pass
+        path = tempfile.mkdtemp()
             
         kg = os.path.join(path,'knownGene.txt.gz')
         xref = os.path.join(path,'kgXref.txt.gz')
@@ -84,8 +80,16 @@ if __name__ == '__main__':
             urllib.urlretrieve(url, '%s.tmp' % isof, hook)
             hook.done()
             os.rename('%s.tmp' % isof,isof)
+            
     
     if not kg or not xref or not isof:
+        if org:
+            shutil.rmtree(path)
+        
         usage()
 
     support.refiso.kg_to_refiso(kg,xref,isof,extend)
+
+    if org:
+        shutil.rmtree(path)
+        

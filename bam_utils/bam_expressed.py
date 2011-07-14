@@ -117,7 +117,7 @@ def bam_find_regions(bam_name, merge_distance = 10, min_read_count = 2, only_uni
 def usage():
     print __doc__
     print """\
-Usage: %s {options} bamfile
+Usage: bamutils extract {options} bamfile
 
 Options:
 -ns             Ignore strandedness when creating regions
@@ -132,8 +132,7 @@ Options:
            
 -mincount N     The minimum number of reads required in a region
                 (default: 2)
-
-""" % os.path.basename(sys.argv[0])
+"""
     sys.exit(1)
 
 if __name__ == "__main__":

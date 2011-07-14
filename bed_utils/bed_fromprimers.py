@@ -24,9 +24,9 @@ import os,sys,urllib2,re,urllib,time
 def usage():
     print __doc__
     print """\
-Usage: %s {opts} -fasta file.fa
-       %s {opts} -tab file.txt
-       %s {opts} fwd_primer rev_primer
+Usage: bedutils fromprimers {opts} -fasta file.fa
+       bedutils fromprimers {opts} -tab file.txt
+       bedutils fromprimers {opts} fwd_primer rev_primer
 
 Options:
 -db         name    DB to use (default: hg18)
@@ -35,7 +35,7 @@ Options:
 -size       bases   Max product size (default: 4000)
 -flip               Flip the reverse primer (default: False)
 
-""" % (os.path.basename(sys.argv[0]),os.path.basename(sys.argv[0]),os.path.basename(sys.argv[0]))
+"""
     sys.exit(1)
     
 def insilico_pcr_tab(fasta,db='hg18',perfect=15,good=15,size=4000,flip=False):

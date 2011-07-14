@@ -9,20 +9,20 @@ import os,sys
 def usage():
     print __doc__
     print """\
-Usage: %s {-nostrand} {-c} {-extend num[,num]} bedfile
+Usage: bedutils reduce {opts} bedfile
 
--extend 
-Can either a single number (extend the same in both direction) or a comma 
-delimited pair of numbers where the first number extends the region in the 5' 
-direction and the second number extends the region in the 3' direction.
+-extend num{,num}   Extend the BED region {num} bases 5' and 3'
+                    Can either a single number (extend the same in both 
+                    direction) or a comma delimited pair of numbers where the 
+                    first number extends the region in the 5' direction and 
+                    the second number extends the region in the 3' direction.
 
--c
-Output the number of regions merged as the score (count).  Otherwise, it adds
-the scores for all of the combined regions together.
+-c                  Output the number of regions merged as the score (count).  
+                    Otherwise, the scores for all of the regions are added 
+                    together.
 
--nostrand
-Ignore strand information when merging regions
-""" % os.path.basename(sys.argv[0])
+-nostrand           Ignore strand information when merging regions
+"""
 
 class MergedRegion(object):
     '''

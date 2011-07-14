@@ -18,7 +18,7 @@ def fastq_truncate(fname,max_len):
 
 def usage():
     print __doc__
-    print """Usage: %s filename.fastq{.gz} max_len""" % os.path.basename(sys.argv[0])
+    print "Usage: fastqutils truncate filename.fastq{.gz} max_len"
     sys.exit(1)
 
 if __name__ == '__main__':

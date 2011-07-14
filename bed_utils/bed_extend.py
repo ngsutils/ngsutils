@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 '''
-Extends BED regions to be a fixed size
+Extends BED regions
 '''
 
 import os,sys
@@ -9,7 +9,7 @@ import support.ngs_utils
 def usage():
     print __doc__
     print """\
-Usage: %s SIZE bedfile
+Usage: bedutils extend {+}SIZE bedfile
 
 SIZE is what the total size of the region should be.  The size of the region 
 will be extended or reduced to make the total length exactly SIZE. The region
@@ -18,7 +18,7 @@ is always adjusted at the 3' end, respective to the given strand.
 If the first character of SIZE is '+', then the region is extended 
 SIZE bases, regardless of how long it is to start with.
 
-""" % os.path.basename(sys.argv[0])
+"""
     sys.exit(1)
 
 def bed_extend(fname,size,relative=False):
