@@ -7,7 +7,7 @@ that setup the appropriate environment (loading pysam) and run the requested com
 
 For ease of use, it is recommended that you add `bamutils`, `bedutils`, `fastqutils`, and `sequtils` to your $PATH.
 
-Running **`bamutils`** without any arguments will return a list of command available.  Running **`bamutils command`**
+Running `bamutils` without any arguments will return a list of commands available.  Running `bamutils command`
 will give you the parameters required for that command (or `bedutils`, etc...)
 
 General usage format:
