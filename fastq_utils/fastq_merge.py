@@ -33,26 +33,26 @@ def fastq_merge(fnames,split_slashes=False):
     while True:
         lastname = None
         
-        for fname,generator in infiles:
-            try:
-                name,seq,qual = generator.next()
-            except:
-                break
+        try:
+            for fname,generator in infiles:
+                    name,seq,qual = generator.next()
             
-            if split_slashes and '/' in name:
-                spl = name.split('/',1)
-                name = spl[0]
-                desc = ' /%s' % spl[1]
-            else:
-                desc = ''
+                if split_slashes and '/' in name:
+                    spl = name.split('/',1)
+                    name = spl[0]
+                    desc = ' /%s' % spl[1]
+                else:
+                    desc = ''
 
-            if not lastname:
-                lastname = name
-            elif name != lastname:
-                sys.stderr.write('Files are not paired! (error in: %s)\nExpected: %s\nGot     : %s\n' % (fname,lastname,name))
-                sys.exit(1)
+                if not lastname:
+                    lastname = name
+                elif name != lastname:
+                    sys.stderr.write('Files are not paired! (error in: %s)\nExpected: %s\nGot     : %s\n' % (fname,lastname,name))
+                    sys.exit(1)
         
-            sys.stdout.write('%s%s\n%s\n+\n%s\n' % (name,desc,seq,qual))
+                sys.stdout.write('%s%s\n%s\n+\n%s\n' % (name,desc,seq,qual))
+        except:
+            break
 
 def usage():
     print __doc__
