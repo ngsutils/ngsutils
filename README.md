@@ -1,8 +1,7 @@
 ngsutils - Utility programs for analysis of next-gen sequencing data
 ===
-
 Usage
-===
+---
 Run the `bamutils`, `bedutils`, `fastqutils`, or `sequtils` scripts. These are the main driver scripts 
 that setup the appropriate environment (loading pysam) and run the requested command.
 
@@ -13,10 +12,10 @@ will give you the parameters required for that command (or `bedutils`, etc...)
 
 General usage format:
 
-`bamutils command {options} filename`  
-`bedutils command {options} filename`  
-`fastqutils command {options} filename`  
-`sequtils command {options} filename`  
+`bamutils command {options} filename  
+bedutils command {options} filename  
+fastqutils command {options} filename  
+sequtils command {options} filename`  
 
 bamutils
 ---
@@ -90,17 +89,18 @@ General
 Conversions
 
 * fromfasta    - Converts FASTA files (with .qual) to FASTQ (basespace or colorspace)
-* fromqseq     - Converts Illumina qseq (or export or sorted) files to FASTQ format
-* tofasta      - Converts FASTQ to FASTQ
+* fromqseq     - Converts Illumina qseq (or export/sorted) files to FASTQ format
+* tofasta      - Converts FASTQ to FASTA
 
 
 sequtils
 ---
 
 Scripts for assembling the gene model used in `bedutils` and `bamutils` scripts. The gene model is similar to the UCSC refFlat or KnownGene
-tab-delimited format, except that it adds one column to the beginning indicating isoforms. For some organisms this column can be redundant. But for others,
-it is a required step. We are calling this format **RefIso**. RefIso files can be compiled from UCSC refFlat or KnownGene files. If needed, these can
-be automatically downloaded for each organism.
+tab-delimited format, except that it adds one column to the beginning indicating isoforms. For some organisms this column can be redundant. 
+But for others, it is a required step to ensure annotated isoforms are on the same chromosome and overlap. We are calling this format 
+**RefIso**. RefIso files can be compiled from UCSC refFlat or KnownGene files. If needed, these can be automatically downloaded for each 
+organism.
 
 Building RefIso
 
@@ -114,7 +114,7 @@ General
 
 
 Installing
-===
+---
 
 Checkout the code and run `build_deps.sh`. This will download and compile `pysam` (and if needed, `Cython`). Cython will be installed into your
 user-packages folder for Python (usually in `$HOME/.local`). Pysam will be installed in the `ngsutils/ext` folder and loaded as needed by the main
