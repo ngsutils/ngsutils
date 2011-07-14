@@ -35,7 +35,7 @@ def fastq_merge(fnames,split_slashes=False):
         
         try:
             for fname,generator in infiles:
-                    name,seq,qual = generator.next()
+                name,seq,qual = generator.next()
             
                 if split_slashes and '/' in name:
                     spl = name.split('/',1)
