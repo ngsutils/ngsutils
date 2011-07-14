@@ -3,6 +3,7 @@ usage(){
     echo "Usage: bedutils COMMAND"
     echo ""
     echo "Commands"
+    echo "  General"
     echo "    extend       - Extends BED regions (3' end)"
     echo "    reduce       - Merges overlapping BED regions"
     echo "    refcount     - Given a number of BED files, calculate the number of" 

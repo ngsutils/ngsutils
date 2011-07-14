@@ -11,7 +11,7 @@ usage(){
     echo "    cims          - Finds regions of unusual deletions (CLIP-seq)"
     echo "    rpkm          - Calculates RPKM/counts for genes/BED regions/repeats"
     echo ""
-    echo "  Generic"
+    echo "  General"
     echo "    convertregion - Converts region mapping to genomic mapping"
     echo "    expressed     - Finds regions expressed in a BAM file"
     echo "    extract       - Extracts reads based on regions in a BED file"
