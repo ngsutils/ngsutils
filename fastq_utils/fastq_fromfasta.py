@@ -18,9 +18,6 @@ Usage: fastqutils fromfasta {opts} filename.[cs]fasta [filename.qual]
 
 Options:
   -q val       Use a constant value for quality (Phred char; e.g. '*' = 10)
-  -maxlen VAL  Trim sequences and quality scores to be a maximum of VAL bases
-  -c           output to stdout (can only have one fasta file)
-  -z           output gzip compressed files
   -tag tag     add a tag as a suffix to all read names like: readname:suffix
 """
     sys.exit(-1)
@@ -59,30 +56,8 @@ def getline(fs):
         line = line.strip()
     return line
 
-def merge_files(fasta,qual,suffix=None,stdout=False, gz=False, common_qual=None,max_len=None):
+def merge_files(fasta,qual,suffix=None, common_qual=None):
     sys.stderr.write('Merging %s and %s -> ' % (os.path.basename(fasta),os.path.basename(qual) if qual else common_qual))
-    if stdout:
-        sys.stderr.write('stdout')
-        if gz:
-            out = gzip.GzipFile(fileobj=sys.stdout)
-        else:
-            out = sys.stdout
-    else:
-      if fasta.lower().endswith('fasta'):
-        outfile = fasta[:-1]+'q'
-      else:
-        outfile = fasta+'.fastq'
-      if gz:
-        outfile = '%s.gz' % outfile
-        out = gzip.open(outfile,'w')
-      else:
-        out = open(outfile,'w')
-      sys.stderr.write(os.path.basename(outfile))
-
-    if gz:
-        sys.stderr.write(' [gzip]')
-    sys.stderr.write('\n')
-    
     f = open(fasta)
 
     if qual:
@@ -134,13 +109,7 @@ def merge_files(fasta,qual,suffix=None,stdout=False, gz=False, common_qual=None,
         else:
             qual = common_qual * len(seq)
             
-        if not maxlen:
-            out.write('@%s\n%s\n+\n%s\n' % (name,seq,qual))
-        elif colorspace and seq[0].upper() in 'ATGC':
-            out.write('@%s\n%s\n+\n%s\n' % (name,seq[:maxlen+1],qual[:maxlen]))
-        else:
-            out.write('@%s\n%s\n+\n%s\n' % (name,seq[:maxlen],qual[:maxlen]))
-        
+        sys.stdout.write('@%s\n%s\n+\n%s\n' % (name,seq,qual))
         f_line = getline(f)
         if q:
             q_line = getline(q)
@@ -151,8 +120,6 @@ def merge_files(fasta,qual,suffix=None,stdout=False, gz=False, common_qual=None,
     f.close()
     if q:
         q.close()
-    if out != sys.stdout:
-      out.close()
 
 def trim_name(name):
     ''' remove trailing _F3 / _R3 (to match bfast solid2fastq script) '''
@@ -165,19 +132,13 @@ def trim_name(name):
 if __name__ == '__main__':
     last = None
     tag = None
-    gz = False
-    stdout = False
     fasta = None
     qual = None
     common_qual = None
-    maxlen = None
     
     for arg in sys.argv[1:]:
         if last == '-tag':
             tag = arg
-            last = None
-        elif last == '-maxlen':
-            maxlen = int(arg)
             last = None
         elif last == '-q':
             if len(arg) == 1:
@@ -186,14 +147,10 @@ if __name__ == '__main__':
                 sys.stderr.write("ERROR: A common qual value must be only one character\n")
                 sys.exit(-1)
             last = None
-        elif arg in ['-tag','-q','-maxlen']:
+        elif arg in ['-tag','-q']:
             last = arg
         elif arg == '-h':
             usage()
-        elif arg == '-z':
-            gz = True
-        elif arg == '-c':
-            stdout = True
         elif not fasta and os.path.exists(arg):
             fasta = arg
         elif not qual and os.path.exists(arg):
@@ -205,5 +162,5 @@ if __name__ == '__main__':
     if not fasta:
         usage()
         
-    merge_files(fasta,qual, tag,stdout,gz,common_qual,maxlen)
+    merge_files(fasta,qual, tag,common_qual)
         
