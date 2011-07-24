@@ -41,7 +41,7 @@ class FASTQReader(object):
         self.kept = 0
         
     def filter(self):
-        for tup in read_fastq(fname):
+        for tup in read_fastq(fname, quiet = not self.verbose):
             self.kept += 1
             if self.verbose:
                 sys.stderr.write('[FASTQ] Read: %s\n' % tup[0])
