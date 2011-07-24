@@ -86,7 +86,7 @@ class TrimFilter(object):
                 self.kept += 1
                 if self.verbose:
                     sys.stderr.write('[Trim] %s (kept)\n' % name)
-                yield ('%s #trim' % name,seq,qual)
+                yield (name,seq,qual)
 
 
 class PairedFilter(object):
@@ -157,7 +157,7 @@ class QualFilter(object):
                 self.kept += 1
                 if self.verbose:
                     sys.stderr.write('[Qual] %s (kept)\n' % (name,))
-                yield ('%s #qual' % name,seq,qual)
+                yield (name,seq,qual)
 
 class SuffixQualFilter(object):
     def __init__(self,parent,val,verbose = False):
@@ -181,12 +181,13 @@ class SuffixQualFilter(object):
                 if self.verbose:
                     sys.stderr.write('[SuffixQual] %s (altered)\n' % (name,))
                 self.altered += 1
+                name = '%s #suff'
             else:
                 if self.verbose:
                     sys.stderr.write('[SuffixQual] %s (kept)\n' % (name,))
                 self.kept += 1
                 
-            yield ('%s #suff' % name,seq,qual)
+            yield (name,seq,qual)
         
     
 class WildcardFilter(object):
@@ -211,7 +212,7 @@ class WildcardFilter(object):
                 if self.verbose:
                     sys.stderr.write('[Wild] %s (kept)\n' % (name,))
                 
-                yield ('%s #wild' % name,seq,qual)
+                yield (name,seq,qual)
             else:
                 if self.verbose:
                     sys.stderr.write('[Wild] %s (removed)\n' % (name,))
@@ -233,7 +234,7 @@ class SizeFilter(object):
                 self.kept += 1
                 if self.verbose:
                     sys.stderr.write('[Size] %s (kept)\n' % (name,))
-                yield ('%s #size' % name,seq,qual)
+                yield (name,seq,qual)
             else:
                 if self.verbose:
                     sys.stderr.write('[Size] %s (removed) seq:%s size:%s\n' % (name,seq,len(qual)))
@@ -245,7 +246,7 @@ def usage():
     print """Usage: fastqutils filter {opts} {filters} file.fastq{.gz}
 Options:
   -stats filename             Write filter stats out to a file
-  -v                          Verbose logging
+  -v                          Verbose
 
 Filters:
   -wildcard num               Discard reads with too many wildcards (N or .)
@@ -273,6 +274,7 @@ if __name__ == '__main__':
     fname = None
     stats_fname = None
     verbose = False
+    veryverbose = False
     filters_config = []
 
     last = None
@@ -320,6 +322,8 @@ if __name__ == '__main__':
             last = arg
         elif arg == '-v':
             verbose = True
+        elif arg == '-vv':
+            veryverbose = True
         elif arg == '-h':
             usage()
         elif arg == '-paired':
@@ -332,10 +336,12 @@ if __name__ == '__main__':
         
     chain = FASTQReader(fname,verbose)
     for config in filters_config:
-        sys.stderr.write('%s\n'% '\t'.join([str(x) for x in config]))
+        if verbose:
+            sys.stderr.write(config[0].__name__)
+            sys.stderr.write('\t%s\n'% '\t'.join([str(x) for x in config[1:]]))
         
         clazz = config[0]
         opts = config[1:]
-        chain = clazz(chain,*opts,verbose=verbose)
+        chain = clazz(chain,*opts,verbose=veryverbose)
     
     fastq_filter(chain)
