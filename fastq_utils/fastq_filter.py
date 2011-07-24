@@ -31,9 +31,10 @@ def fastq_filter(filter_chain,stats_fname=None):
 
 
 class FASTQReader(object):
-    def __init__(self,fname):
+    def __init__(self,fname,verbose = False):
         self.parent = None
         self.fname = fname
+        self.verbose = verbose
         
         self.altered = 0
         self.removed = 0
@@ -42,14 +43,17 @@ class FASTQReader(object):
     def filter(self):
         for tup in read_fastq(fname):
             self.kept += 1
+            if self.verbose:
+                sys.stderr.write('[FASTQ] Read: %s\n' % tup[0])
             yield tup
 
 class TrimFilter(object):
-    def __init__(self,parent,trim_seq,mismatch_pct,min_filter_len):
+    def __init__(self,parent,trim_seq,mismatch_pct,min_filter_len,verbose = False):
         self.parent = parent
         self.trim_seq = trim_seq
         self.mismatch_pct = mismatch_pct
         self.min_filter_len = min_filter_len
+        self.verbose = verbose
 
         self.altered = 0
         self.removed = 0
@@ -70,6 +74,8 @@ class TrimFilter(object):
                 if (matches / total) >= self.mismatch_pct:
                     trimmed = True
                     self.altered += 1
+                    if self.verbose:
+                        sys.stderr.write('[Trim] %s (altered) seq:%s clipped at:%s %s\n' % (name,seq,i,seq[:i]))
                     if len(seq) == len(qual):
                         yield ('%s #trim' % name,seq[:i],qual[:i])
                     else:
@@ -78,13 +84,17 @@ class TrimFilter(object):
             
             if not trimmed:
                 self.kept += 1
+                if self.verbose:
+                    sys.stderr.write('[Trim] %s (kept)\n' % name)
                 yield ('%s #trim' % name,seq,qual)
 
 
 class PairedFilter(object):
-    def __init__(self,parent):
+    def __init__(self,parent,verbose = False):
         self.parent = parent
         self._last = None
+        self.verbose = verbose
+
         self.altered = 0
         self.removed = 0
         self.kept = 0
@@ -94,22 +104,31 @@ class PairedFilter(object):
             if not self._last:
                 self._last = tup
             elif self._last[0] == tup[0]:
+                if self.verbose:
+                    sys.stderr.write('[Paired] %s (pass)\n' % self._last[0])
+                    sys.stderr.write('[Paired] %s (pass)\n' % tup[0])
                 yield self._last
                 yield tup
                 self._last = None
                 self.kept += 2
             else:
+                if self.verbose:
+                    sys.stderr.write('[Paired] %s (fail)\n' % self._last[0])
                 self.removed += 1
                 self._last = tup
 
         if self._last:
+            if self.verbose:
+                sys.stderr.write('[Paired] %s (pass)\n' % self._last[0])
             self.removed += 1
             
 class QualFilter(object):
-    def __init__(self,parent,min_qual,window_size):
+    def __init__(self,parent,min_qual,window_size,verbose = False):
         self.parent = parent
         self.min_qual = min_qual
         self.window_size = window_size
+        self.verbose = verbose
+
         self.altered = 0
         self.removed = 0
         self.kept = 0
@@ -126,6 +145,8 @@ class QualFilter(object):
                 if (acc / self.window_size) < self.min_qual: # truncate here
                     self.altered += 1
                     yielded = True
+                    if self.verbose:
+                        sys.stderr.write('[Qual] %s (altered) (idx:%s)\n' % (name,i))
                     if len(seq) == len(qual): #basespace or colorspace w/o prefix
                         yield('%s #qual' % name, seq[:i+self.window_size-1], qual[:i+self.window_size-1])
                     else:
@@ -134,12 +155,16 @@ class QualFilter(object):
 
             if not yielded:
                 self.kept += 1
+                if self.verbose:
+                    sys.stderr.write('[Qual] %s (kept)\n' % (name,))
                 yield ('%s #qual' % name,seq,qual)
 
 class SuffixQualFilter(object):
-    def __init__(self,parent,val):
+    def __init__(self,parent,val,verbose = False):
         self.parent = parent
         self.value = val
+        self.verbose = verbose
+
         self.altered = 0
         self.removed = 0
         self.kept = 0
@@ -153,17 +178,23 @@ class SuffixQualFilter(object):
                 seq=seq[:-1]
 
             if altered:
+                if self.verbose:
+                    sys.stderr.write('[SuffixQual] %s (altered)\n' % (name,))
                 self.altered += 1
             else:
+                if self.verbose:
+                    sys.stderr.write('[SuffixQual] %s (kept)\n' % (name,))
                 self.kept += 1
                 
             yield ('%s #suff' % name,seq,qual)
         
     
 class WildcardFilter(object):
-    def __init__(self,parent,max_num):
+    def __init__(self,parent,max_num,verbose = False):
         self.parent = parent
         self.max_num = max_num
+        self.verbose = verbose
+
         self.altered = 0
         self.removed = 0
         self.kept = 0
@@ -177,14 +208,21 @@ class WildcardFilter(object):
 
             if count <= self.max_num:
                 self.kept += 1
+                if self.verbose:
+                    sys.stderr.write('[Wild] %s (kept)\n' % (name,))
+                
                 yield ('%s #wild' % name,seq,qual)
             else:
+                if self.verbose:
+                    sys.stderr.write('[Wild] %s (removed)\n' % (name,))
                 self.removed += 1
 
 class SizeFilter(object):
-    def __init__(self,parent,min_size):
+    def __init__(self,parent,min_size,verbose = False):
         self.parent = parent
         self.min_size = min_size
+        self.verbose = verbose
+
         self.altered = 0
         self.removed = 0
         self.kept = 0
@@ -193,8 +231,12 @@ class SizeFilter(object):
         for name,seq,qual in self.parent.filter():
             if len(qual) >= self.min_size:
                 self.kept += 1
+                if self.verbose:
+                    sys.stderr.write('[Size] %s (kept)\n' % (name,))
                 yield ('%s #size' % name,seq,qual)
             else:
+                if self.verbose:
+                    sys.stderr.write('[Size] %s (removed) seq:%s size:%s\n' % (name,seq,len(qual)))
                 self.removed += 1
     
 
@@ -203,6 +245,7 @@ def usage():
     print """Usage: fastqutils filter {opts} {filters} file.fastq{.gz}
 Options:
   -stats filename             Write filter stats out to a file
+  -v                          Verbose logging
 
 Filters:
   -wildcard num               Discard reads with too many wildcards (N or .)
@@ -229,6 +272,7 @@ Filters:
 if __name__ == '__main__':
     fname = None
     stats_fname = None
+    verbose = False
     filters_config = []
 
     last = None
@@ -274,6 +318,8 @@ if __name__ == '__main__':
             last = None
         elif arg in ['-wildcard','-size','-qual','-suffixqual','-trim','-stats']:
             last = arg
+        elif arg == '-v':
+            verbose = True
         elif arg == '-h':
             usage()
         elif arg == '-paired':
@@ -284,12 +330,12 @@ if __name__ == '__main__':
     if not fname or not filters_config:
         usage()
         
-    chain = FASTQReader(fname)
+    chain = FASTQReader(fname,verbose)
     for config in filters_config:
         sys.stderr.write('%s\n'% '\t'.join([str(x) for x in config]))
         
         clazz = config[0]
         opts = config[1:]
-        chain = clazz(chain,*opts)
+        chain = clazz(chain,*opts,verbose=verbose)
     
     fastq_filter(chain)
