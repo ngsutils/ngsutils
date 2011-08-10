@@ -3,6 +3,7 @@ usage(){
      echo "Usage: fastqutils COMMAND"
      echo ""
      echo "Commands"
+     echo "    merge             - Merges paired FASTQ files into one file"
      echo "    names             - Write out the read names"
      echo "    split             - Splits a FASTQ file into N chunks"
      echo "    stats             - Calculate summary statistics for a FASTQ file"
