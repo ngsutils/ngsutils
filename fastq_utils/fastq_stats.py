@@ -24,7 +24,10 @@ def fastq_stats(fname):
     else:
         print "Pairing:\tFragmented"
     
-    print "Quality scale:\t%s" % fastq_qualtype(fname)
+    qual_totals = fastq_qualtype(fname)
+    
+    print "Quality scale:\t%s" % qual_totals[-1][1]
+    print ' '.join(['(%s,%s)' % q[1],q[0] for q in qual_totals])
     
     lengths = []
     qualities = []
