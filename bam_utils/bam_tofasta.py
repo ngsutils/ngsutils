@@ -4,7 +4,7 @@ import sys,gzip,os
 from support.eta import ETA
 import pysam
 
-def bam2fasta(sam_fname,colorspace=False,only_mapped=False,only_unmapped=False):
+def bam_tofasta(sam_fname,colorspace=False,only_mapped=False,only_unmapped=False):
     if only_mapped == False and only_unmapped == False:
         return
     if sam_fname[-4:].lower() == '.bam':
@@ -33,10 +33,10 @@ def bam2fasta(sam_fname,colorspace=False,only_mapped=False,only_unmapped=False):
 
 def usage():
     print """\
-Usage: %s  [-cs] {-mapped} {-unmapped} file.bam
+Usage: bamutils tofasta [-cs] {-mapped} {-unmapped} file.bam
 
 Outputs the sequences of all mapped reads to FASTA format.
-""" % os.path.basename(sys.argv[0])
+"""
     sys.exit(1)
 
 if __name__ == "__main__":
@@ -65,4 +65,4 @@ if __name__ == "__main__":
         mapped = True
         unmapped = True
     
-    bam2fasta(samf,cs,mapped,unmapped)
+    bam_tofasta(samf,cs,mapped,unmapped)

@@ -590,7 +590,7 @@ def _fetch_reads(bam,chrom,strand,starts,ends,multiple,exclusive,whitelist=None,
 def usage():
     print __doc__
     print """\
-Usage: %s [gene|alt|bed|repeat] annotation_file {opts} bamfile
+Usage: bamutils rpkm [gene|alt|bed|repeat] annotation_file {opts} bamfile
 
 Common options:
     -nostrand          ignore strand in counting reads
@@ -653,7 +653,7 @@ Possible values for {-norm}:
                (default)
     total    - count all reads that map anywhere on
                the genome
-    quartile - count all the reads in the lower 75%%
+    quartile - count all the reads in the lower 75%
                of all genes/regions (not available for repeats)
     none     - don't calc RPKM
 
@@ -664,7 +664,7 @@ Possible values for {-multiple}:
     partial  - add a fractional cound to all genes
                (1/number of matches, ex: 1/3)
 
-""" % (os.path.basename(sys.argv[0]),)
+"""
 
 if __name__ == '__main__':
     try:

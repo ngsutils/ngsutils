@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 '''
-Simple Smith-Waterman style aligner
+Simple Smith-Waterman aligner
 '''
 
 import sys,StringIO

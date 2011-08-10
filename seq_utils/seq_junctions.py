@@ -10,7 +10,7 @@ import support.refiso
 def usage():
     print __doc__
     print """\
-Usage: %s {opts} refiso.txt{.gz} ref.fasta
+Usage: sequtils junctions {opts} refiso.txt{.gz} ref.fasta
 
 Arguments
   refiso.txt      Gene model in RefIso format
@@ -22,8 +22,7 @@ Options
                   [default 46]
   -min size       Minimum size of a junction            
                   [default 50]
-
-""" % (os.path.basename(sys.argv[0]),)
+"""
     sys.exit(1)
 
 if __name__ == '__main__':

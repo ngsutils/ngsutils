@@ -33,10 +33,9 @@ from support.eta import ETA
 import pysam
 
 def usage():
-    base = os.path.basename(sys.argv[0])
     print __doc__
     print """
-Usage: %s {opts} in.bam {chrom:start-end}
+Usage: bamutils basecall {opts} in.bam {chrom:start-end}
 
 Options:
 -ref   val    Include reference basecalls from this file
@@ -49,8 +48,7 @@ Options:
 -mask  val    The bitmask to use for filtering reads (default 1540)
 
 -showgaps     Report gaps/splice-junctions in RNA-seq data
-
-""" % (base)
+"""
     sys.exit(1)
 
 __genomic_freq = {'A': 0.3, 'C': 0.2, 'G': 0.2,'T': 0.3}

@@ -120,19 +120,15 @@ def convert_illumina_qual(qual):
 def usage():
     print __doc__
     print """\
-Usage: %s {-illumina | -solexa} {-tag tag} {-trim} {-min N} export.txt
+Usage: fastqutils fromqseq {opts} export.txt
 
 Options:
--illumina   file is post-1.3 format (uses Phred calculation for quality)
-            (default)
--solexa     file is pre-1.3 format (uses Solexa calculation for quality)
-
--tag tag    Prefix the read names with this tag (such as the sample name/date)
--trim       perform quality control indicator (trailing B) trimming
--min N      the minimum allowed length for a read, post B-trimming
--noqc       Don't remove reads that failed QC (for matching paired end data)
-
-    """ % os.path.basename(sys.argv[0])
+  -solexa     file is pre-1.3 format (uses Solexa calculation for quality)
+  -tag tag    Prefix the read names with this tag (such as the sample name)
+  -trim       perform quality control indicator (trailing B) trimming
+  -min N      the minimum allowed length for a read, post B-trimming
+  -noqc       Don't remove reads that failed QC (for matching paired end data)
+"""
     sys.exit(1)
     
 if __name__ == '__main__':

@@ -13,10 +13,9 @@ from support.eta import ETA
 import pysam
 
 def usage():
-    base = os.path.basename(sys.argv[0])
     print __doc__
     print """
-Usage: %s {opts} in.bam {in.bam...}
+Usage: bamutils cims {opts} in.bam {in.bam...}
 
 Options:
     -fasta ref.fa    Ouput in FASTA format (requires reference genome.fa)
@@ -25,7 +24,7 @@ Options:
     -flanking N      The number of flanking bases on either side to report
                      (FASTA output only) [default: 12]
                      
-    -cutoff N        Cut-off %% for deletions - if the %% of reads that 
+    -cutoff N        Cut-off % for deletions - if the % of reads that 
                      include a deletion at a position is higher than this 
                      number, the fragment is reported (0->1.0)
                      [default: 0.1]
@@ -34,7 +33,7 @@ Options:
     
     -window N        The maximum length of a deletion window
                      [default: 20]
-""" % (base)
+"""
     sys.exit(1)
 
 class BEDEmitter(object):

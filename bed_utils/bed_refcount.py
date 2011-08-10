@@ -22,17 +22,13 @@ import os,sys,math
 from support.eta import ETA
 import support.ngs_utils
 import pysam
-# try:
-#     import rpy2.robjects as robjects
-# except Exception,e:
-#     robjects = None
 
 
 def usage():
     print __doc__
     print """\
-Usage: %s {-ns} reference.bed sample1.bed sample2.bed ...
-       %s {-ns} reference.bed -group name sample1-1 sample1-2 ... \\
+Usage: bedutils refcount {-ns} ref.bed sample1.bed sample2.bed ...
+       bedutils refcount {-ns} ref.bed -group name sample1-1 sample1-2 ...\\
                               -group name sample2-1 sample2-2 ...
 
 Where the sample BED files are Tabix indexed (sample1.bed.tgz.tbi exists).
@@ -62,7 +58,7 @@ def _ref_count(tabix,chrom,start,end,strand=None):
                 count += 1
         return count
 
-def bed_ref_count(refname,group_files,group_names,stranded=True):
+def bed_refcount(refname,group_files,group_names,stranded=True):
     groups = []
     for fnames,name in zip(group_files,group_names):
         samples = support.ngs_utils.filenames_to_uniq([os.path.basename(x) for x in fnames])
@@ -203,4 +199,4 @@ if __name__ == '__main__':
         usage()
         sys.exit(1)
     
-    bed_ref_count(refname,group_files,group_names,stranded=stranded)
+    bed_refcount(refname,group_files,group_names,stranded=stranded)

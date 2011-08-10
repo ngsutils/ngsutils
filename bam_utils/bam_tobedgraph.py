@@ -19,7 +19,7 @@ def write_bedgraph(chrom,start,end,count,normalize=None):
             sys.stdout.write('%s\t%s\t%s\t%s\n' % (chrom,start,end,count))
             
 
-def bam_to_bedgraph(bam_name,strand=None,normalize=None):
+def bam_tobedgraph(bam_name,strand=None,normalize=None):
     bamfile = pysam.Samfile(bam_name,"rb")
     eta = ETA(0,bamfile=bamfile)
 
@@ -79,7 +79,7 @@ def bam_to_bedgraph(bam_name,strand=None,normalize=None):
 def usage():
     print __doc__
     print """\
-Usage: %s [-plus | -minus] {-norm N} bamfile
+Usage: bamutils tobedgraph [-plus | -minus] {-norm N} bamfile
 
 Options:
     -plus             only count reads on the plus strand 
@@ -88,7 +88,7 @@ Options:
     
     -norm VAL         the count at every position is calculated as:
                       floor(count * VAL).
-""" % os.path.basename(sys.argv[0])
+"""
     sys.exit(1)
 
 if __name__ == "__main__":
@@ -116,4 +116,4 @@ if __name__ == "__main__":
     if not bam:
         usage()
     
-    bam_to_bedgraph(bam,strand,norm)
+    bam_tobedgraph(bam,strand,norm)

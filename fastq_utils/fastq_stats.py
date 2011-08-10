@@ -72,7 +72,7 @@ def fastq_stats(fname):
 
 def usage():
     print __doc__
-    print """Usage: %s filename.fastq{.gz}""" % os.path.basename(sys.argv[0])
+    print "Usage: fastqutils stats filename.fastq{.gz}"
     sys.exit(1)
 
 if __name__ == '__main__':

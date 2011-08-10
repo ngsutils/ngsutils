@@ -9,10 +9,9 @@ from support.eta import ETA
 import pysam
 
 def usage():
-    base = os.path.basename(sys.argv[0])
     print __doc__
     print """
-Usage: %s {-n num} in.bam out_template_name
+Usage: bamutils split {-n num} in.bam out_template_name
 
 out_template_name will be the template for the smaller BAM files.  They will 
 be named "out_template_name.N.bam" where out_template_name is the given 
@@ -21,7 +20,7 @@ argument and N is the file number.
 Options:
     -n      The number of reads to include in sub-files
             (default: 1000000)
-""" % (base,)
+"""
     sys.exit(1)
 
 def bam_split(infile,out_template,read_count = 1000000):

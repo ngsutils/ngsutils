@@ -4,7 +4,7 @@ Converts a file in basecall format to BED3 format.
 '''
 import sys,os
 
-def basecall_to_bed(fname):
+def bed_frombasecall(fname):
     if fname == '-':
         f = sys.stdin
     else:
@@ -21,7 +21,7 @@ def basecall_to_bed(fname):
 
 def usage():
     print __doc__
-    print 'Usage: %s basecall.txt (- for stdin)' % os.path.basename(sys.argv[0])
+    print 'Usage: bedutils frombasecall basecall.txt (- for stdin)'
     sys.exit(1)
 if __name__ == '__main__':
     fname = None
@@ -36,4 +36,4 @@ if __name__ == '__main__':
     if not fname:
         usage()
         
-    basecall_to_bed(fname)
+    bed_frombasecall(fname)

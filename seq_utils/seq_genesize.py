@@ -7,10 +7,10 @@ import sys,os
 
 def usage():
     print __doc__
-    print 'Usage: %s refiso.txt' % os.path.basename(sys.argv[0])
+    print 'Usage: sequtils genesize refiso.txt' % os.path.basename(sys.argv[0])
     sys.exit(1)
 
-def read_file(fname):
+def seq_genesize(fname):
     genes = {}
     with open(fname) as f:
         for line in f:
@@ -46,4 +46,4 @@ if __name__ == '__main__':
     if not fname:
         usage()
         
-    read_file(fname)
+    seq_genesize(fname)

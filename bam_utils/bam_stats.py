@@ -9,10 +9,9 @@ from support.eta import ETA
 from support.refiso import RefIso
 
 def usage():
-    base = os.path.basename(sys.argv[0])
     print __doc__
     print """
-Usage: %s in.bam {-model refiso.txt} {region}
+Usage: bamutils stats in.bam {-model refiso.txt} {region}
 
 If a RefIso file is given, counts corresponding to exons, introns, promoters,
 junctions, intergenic, and mitochondrial regions will be calculated.
@@ -20,9 +19,7 @@ junctions, intergenic, and mitochondrial regions will be calculated.
 If a region is given, only reads that map to that region will be counted. 
 Regions should be be in the format: 'ref:start-end' or 'ref:start' using 
 1-based start coordinates.
-
-
-""" % (base)
+"""
     sys.exit(1)
 
 flag_descriptions = {

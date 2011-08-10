@@ -18,10 +18,10 @@ def export_qual(fname):
         sys.stdout.write('>%s\n%s\n' % (name[1:],' '.join([str(ord(x)-33) for x in quals])))
 
 def usage():
-    print """Usage: %s {-qual} filename.fastq{.gz}
+    print """Usage: fastqutils tofasta {-qual} filename.fastq{.gz}
 Options:
   -qual    Export the quality values (space separated numbers)
-""" % os.path.basename(sys.argv[0])
+"""
     sys.exit(1)
 
 if __name__ == '__main__':
