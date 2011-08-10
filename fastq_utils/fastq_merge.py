@@ -42,7 +42,12 @@ def fastq_merge(fnames,split_slashes=False):
                     name = spl[0]
                     desc = ' /%s' % spl[1]
                 else:
-                    desc = ''
+                    cols = name.split()
+                    name = cols[0]
+                    if len(cols) > 1:
+                        desc = cols[1]
+                    else:
+                        desc = ''
 
                 if not lastname:
                     lastname = name
