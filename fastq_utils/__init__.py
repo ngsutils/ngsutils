@@ -63,7 +63,7 @@ def fastq_qualtype(fname, num_to_check=10000):
     
     totals = [(sanger_count,'Sanger'),(solexa_count,'Solexa'),(illumina_count,'Illumina')]
     totals.sort()
-    return totals[-1][1]
+    return totals
 
 def is_colorspace_fastq(fname):
     '''
