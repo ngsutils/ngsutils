@@ -41,6 +41,7 @@ def fastq_qualtype(fname, num_to_check=10000):
     sanger_count = 0
     solexa_count = 0
     illumina_count = 0
+    unknown_count = 0
 
     checked = 0
     for name,seq,qual in read_fastq(fname,quiet=True):
@@ -55,13 +56,15 @@ def fastq_qualtype(fname, num_to_check=10000):
                 qmax = ord(q)
         if sanger[0] <= qmin <= qmax <= sanger[1]:
             sanger_count += 1
-        elif solexa[0] <= qmin <= qmax <= solexa[1]:
-            solexa_count += 1
         elif illumina[0] <= qmin <= qmax <= illumina[1]:
             illumina_count += 1
+        elif solexa[0] <= qmin <= qmax <= solexa[1]:
+            solexa_count += 1
+        else:
+            unknown_count += 1
         checked += 1
     
-    totals = [(sanger_count,'Sanger'),(solexa_count,'Solexa'),(illumina_count,'Illumina')]
+    totals = [(sanger_count,'Sanger'),(solexa_count,'Solexa'),(illumina_count,'Illumina'),(unkown_count,'Unknown')]
     totals.sort()
     return totals
 
