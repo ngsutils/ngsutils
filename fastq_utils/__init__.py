@@ -64,7 +64,7 @@ def fastq_qualtype(fname, num_to_check=10000):
             unknown_count += 1
         checked += 1
     
-    totals = [(sanger_count,'Sanger'),(solexa_count,'Solexa'),(illumina_count,'Illumina'),(unkown_count,'Unknown')]
+    totals = [(sanger_count,'Sanger'),(solexa_count,'Solexa'),(illumina_count,'Illumina'),(unknown_count,'Unknown')]
     totals.sort()
     return totals
 
