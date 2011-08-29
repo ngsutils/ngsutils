@@ -13,6 +13,8 @@ usage(){
      echo ""
      echo "Conversions"
      echo "    convertqual      - Converts qual values from Illumina to Sanger scale"
+     echo "    csencode         - Converts color-space FASTQ file to encoded FASTQ "
+     echo "                       (01234. -> ACGTNN)"
      echo "    fromfasta        - Converts FASTA/Qual files to FASTQ format"
      echo "    fromqseq         - Converts Illumina qseq (export/sorted) files to FASTQ"
      echo "    tofasta          - Converts to FASTA format (seq or qual)"
