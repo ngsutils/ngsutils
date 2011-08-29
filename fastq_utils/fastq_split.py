@@ -43,7 +43,17 @@ def fastq_split(fname,outbase,chunks,ignore_pairs = False):
 
 def usage():
     print __doc__
-    print "Usage: fastqutils split {-ignorepaired} filename.fastq{.gz} out_template num_chunks"
+    print """\
+Usage: fastqutils split {opts} filename.fastq{.gz} out_template num_chunks
+
+Options:
+  -ignorepaired    Normally for paired-end samples, each read of the pair is 
+                   written to the same file. With this option, paired reads 
+                   can be written to any file. This is useful for splitting a
+                   paired FASTQ file back into separate files for each 
+                   fragment.
+
+"""
     sys.exit(1)
 
 if __name__ == '__main__':
