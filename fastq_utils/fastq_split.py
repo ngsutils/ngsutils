@@ -9,10 +9,13 @@ import os,sys,gzip
 
 from fastq_utils import read_fastq,is_paired_fastq
 
-def fastq_split(fname,outbase,chunks):
+def fastq_split(fname,outbase,chunks,ignore_pairs = False):
     i=0
     chunk=1
-    is_paired = is_paired_fastq(fname)
+    if ignore_pairs:
+        is_paired = False
+    else:
+        is_paired = is_paired_fastq(fname)
 
     outs = []
     for i in xrange(chunks):
@@ -40,16 +43,19 @@ def fastq_split(fname,outbase,chunks):
 
 def usage():
     print __doc__
-    print "Usage: fastqutils split filename.fastq{.gz} out_template num_chunks"
+    print "Usage: fastqutils split {-ignorepaired} filename.fastq{.gz} out_template num_chunks"
     sys.exit(1)
 
 if __name__ == '__main__':
     fname = None
     outtemplate = None
     chunks = 0
+    ignore_pairs = False
 
     for arg in sys.argv[1:]:
-        if not fname and os.path.exists(arg):
+        if arg == '-ignorepaired':
+            ignore_pairs = True
+        elif not fname and os.path.exists(arg):
             fname = arg
         elif not outtemplate:
             outtemplate = arg
@@ -59,4 +65,4 @@ if __name__ == '__main__':
     if not fname or not chunks or not outtemplate:
         usage()
         
-    fastq_split(fname,outtemplate,chunks)
+    fastq_split(fname,outtemplate,chunks,ignore_pairs)
