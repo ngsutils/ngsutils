@@ -29,7 +29,7 @@ def encoded_seq(seq):
     return ''.join(ret)
 
 def fastq_csencode(fname):
-    for name,seq,quals in read_fastq(fname,quiet=False):
+    for name,seq,qual in read_fastq(fname,quiet=False):
         if seq[0] in 'ATCG':
             seq = seq[2:]
         else:
