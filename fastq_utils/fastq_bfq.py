@@ -498,8 +498,8 @@ def bfq_info(fnames):
         bfq = BFQ(fname)
         sys.stdout.write('[%s]\n' % fname if fname != '-' else 'stdin')
         if bfq.description:
-            sys.stdout.write('%s\n' % bfq.description)
-        sys.stdout.write('Flags: 0x%02x ' % bfq.flags)
+            sys.stdout.write('[Description]\n%s\n' % bfq.description)
+        sys.stdout.write('[Flags]\n0x%02x ' % bfq.flags)
         f = []
         if bfq.flags & 0x01 == 0x01:
             f.append('compressed')
@@ -507,7 +507,7 @@ def bfq_info(fnames):
             f.append('not-compressed')
         
         sys.stdout.write('(%s)\n'%(','.join(f)))
-        sys.stdout.write('%s fragment(s)\n' % bfq.fragment_count)
+        sys.stdout.write('[Fragments]\n%s fragment(s)\n' % bfq.fragment_count)
         i=0
         for n,ff in zip(bfq.fragment_names,bfq.fragment_flags):
             i += 1
@@ -587,9 +587,8 @@ Encoding options:
     -fn             Include a name for a fragment (there can be as 
                     many of these are there are fragments)
     -desc text      Include a description of the file
-                    (if the text starts with an '@' then the rest of the 
-                    argument is assumed to be a filename, and the contents
-                    of the file will be included as the description)
+    -descf fname    The contents of the file fname will be used as the 
+                    description
     -nc             Disable compression
     -o fname        Name of the output file
                     (defaults to input filename.bfq)
@@ -619,13 +618,21 @@ if __name__ == '__main__':
         if last == '-o':
             outname = arg
             last = None
+        elif last == '-descf':
+            if os.path.exists(arg):
+                with open(arg) as f:
+                    desc = f.read()
+            else:
+                sys.stderr.write('Description file: %s is missing!\n' % arg)
+                sys.exit(1)
+            last = None
         elif last == '-desc':
             desc = arg
             last = None
         elif last == '-fn':
             fragment_names.append(arg)
             last = None
-        elif arg in ['-desc','-o','-fn']:
+        elif arg in ['-desc','-o','-fn','-descf']:
             last = arg
         elif arg == '-nc':
             compress = False
