@@ -60,6 +60,9 @@ char*   description
 
     Valid flags:
         0x1     The file is zlib compressed
+        0x2     The description contains a filename followed by binary data
+                The format is:
+                  filename\0binary data
 
 
 [fragment_header]
@@ -97,7 +100,7 @@ class BFQ(object):
     __nt_encode = { 'A': 0,'C':1,'G':2,'T':3,'N':4}
     __nt_decode = 'ACGT'
     
-    def __init__(self, filename, mode='r', description='', fragment_count = 1, fragment_names=None, fragment_flags=None):
+    def __init__(self, filename, mode='r', description='', fragment_count=1, fragment_names=None, fragment_flags=None, description_binary=False):
         assert mode in ['r','w','wz']
         self.filename = filename
         self.description = description
@@ -105,6 +108,7 @@ class BFQ(object):
         self.fragment_flags = fragment_flags
         self.fragment_names = fragment_names
 
+        self.description_binary = description_binary
         self.compress = False
         self.version = 1
         self.flags = 0
@@ -239,6 +243,7 @@ class BFQ(object):
 
         self.version, self.flags, self.fragment_count, lendesc = struct.unpack('<HHBI',self.fobj.read(9))
         self.compress = self.flags & 0x1 == 0x1
+        self.description_binary = self.flags & 0x2 == 0x2
 
         if lendesc > 0:
             self.description, = struct.unpack('<%ss' % lendesc,self.fobj.read(lendesc))
@@ -270,6 +275,8 @@ class BFQ(object):
         
         if self.compress:
             flags = flags | 0x1
+        if self.description_binary:
+            flags = flags | 0x2
         
         data = struct.pack('<IHH', BFQ._magic,self.version,flags)
         self.__write_data(data,True)
@@ -385,7 +392,7 @@ def bfq_decode(fname):
     bfq.close()
 
 
-def bfq_encode_fastq(fnames, stdout=False, compress=False, description='', outname=None, force = False, quiet = False, fragment_names=None):
+def bfq_encode_fastq(fnames, stdout=False, compress=False, description='', outname=None, force = False, quiet = False, fragment_names=None, description_binary=False):
     fobjs = []
     for fname in fnames:
         if fname == '-':
@@ -462,7 +469,7 @@ def bfq_encode_fastq(fnames, stdout=False, compress=False, description='', outna
         for f in fnames:
             fragment_names.append(os.path.basename(fname))
 
-    bfq = BFQ(outname,mode,description=description,fragment_count=fragment_count,fragment_names=fragment_names,fragment_flags = fragment_flags)
+    bfq = BFQ(outname,mode,description=description,fragment_count=fragment_count,fragment_names=fragment_names,fragment_flags = fragment_flags, description_binary=description_binary)
     
     last_pos = 0
     diff = .05 * fsize
@@ -498,7 +505,16 @@ def bfq_info(fnames):
         bfq = BFQ(fname)
         sys.stdout.write('[%s]\n' % fname if fname != '-' else 'stdin')
         if bfq.description:
-            sys.stdout.write('[Description]\n%s\n' % bfq.description)
+            sys.stdout.write('[Description]\n')
+            if bfq.description_binary:
+                for c in bfq.description:
+                    if c == '\0':
+                        sys.stdout.write(' *binary*\n')
+                        break
+                    else:
+                        sys.stdout.write(c)
+            else:
+                sys.stdout.write('%s\n' % bfq.description)
         sys.stdout.write('[Flags]\n0x%02x ' % bfq.flags)
         f = []
         if bfq.flags & 0x01 == 0x01:
@@ -522,6 +538,17 @@ def bfq_info(fnames):
 
             sys.stdout.write('(%s)\n'%(','.join(f)))
         sys.stdout.write('\n')
+
+def bfq_description(fname):
+    bfq = BFQ(fname)
+    if bfq.description:
+        i=0
+        if bfq.description_binary:
+            for c in bfq.description:
+                i+=1
+                if c == '\0':
+                    break
+        sys.stdout.write(bfq.description[i:])
     
 def bfq_test(fnames):
     if type(fnames) == str:
@@ -588,11 +615,14 @@ Encoding options:
                     many of these are there are fragments)
     -desc text      Include a description of the file
     -descf fname    The contents of the file fname will be used as the 
-                    description
+                    description (this can be a binary file)
     -nc             Disable compression
     -o fname        Name of the output file
                     (defaults to input filename.bfq)
     -q              Quiet (no progress bar)
+
+Decoding options:
+    -desc           Extract the description only (to stdout)
 
 """
     sys.exit(1)
@@ -601,6 +631,7 @@ if __name__ == '__main__':
     action = 'encode'
     stdout = False
     desc = ''
+    desc_bin = False
     compress = True
     force = False
     quiet = False
@@ -621,7 +652,8 @@ if __name__ == '__main__':
         elif last == '-descf':
             if os.path.exists(arg):
                 with open(arg) as f:
-                    desc = f.read()
+                    desc = '%s\0%s' % (os.path.basename(arg),f.read())
+                    desc_bin = True
             else:
                 sys.stderr.write('Description file: %s is missing!\n' % arg)
                 sys.exit(1)
@@ -632,6 +664,8 @@ if __name__ == '__main__':
         elif last == '-fn':
             fragment_names.append(arg)
             last = None
+        elif arg == '-desc' and action == 'decode':
+            action = 'desc'
         elif arg in ['-desc','-o','-fn','-descf']:
             last = arg
         elif arg == '-nc':
@@ -666,10 +700,14 @@ if __name__ == '__main__':
             if not fnames:
                 fnames.append('-')
             bfq_info(fnames)
+        elif action == 'desc':
+            if not fnames:
+                fnames.append('-')
+            bfq_description(fnames[0])
         elif action == 'encode':
             if not fnames:
                 fnames = ['-']
-            bfq_encode_fastq(fnames, stdout=stdout, compress=compress, description=desc, outname=outname, force=force, fragment_names=fragment_names, quiet=quiet)
+            bfq_encode_fastq(fnames, stdout=stdout, compress=compress, description=desc, outname=outname, force=force, fragment_names=fragment_names, quiet=quiet, description_binary=desc_bin)
     # except Exception, e:
        # sys.stderr.write('%s: %s' % (type(e).__name__,e))
        # sys.stderr.write('\n')
