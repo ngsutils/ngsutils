@@ -1,20 +1,24 @@
 #!/usr/bin/python
 '''
-BFQ - A Binary FastQ format. 
-'''
-'''
-This stores the name/seq/qual information for a 
-FASTQ file in a highly compact binary format. This stores the name as a char*,
-and the sequence + qual in an 8-bit encoded format. It can store more than one 
-sequence+qual fragments for each read, meaning that it efficiently deals with 
-paired-end data (with support for upto 256 fragments).
+BFQ - A Binary FASTQ format. 
+
+This stores the name/seq/qual information for a FASTQ file in a highly compact 
+binary format. This stores the sequence + qual in an 8-bit encoded format. It 
+can store more than one sequence+qual fragments for each read, meaning that it 
+efficiently deals with paired-end data (with support for upto 256 fragments).
+
+To save paired end data, include one file for each fragment, or use a single
+FASTQ file with one record for each fragment (consecuatively using the same 
+name for each fragment).
 
 BFQ also compresses the read data with zlib, so it is very compact. (This can 
 be turned off for faster processing).
 
 Finally, the file includes an MD5 checksum at the end so that file integrity 
 be confirmed at any point.
+'''
 
+'''
 8 bit-encoding:
 bits: SSQQ QQQQ
 
@@ -31,8 +35,9 @@ All values are little-endian, regardless of platform.
 
 Limits:
     length of description: 4 billion (uint)
-    length of name: 64K (ushort)
+    length of a fragment name: 64K (ushort)
     number of fragments per read: 256 (uchar)
+    length of read name: 64K (ushort)
     length of sequence: 64K (ushort)
     quality score: 0-62
 
@@ -44,18 +49,28 @@ File format:
 16byte  md5 hash of entire file
 
 [header]
-uint    magic_byte
-ushort  file version
-ushort  flags bitmap
-uchar   number of sequences per read (paired-end/multiple fragments)
+uint    magic_byte    (always uncompressed)
+ushort  file version  (always uncompressed)
+ushort  flags bitmap  (always uncompressed)
+(compression starts here - if enabled)
+uchar   number of fragments per read
 uint    description length
 char*   description
+{fragment_header}+
 
-        Valid flags:
-        0x1     File is in colorspace
-        0x2     If file is in colorspace, the last base of the adapter is 
-                included (in base-space)
-        0x4     The body is zlib compressed
+    Valid flags:
+        0x1     The file is zlib compressed
+
+
+[fragment_header]
+ushort  fragment flags bitmap
+ushort  name length
+char*   name
+
+    Valid fragment flags:
+        0x1     Fragment is in colorspace
+        0x2     If fragment is in colorspace, the last base of the adapter  
+                is included (in base-space)
 
 [body]
 {read}+
@@ -63,35 +78,43 @@ char*   description
 [read]
 ushort  length of the name (must be > 0)
 char*   read name
-{seq_qual}+
+{seq_qual}+ (for each fragment, if a read is missing a fragment, the length is 0)
 
 [seq_qual]
 ushort  length of the sequence
-uchar*  seq+qual
+uchar*  seq+qual in 8bit encoding
 
 '''
 
-import sys,os,gzip,struct,zlib,hashlib
+import sys,os,gzip,struct,zlib,hashlib,collections
+
+_BFQ_fragment_flags = collections.namedtuple('_BFQ_fragment_flags','flags colorspace cs_include_prefix')
 
 class BFQ(object):
     _magic = 0xE1EEBEA4
     __cs_encode = { '0': 0,'1':1,'2':2,'3':3,'4':4,'5':4,'6':4,'.':4}
+    __cs_decode = '0123'
     __nt_encode = { 'A': 0,'C':1,'G':2,'T':3,'N':4}
     __nt_decode = 'ACGT'
     
-    def __init__(self, filename, mode='r', description='', seq_count = 1):
+    def __init__(self, filename, mode='r', description='', fragment_count = 1, fragment_names=None, fragment_flags=None):
         assert mode in ['r','w','wz']
         self.filename = filename
         self.description = description
-        self.sequences_per_read = seq_count
+        self.fragment_count = fragment_count
+        self.fragment_flags = fragment_flags
+        self.fragment_names = fragment_names
 
-        self.colorspace = False
-        self.cs_include_prefix = False
         self.compress = False
         self.version = 1
+        self.flags = 0
+        
+        self.__fragment_colorspace = []
+        self.__fragment_cs_include_prefix = []
+
         self.__errors_printed = set()
         self.__last_name = None
-        self.__seqnum = 1
+        self.__seqnum = 0
 
         mode = mode.lower()
 
@@ -113,6 +136,12 @@ class BFQ(object):
         if self.mode == 'w':
             self.__wrote_header = False
             self.__md5 = hashlib.md5()
+            
+            if not self.fragment_flags:
+                self.fragment_flags = [0,] * fragment_count
+            if not self.fragment_names:
+                self.fragment_names = ['',] * fragment_count
+            
         else:
             self._read_header()
         
@@ -127,7 +156,7 @@ class BFQ(object):
             seqs = []
             quals = []
             
-            for i in xrange(self.sequences_per_read):
+            for i in xrange(self.fragment_count):
                 lenseq = self.__read_struct('<H')
                 
                 if lenseq == 0:
@@ -139,21 +168,20 @@ class BFQ(object):
                 
                 seq = []
                 qual = []
-                if self.colorspace:
-                    if self.cs_include_prefix:
+                if self.__fragment_cs_include_prefix[i]:
                         seq.append(BFQ.__nt_decode[seqqual[0] >> 6])
                         seqqual = seqqual[1:]
                 
                 for sq in seqqual:
                     if sq == 0xFF:
-                        if self.colorspace:
+                        if self.__fragment_colorspace[i]:
                             seq.append('.')
                         else:
                             seq.append('N')
                         qual.append(0)
                     else:
-                        if self.colorspace:
-                            seq.append(str(sq >> 6))
+                        if self.__fragment_colorspace[i]:
+                            seq.append(BFQ.__cs_decode[sq >> 6])
                         else:
                             seq.append(BFQ.__nt_decode[sq >> 6])
             
@@ -165,60 +193,73 @@ class BFQ(object):
         except Exception, e:
             raise StopIteration
         
-    
     def write_read(self,name,seq,qual):
         if not self.__wrote_header:
-            self.__check_format(name,seq,qual)
             self._write_header()
 
-        if self.sequences_per_read == 1 or name != self.__last_name:
-            while self.__seqnum < self.sequences_per_read:
-                self.__write_struct(struct.pack('<H',0))
-                self.__seqnum += 1
-            self.__write_struct(struct.pack('<H%ss' % len(name),len(name),name))
-            self.__seqnum = 1
-        else:
-            self.__seqnum += 1
-        
-        self.__write_struct(struct.pack('<H',len(seq)))
+        if self.fragment_count == 1 or name != self.__last_name:
+            if self.__last_name:
+                while self.__seqnum < self.fragment_count:
+                    self.__write_data(struct.pack('<H',0))
+                    self.__seqnum += 1
+            self.__write_data(struct.pack('<H%ss' % len(name),len(name),name))
+            self.__seqnum = 0
+
+        self.__last_name = name
+        self.__write_data(struct.pack('<H',len(seq)))
             
-        if self.colorspace:
-            if self.cs_include_prefix:
-                self.__write_struct(struct.pack('<B',(BFQ.__nt_encode[seq[0]] << 6)))
+        if self.__fragment_cs_include_prefix[self.__seqnum]:
+                self.__write_data(struct.pack('<B',(BFQ.__nt_encode[seq[0]] << 6)))
                 seq = seq[1:]
 
         for s,q in zip(seq,qual):
             self.__write_base_qual(s,q)
+        self.__seqnum += 1
 
     def tell(self):
         return self.fobj.tell()
     
     def close(self):
         if self.mode == 'w':
-            data = self.__compressor.flush()
-            if data:
-                self.fobj.write(data)
-                self.__md5_update(data)
+            if self.compress:
+                data = self.__compressor.flush()
+                if data:
+                    self.fobj.write(data)
+                    self.__md5_update(data)
             self.fobj.write(self.__md5.digest())
             self.fobj.flush()
         self.fobj.close()
         
 
     def _read_header(self):
-        header = self.fobj.read(13)
-        magic, self.version, flags, self.sequences_per_read, lendesc = struct.unpack('<IHHBI',header)
+        magic, = struct.unpack('<I',self.fobj.read(4))
 
         if magic != BFQ._magic:
             raise IOError,"File isn't in BFQ format"
 
+        self.version, self.flags, self.fragment_count, lendesc = struct.unpack('<HHBI',self.fobj.read(9))
+        self.compress = self.flags & 0x1 == 0x1
+
         if lendesc > 0:
-            desc = self.fobj.read(lendesc)
-            self.description, = struct.unpack('<%ss' % lendesc,desc)
-
-
-        self.colorspace = flags & 0x1 == 0x1
-        self.cs_include_prefix = flags & 0x2 == 0x2
-        self.compress = flags & 0x4 == 0x4
+            self.description, = struct.unpack('<%ss' % lendesc,self.fobj.read(lendesc))
+        
+        self.fragment_names = []
+        self.fragment_flags = []
+        
+        for i in xrange(self.fragment_count):
+            flags,namelen = struct.unpack('<HH',self.fobj.read(4))
+            
+            if namelen > 0:
+                name, = struct.unpack('<%ss' % namelen,self.fobj.read(namelen))
+            else:
+                name = ''
+            
+            self.fragment_names.append(name)
+            self.fragment_flags.append(flags)
+            
+            self.__fragment_colorspace.append(flags & 0x1 == 0x1)
+            self.__fragment_cs_include_prefix.append(flags & 0x2 == 0x2)
+            
         
         if self.compress:
             self.__decompressor = zlib.decompressobj()
@@ -227,20 +268,29 @@ class BFQ(object):
     def _write_header(self):
         flags = 0
         
-        if self.colorspace:
-            flags = flags | 0x1
-        if self.cs_include_prefix:
-            flags = flags | 0x2
         if self.compress:
-            flags = flags | 0x4
+            flags = flags | 0x1
         
-        data = struct.pack('<IHHBI%ss' % len(self.description),BFQ._magic,self.version,flags,self.sequences_per_read,len(self.description),self.description)
-        self.fobj.write(data)
-        self.__md5_update(data)
+        data = struct.pack('<IHH', BFQ._magic,self.version,flags)
+        self.__write_data(data,True)
+
+        data = struct.pack('<BI%ss' % len(self.description),self.fragment_count,len(self.description),self.description)
+        self.__write_data(data)
+        
+        while len(self.fragment_names) < len(self.fragment_flags):
+            self.fragment_names.append('')
+        
+        for name,ff in zip(self.fragment_names,self.fragment_flags):
+            data = struct.pack('<HH%ss' % len(name),ff,len(name),name)
+            self.__write_data(data)
+
+            self.__fragment_colorspace.append(ff & 0x1 == 0x1)
+            self.__fragment_cs_include_prefix.append(ff & 0x2 == 0x2)
+
         self.__wrote_header = True
     
     def __write_base_qual(self,base,qual):
-        if self.colorspace:
+        if self.__fragment_colorspace[self.__seqnum]:
             b = BFQ.__cs_encode[base]
         else:
             b = BFQ.__nt_encode[base]
@@ -253,7 +303,7 @@ class BFQ(object):
                 qual = 0x3E
             b = (b << 6) | (qual & 0x3F)
         
-        self.__write_struct(struct.pack('<B',b))
+        self.__write_data(struct.pack('<B',b))
     
     def __errmsg(self,msg):
         if not msg in self.__errors_printed:
@@ -279,8 +329,8 @@ class BFQ(object):
         
         return struct.unpack(fmt,data)
     
-    def __write_struct(self,data):
-        if self.compress:
+    def __write_data(self,data, force_uncompressed = False):
+        if self.compress and not force_uncompressed:
             chunk = self.__compressor.compress(data)
             if chunk:
                 self.fobj.write(chunk)
@@ -291,31 +341,37 @@ class BFQ(object):
 
     def __md5_update(self,data):
         self.__md5.update(data)
-
-    def __check_format(self,name,seq,qual):
-        if '0' in seq or '1' in seq or '2' in seq or '3' in seq:
-            self.colorspace = True
-            self.cs_include_prefix = seq[0].upper() in 'ATCG'
         
+def _check_fragment_flags(seq):
+    flags = 0
 
-def _read_fastq(fobjs):
+    if '0' in seq or '1' in seq or '2' in seq or '3' in seq or '4' in seq or '.' in seq:
+        flags = flags | 0x1
+
+        if seq[0].upper() in 'ATCG':
+            flags = flags | 0x2
+    
+    return flags
+
+def _read_fastq(fobjs,fileno=-1):
     try:
-        i = 0
+        i = fileno+1
         while True:
+            if i >= len(fobjs):
+                i=0
             name = fobjs[i].next()
             if not name:
                 return
             seq = fobjs[i].next()
             fobjs[i].next()
             qual = fobjs[i].next()
-            yield (name,seq,qual)
+            # sys.stderr.write('*%s*' % name.strip())
+            yield (name,seq,qual,i)
             
             if len(fobjs) > 1:
                 i += 1
-                if i > len(fobjs):
-                    i=0
-
-    except:
+    
+    except Exception, e:
         return
 
 
@@ -329,7 +385,7 @@ def bfq_decode(fname):
     bfq.close()
 
 
-def bfq_encode_fastq(fnames, stdout=False, compress=False, description='', outname=None, force = False, quiet = False):
+def bfq_encode_fastq(fnames, stdout=False, compress=False, description='', outname=None, force = False, quiet = False, fragment_names=None):
     fobjs = []
     for fname in fnames:
         if fname == '-':
@@ -351,30 +407,29 @@ def bfq_encode_fastq(fnames, stdout=False, compress=False, description='', outna
         fobjs.append(f)
 
     buf = []
+    flags = {}
+    last_fileno = 0
+    for name,seq,qual,fileno in _read_fastq(fobjs):
+        buf.append((name,seq,qual))
+        
+        if not name in flags:
+            flags[name] = []
 
-    if len(fnames) > 1:
-        seq_count = len(fnames)
-    else:
-        if fobjs[0] != sys.stdin:
-            name_count = {}
-            for name,seq,qual in _read_fastq(fobjs):
-                buf.append((name,seq,qual))
-                if not name in name_count:
-                    name_count[name] = 1
-                else:
-                    name_count[name] += 1
-                
-                if len(name_count) > 10:
-                    break
-            nc = []
-            for name in name_count:
-                nc.append(name_count[name])
-            
-            nc.sort()
-            seq_count = nc[-1]
-        else:
-            seq_count = 1
+        flags[name].append(_check_fragment_flags(seq))
+        
+        if len(flags) > 10:
+            last_fileno = fileno
+            break
+
+    nc = []
+    for name in flags:
+        nc.append((len(flags[name]),flags[name]))
     
+    nc.sort()
+    fragment_count = nc[-1][0]
+    fragment_flags = nc[-1][1]
+    
+
     if compress:
         mode = 'wz'
     else:
@@ -397,15 +452,21 @@ def bfq_encode_fastq(fnames, stdout=False, compress=False, description='', outna
             base.append('bfq')
             outname = '.'.join(base)
 
-            if os.path.exists(outname) and not force:
-                sys.stderr.write('%s exists!' % outname)
-                sys.exit(1)
+    if outname and os.path.exists(outname) and not force:
+        sys.stderr.write('%s exists!\n' % outname)
+        sys.exit(1)
             
 
-    bfq = BFQ(outname,mode,description=description,seq_count=seq_count)
+    if not fragment_names:
+        fragment_names = []
+        for f in fnames:
+            fragment_names.append(os.path.basename(fname))
+
+    bfq = BFQ(outname,mode,description=description,fragment_count=fragment_count,fragment_names=fragment_names,fragment_flags = fragment_flags)
     
     last_pos = 0
     diff = .05 * fsize
+    pos = 0
     
     if not quiet:
         sys.stderr.write('[...................]\r[>')
@@ -413,29 +474,54 @@ def bfq_encode_fastq(fnames, stdout=False, compress=False, description='', outna
     for name,seq,qual in buf:
         bfq.write_read(name[1:].strip(),seq.strip(),[ord(q)-33 for q in qual.strip()])
     
-    for name,seq,qual in _read_fastq(fobjs):
-        if fsize:
+    for name,seq,qual,fileno in _read_fastq(fobjs,last_fileno):
+        bfq.write_read(name[1:].strip(),seq.strip(),[ord(q)-33 for q in qual.strip()])
+
+        if fsize and not quiet: 
             pos = teller.tell()
             if pos - last_pos > diff:
                 sys.stderr.write('>')
                 sys.stderr.flush()
-#                sys.stderr.write('%s%%\n' % (pos* 100 / fsize))
                 last_pos = pos
-        bfq.write_read(name[1:].strip(),seq.strip(),[ord(q)-33 for q in qual.strip()])
     
     bfq.close()
-    sys.stderr.write('\r                     \r')
+
+    if not quiet:
+        sys.stderr.write('\r                     \r')
 
     for fobj in fobjs:
         if fobj != sys.stdin:
             fobj.close()
 
-def bfq_show_description(fnames):
+def bfq_info(fnames):
     for fname in fnames:
         bfq = BFQ(fname)
-        if len(fnames) > 1:
-            sys.stdout.write('[%s]\n' % fname if fname != '-' else 'stdin')
-        sys.stdout.write('%s\n' % bfq.description)
+        sys.stdout.write('[%s]\n' % fname if fname != '-' else 'stdin')
+        if bfq.description:
+            sys.stdout.write('%s\n' % bfq.description)
+        sys.stdout.write('Flags: 0x%02x ' % bfq.flags)
+        f = []
+        if bfq.flags & 0x01 == 0x01:
+            f.append('compressed')
+        else:
+            f.append('not-compressed')
+        
+        sys.stdout.write('(%s)\n'%(','.join(f)))
+        sys.stdout.write('%s fragment(s)\n' % bfq.fragment_count)
+        i=0
+        for n,ff in zip(bfq.fragment_names,bfq.fragment_flags):
+            i += 1
+            sys.stdout.write('  #%-4s: %s\n  Flags: 0x%02x ' % (i,n,ff))
+            f = []
+            if ff & 0x01 == 0x01:
+                f.append('colorspace')
+            else:
+                f.append('basespace')
+            if ff & 0x02 == 0x02:
+                f.append('cs_prefix')
+
+            sys.stdout.write('(%s)\n'%(','.join(f)))
+        sys.stdout.write('\n')
     
 def bfq_test(fnames):
     if type(fnames) == str:
@@ -489,21 +575,25 @@ Usage: fastqutils bfq {opts} infile1.fastq {infile2.fastq ... }
        fastqutils bfq -t filename.bfq
        
 Options:
-    -d              Decode BFQ file to stdout in FASTQ format
+    -d              Decode BFQ file to stdout in FASTQ format (one-file)
     -t              Test file integrity
+    -i              Display information about the file and fragments
 
     -h              Display this message
     
 Encoding options:
     -c              Output to stdout
     -f              Force overwriting existing files
-    -i description  Include a description of the file
-    -nogz           Disable compression
+    -fn             Include a name for a fragment (there can be as 
+                    many of these are there are fragments)
+    -desc text      Include a description of the file
+                    (if the text starts with an '@' then the rest of the 
+                    argument is assumed to be a filename, and the contents
+                    of the file will be included as the description)
+    -nc             Disable compression
     -o fname        Name of the output file
                     (defaults to input filename.bfq)
-
-Decoding options:
-    -s              Only display the description
+    -q              Quiet (no progress bar)
 
 """
     sys.exit(1)
@@ -513,10 +603,11 @@ if __name__ == '__main__':
     stdout = False
     desc = ''
     compress = True
-    show = False
     force = False
+    quiet = False
     outname = None
-    
+
+    fragment_names = []
     fnames = []
     
     last = None
@@ -528,19 +619,24 @@ if __name__ == '__main__':
         if last == '-o':
             outname = arg
             last = None
-        elif last == '-i':
+        elif last == '-desc':
             desc = arg
             last = None
-        elif arg in ['-i','-o']:
+        elif last == '-fn':
+            fragment_names.append(arg)
+            last = None
+        elif arg in ['-desc','-o','-fn']:
             last = arg
-        elif arg == '-nogz':
+        elif arg == '-nc':
             compress = False
         elif arg == '-f':
             force = True
         elif arg == '-c':
             stdout = True
-        elif arg == '-s':
-            show = True
+        elif arg == '-q':
+            quiet = True
+        elif arg == '-i':
+            action = 'info'
         elif arg == '-t':
             action = 'test'
         elif arg == '-d':
@@ -548,7 +644,8 @@ if __name__ == '__main__':
         elif arg == '-' or os.path.exists(arg):
             fnames.append(arg)
 
-    try:
+    # try:
+    if True:
         if action == 'test':
             if not fnames:
                 usage()
@@ -556,16 +653,17 @@ if __name__ == '__main__':
         elif action == 'decode':
             if not fnames:
                 fnames.append('-')
-        
-            if show:
-                bfq_show_description(fnames)
             else:
                 bfq_decode(fnames[0])
+        elif action == 'info':
+            if not fnames:
+                fnames.append('-')
+            bfq_info(fnames)
         elif action == 'encode':
             if not fnames:
                 fnames = ['-']
-            bfq_encode_fastq(fnames, stdout=stdout, compress=compress, description=desc, outname=outname, force=force)
-    except Exception, e:
-       sys.stderr.write('%s: %s' % (type(e).__name__,e))
-       sys.stderr.write('\n')
-       sys.exit(1)
+            bfq_encode_fastq(fnames, stdout=stdout, compress=compress, description=desc, outname=outname, force=force, fragment_names=fragment_names, quiet=quiet)
+    # except Exception, e:
+       # sys.stderr.write('%s: %s' % (type(e).__name__,e))
+       # sys.stderr.write('\n')
+       # sys.exit(1)
