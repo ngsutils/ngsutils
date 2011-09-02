@@ -1,6 +1,9 @@
 #!/usr/bin/python
 '''
-BFQ - A Binary FastQ format. This stores the name/seq/qual information for a 
+BFQ - A Binary FastQ format. 
+'''
+'''
+This stores the name/seq/qual information for a 
 FASTQ file in a highly compact binary format. This stores the name as a char*,
 and the sequence + qual in an 8-bit encoded format. It can store more than one 
 sequence+qual fragments for each read, meaning that it efficiently deals with 
@@ -336,7 +339,7 @@ def bfq_encode_fastq(fnames, stdout=False, compress=False, description='', outna
                 quiet = True
             else:
                 sys.stderr.write('Missing data on stdin\n')
-                sys.exit(1)
+                usage()
         elif fname[-3:].lower() == '.gz':
             f = gzip.open(fname)
             fsize = os.stat(fname).st_size
@@ -479,6 +482,7 @@ def bfq_test(fnames):
 
 
 def usage():
+    print __doc__
     print """\
 Usage: fastqutils bfq {opts} infile1.fastq {infile2.fastq ... }
        fastqutils bfq -d {opts} filename.bfq
@@ -494,7 +498,7 @@ Encoding options:
     -c              Output to stdout
     -f              Force overwriting existing files
     -i description  Include a description of the file
-    -noz            Disable compression
+    -nogz           Disable compression
     -o fname        Name of the output file
                     (defaults to input filename.bfq)
 
@@ -529,7 +533,7 @@ if __name__ == '__main__':
             last = None
         elif arg in ['-i','-o']:
             last = arg
-        elif arg == '-nz':
+        elif arg == '-nogz':
             compress = False
         elif arg == '-f':
             force = True
