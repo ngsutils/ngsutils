@@ -5,7 +5,7 @@ criteria to be written to output. The output is another BAM file with the
 reads not matching the criteria removed.
 
 Currently, the available filters are:
-    -mapped
+    -mapped                    Keep only mapped reads
     
     -mismatch num              # mismatches or indels
                                indel always counts as 1 regardless of length
@@ -28,6 +28,9 @@ Currently, the available filters are:
                                from the given BED file
                                Note: If this is a large dataset, use 
                                "bamutils extract" instead.
+
+    -whitelist fname           Remove reads that aren't on this list (by name)
+    -blacklist fname           Remove reads that are on this list (by name)
     
     -eq  tag_name value
     -lt  tag_name value
@@ -53,8 +56,10 @@ def usage():
     print """
 Usage: bamutils filter in.bam out.bam {-failed out.txt} criteria...
 
-If given, -failed, will be a text file containing the read names of all reads 
-that were removed with filtering.
+Options:
+
+  -failed fname    A text file containing the read names of all reads 
+                   that were removed with filtering
 
 Example: 
 bamutils filter filename.bam output.bam -mapped -gte AS:i 1000
@@ -65,6 +70,31 @@ value less than 1000.
     sys.exit(1)
 
 bam_cigar = ['M','I','D','N','S','H','P']
+
+class Blacklist(object):
+    def __init__(self,fname):
+        self.fname = fname
+        self.notallowed = []
+        with open(fname) as f:
+            for line in f:
+                self.notallowed.append(line.strip())
+    def filter(self,bam,read):
+        return read.qname not in self.notallowed
+    def __repr__(self):
+        return 'Blacklist: %s' % (self.fname)
+
+class Whitelist(object):
+    def __init__(self,fname):
+        self.fname = fname
+        self.allowed = []
+        with open(fname) as f:
+            for line in f:
+                self.allowed.append(line.strip())
+    def filter(self,bam,read):
+        return read.qname in self.allowed
+    def __repr__(self):
+        return 'Whitelist: %s' % (self.fname)
+
 
 class IncludeRegion(object):
     _excludes = []
@@ -327,7 +357,9 @@ _criteria = {
     'exclude': ExcludeRegion,
     'excludebed': ExcludeBED,
     'include': IncludeRegion,
-    'includebed': IncludeBED
+    'includebed': IncludeBED,
+    'whitelist': Whitelist,
+    'blacklist': Blacklist
 }
 
 def bam_filter(infile,outfile,criteria,failedfile = None, verbose = False):
