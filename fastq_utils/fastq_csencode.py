@@ -38,6 +38,7 @@ def fastq_csencode(fname):
         sys.stdout.write('%s\n%s\n+\n%s\n' % (name,encoded_seq(seq),qual[1:]))
 
 def usage():
+    print __doc__
     print "Usage: fastqutils csencode filename.fastq{.gz}"
     sys.exit(1)
 
