@@ -31,6 +31,8 @@ Currently, the available filters are:
 
     -whitelist fname           Remove reads that aren't on this list (by name)
     -blacklist fname           Remove reads that are on this list (by name)
+                                 These lists can be whitespace-delimited with 
+                                 the read name as the first column.
     
     -eq  tag_name value
     -lt  tag_name value
@@ -57,7 +59,6 @@ def usage():
 Usage: bamutils filter in.bam out.bam {-failed out.txt} criteria...
 
 Options:
-
   -failed fname    A text file containing the read names of all reads 
                    that were removed with filtering
 
@@ -77,7 +78,7 @@ class Blacklist(object):
         self.notallowed = []
         with open(fname) as f:
             for line in f:
-                self.notallowed.append(line.strip())
+                self.notallowed.append(line.strip().split()[0])
     def filter(self,bam,read):
         return read.qname not in self.notallowed
     def __repr__(self):
@@ -89,7 +90,7 @@ class Whitelist(object):
         self.allowed = []
         with open(fname) as f:
             for line in f:
-                self.allowed.append(line.strip())
+                self.allowed.append(line.strip().split()[0])
     def filter(self,bam,read):
         return read.qname in self.allowed
     def __repr__(self):
