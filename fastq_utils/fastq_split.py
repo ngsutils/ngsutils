@@ -9,7 +9,7 @@ import os,sys,gzip
 
 from fastq_utils import read_fastq,is_paired_fastq
 
-def fastq_split(fname,outbase,chunks,ignore_pairs = False):
+def fastq_split(fname,outbase,chunks,ignore_pairs = False, gz=False):
     i=0
     chunk=1
     if ignore_pairs:
@@ -19,7 +19,12 @@ def fastq_split(fname,outbase,chunks,ignore_pairs = False):
 
     outs = []
     for i in xrange(chunks):
-        outs.append(gzip.open('%s.%s.fastq.gz' % (outbase,i+1),'w'))
+        if gz:
+            sys.stderr.write('Output file: %s.%s.fastq.gz\n' % (outbase,i+1))
+            outs.append(gzip.open('%s.%s.fastq.gz' % (outbase,i+1),'w'))
+        else:
+            sys.stderr.write('Output file: %s.%s.fastq\n' % (outbase,i+1))
+            outs.append(open('%s.%s.fastq' % (outbase,i+1),'w'))
 
     i = 0
     last_name = None
@@ -52,6 +57,8 @@ Options:
                    can be written to any file. This is useful for splitting a
                    paired FASTQ file back into separate files for each 
                    fragment.
+                   
+  -gz              gzip compress the output FASTQ files
 
 """
     sys.exit(1)
@@ -61,10 +68,13 @@ if __name__ == '__main__':
     outtemplate = None
     chunks = 0
     ignore_pairs = False
+    gz = False
 
     for arg in sys.argv[1:]:
         if arg == '-ignorepaired':
             ignore_pairs = True
+        elif arg == '-gz':
+            gz = True
         elif not fname and os.path.exists(arg):
             fname = arg
         elif not outtemplate:
@@ -75,4 +85,4 @@ if __name__ == '__main__':
     if not fname or not chunks or not outtemplate:
         usage()
         
-    fastq_split(fname,outtemplate,chunks,ignore_pairs)
+    fastq_split(fname,outtemplate,chunks,ignore_pairs,gz)
