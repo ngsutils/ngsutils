@@ -57,7 +57,7 @@ def getline(fs):
     return line
 
 def merge_files(fasta,qual,suffix=None, common_qual=None):
-    sys.stderr.write('Merging %s and %s -> ' % (os.path.basename(fasta),os.path.basename(qual) if qual else common_qual))
+    sys.stderr.write('Merging %s and %s\n' % (os.path.basename(fasta),os.path.basename(qual) if qual else common_qual))
     f = open(fasta)
 
     if qual:
