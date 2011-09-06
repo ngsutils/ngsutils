@@ -75,7 +75,7 @@ class TrimFilter(object):
                     trimmed = True
                     self.altered += 1
                     if self.verbose:
-                        sys.stderr.write('[Trim] %s (altered) seq:%s clipped at:%s (%s)-> %s\n' % (name,seq,i,(matches / total),seq[:i]))
+                        sys.stderr.write('[Trim] %s (altered) seq:%s clipped at:%s (%s/%s)-> %s\n' % (name,seq,i,matches,total,seq[:i]))
                     if len(seq) == len(qual):
                         yield ('%s #trim' % name,seq[:i],qual[:i])
                     else:
