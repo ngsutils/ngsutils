@@ -73,14 +73,22 @@ class TrimFilter(object):
             
                 if (matches / total) >= self.mismatch_pct:
                     trimmed = True
-                    self.altered += 1
-                    if self.verbose:
-                        sys.stderr.write('[Trim] %s (altered) seq:%s clipped at:%s (%s/%s)-> %s\n' % (name,seq,i,matches,total,seq[:i]))
-                    if len(seq) == len(qual):
-                        yield ('%s #trim' % name,seq[:i],qual[:i])
+                    if i < 10:
+                        self.removed += 1
+                        if self.verbose:
+                            sys.stderr.write('[Trim] %s (removed) seq:%s clipped at:%s (%s/%s)-> %s\n' % (name,seq,i,matches,total,seq[:i]))
+                        break
                     else:
-                        yield ('%s #trim' % name,seq[:i],qual[:i-1])
-                    break
+                        self.altered += 1
+                        if self.verbose:
+                            sys.stderr.write('[Trim] %s (altered) seq:%s clipped at:%s (%s/%s)-> %s\n' % (name,seq,i,matches,total,seq[:i]))
+                    
+                    
+                        if len(seq) == len(qual):
+                            yield ('%s #trim' % name,seq[:i],qual[:i])
+                        else:
+                            yield ('%s #trim' % name,seq[:i],qual[:i-1])
+                        break
             
             if not trimmed:
                 self.kept += 1
