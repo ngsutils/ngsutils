@@ -30,12 +30,13 @@ def encoded_seq(seq):
 
 def fastq_csencode(fname):
     for name,seq,qual in read_fastq(fname,quiet=False):
-        if seq[0] in 'ATCG':
-            seq = seq[2:]
-        else:
-            seq = seq[1:]
+        if seq:
+            if seq[0] in 'ATCG':
+                seq = seq[2:]
+            else:
+                seq = seq[1:]
 
-        sys.stdout.write('%s\n%s\n+\n%s\n' % (name,encoded_seq(seq),qual[1:]))
+            sys.stdout.write('%s\n%s\n+\n%s\n' % (name,encoded_seq(seq),qual[1:]))
 
 def usage():
     print __doc__
