@@ -18,13 +18,22 @@ def fastq_split(fname,outbase,chunks,ignore_pairs = False, gz=False):
         is_paired = is_paired_fastq(fname)
 
     outs = []
+    fnames = []
     for i in xrange(chunks):
         if gz:
-            sys.stderr.write('Output file: %s.%s.fastq.gz\n' % (outbase,i+1))
-            outs.append(gzip.open('%s.%s.fastq.gz' % (outbase,i+1),'w'))
+            fn = '%s.%s.fastq.gz' % (outbase,i+1)
+            tmp = os.path.join(os.path.dirname(fn),'.tmp.%s' % os.path.basename(fn))
+            fnames.append((tmp,fn))
+            
+            sys.stderr.write('Output file: %s\n' % fn)
+            outs.append(gzip.open(tmp,'w'))
         else:
-            sys.stderr.write('Output file: %s.%s.fastq\n' % (outbase,i+1))
-            outs.append(open('%s.%s.fastq' % (outbase,i+1),'w'))
+            fn = '%s.%s.fastq' % (outbase,i+1)
+            tmp = os.path.join(os.path.dirname(fn),'.tmp.%s' % os.path.basename(fn))
+            fnames.append((tmp,fn))
+            
+            sys.stderr.write('Output file: %s\n' % fn)
+            outs.append(open(tmp,'w'))
 
     i = 0
     last_name = None
@@ -46,7 +55,13 @@ def fastq_split(fname,outbase,chunks,ignore_pairs = False, gz=False):
     for out in outs:
         out.close()
 
-def usage():
+    for tmp,fname in fnames:
+        os.rename(tmp,fname)
+
+def usage(msg=None):
+    if msg:
+        print msg
+
     print __doc__
     print """\
 Usage: fastqutils split {opts} filename.fastq{.gz} out_template num_chunks
@@ -57,7 +72,7 @@ Options:
                    can be written to any file. This is useful for splitting a
                    paired FASTQ file back into separate files for each 
                    fragment.
-                   
+
   -gz              gzip compress the output FASTQ files
 
 """
@@ -75,7 +90,9 @@ if __name__ == '__main__':
             ignore_pairs = True
         elif arg == '-gz':
             gz = True
-        elif not fname and os.path.exists(arg):
+        elif not fname:
+            if not os.path.exists(arg):
+                usage("Missing file: %s" % arg)
             fname = arg
         elif not outtemplate:
             outtemplate = arg
