@@ -654,7 +654,9 @@ def _fetch_reads(bam,chrom,strand,starts,ends,multiple,exclusive,whitelist=None,
                             pass #ignore...
     return count,reads
 
-def usage():
+def usage(msg=None):
+    if msg:
+        print 'Error: %s' % msg
     print __doc__
     print """\
 Usage: bamutils rpkm [type] annotation_file {opts} bamfile
@@ -752,18 +754,20 @@ if __name__ == '__main__':
     try:
         opts,(cmd,annotation,bam) = support.ngs_utils.parse_args(sys.argv[1:],{'nostrand':False,'coverage':False,'multiple':'complete','norm':'genes','whitelist':None,'blacklist':None,'uniq':False,'bin-size':100000},3)
     except:
-        usage()
+        usage("Parsing arguments")
 
     if cmd not in ['gene','alt','bed','repeat','bin']:
-        usage()
+        usage("Invalid command: %s" % cmd)
     elif cmd == 'bin':
         bam = annotation
         if opts['norm'] == 'genes':
             opts['norm'] = 'total'
         if not bam or not os.path.exists(bam):
-            usage()
-    elif not bam or not annotation or not os.path.exists(bam) or not os.path.exists(annotation):
-        usage()
+            usage("Missing BAM file: %s" % bam)
+    elif not bam or not os.path.exists(bam):
+        usage("Missing BAM file: %s" % bam)
+    elif not annotation or not os.path.exists(annotation):
+        usage("Missing annotation file: %s" % annotation)
 
     whitelist = None
     if opts['whitelist'] and os.path.exists(opts['whitelist']):
