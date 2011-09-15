@@ -119,7 +119,7 @@ def filenames_to_uniq(names,new_delim='.'):
         newnames.append(new_delim.join(nn))
     return newnames
 
-def parse_args(argv,defaults=None):
+def parse_args(argv,defaults=None, expected_argc=0):
     opts = {}
     if defaults:
         opts.update(defaults)
@@ -144,4 +144,6 @@ def parse_args(argv,defaults=None):
         else:
             args.append(argv[i])
         i+=1
+    while len(args) < expected_argc:
+        args.append(None)
     return opts,args        
