@@ -334,7 +334,7 @@ def calc_repeat(bam_fname,repeat_fname,stranded=True,multiple='complete',normali
 
 def calc_alt(bam_fname,refiso_name,stranded=True,multiple='complete',normalization='genes',whitelist=None,blacklist=None):
     assert multiple in ['complete','partial','ignore']
-    assert normalization in ['genes','total','none']
+    assert normalization in ['genes','total','none','quartile']
 
     bam = pysam.Samfile(bam_fname,'rb')
     refiso = RefIso(refiso_name)
