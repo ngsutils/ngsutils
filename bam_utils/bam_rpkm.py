@@ -177,20 +177,25 @@ def calc_bin(bam_fname,bin_size,stranded=True,multiple='complete',normalization=
     assert normalization in ['total','quartile','none']
     
     bam = pysam.Samfile(bam_fname,'rb')
-    bed = open(bed_name)
-
-    eta = ETA(os.stat(bed_name).st_size,fileobj=bed)
-    all_reads = set()
-    regions = []
-    
+    size = 0
     for chrom,chrom_len in zip(bam.references,bam.lengths):
         for pos in xrange(0,chrom_len,bin_size):
-            for strand in '+-':
-                start = pos
-                end = pos + bin_size
-                name = '%s %s-%s[%s]' % (chrom,start,end,strand)
+            size += 2
 
-                eta.print_status(extra=name)
+    eta = ETA(size)
+    all_reads = set()
+    regions = []
+    i=0
+    
+    strands = '+-'
+    if not stranded:
+        strands = '+'
+    
+    for chrom,chrom_len in zip(bam.references,bam.lengths):
+        for start,end in [(pos,pos+bin_size) for pos in xrange(0,chrom_len,bin_size)]:
+            for strand in strands:
+                i+=1
+                eta.print_status(i,extra='%s %s-%s[%s]' % (chrom,start,end,strand))
                 coding_len = end-start
 
                 count,reads = _fetch_reads(bam,chrom,strand if stranded else None,[start],[end],multiple,False,whitelist,blacklist)
@@ -201,7 +206,7 @@ def calc_bin(bam_fname,bin_size,stranded=True,multiple='complete',normalization=
 
     mapped_count = 0
     if normalization == 'total':
-        mapped_count = _find_mapped_count(bam,bam_fname,whitelist,blacklist)
+        mapped_count = len(all_reads)
     elif normalization == 'quartile':
         mapped_count = _find_mapped_count_quartile([region[-1] for region in regions if region[-1] > 0 ]) # pull the counts for all regions where count > 0
         
@@ -233,7 +238,6 @@ def calc_bin(bam_fname,bin_size,stranded=True,multiple='complete',normalization=
 
     eta.done()
     bam.close()
-    bed.close()
 
 def calc_repeat(bam_fname,repeat_fname,stranded=True,multiple='complete',normalization='genes',whitelist=None,blacklist=None):
     assert multiple in ['complete','partial','ignore']
@@ -744,14 +748,16 @@ Possible values for {-multiple}:
     sys.exit(-1)
 
 if __name__ == '__main__':
+    
     try:
-        opts,(cmd,annotation,bam) = support.ngs_utils.parse_args(sys.argv[1:],{'nostrand':False,'coverage':False,'multiple':'complete','norm':'genes','whitelist':None,'blacklist':None,'uniq':False,'bin-size':100000})
+        opts,(cmd,annotation,bam) = support.ngs_utils.parse_args(sys.argv[1:],{'nostrand':False,'coverage':False,'multiple':'complete','norm':'genes','whitelist':None,'blacklist':None,'uniq':False,'bin-size':100000},3)
     except:
         usage()
-    
+
     if cmd not in ['gene','alt','bed','repeat','bin']:
         usage()
     elif cmd == 'bin':
+        bam = annotation
         if opts['norm'] == 'genes':
             opts['norm'] = 'total'
         if not bam or not os.path.exists(bam):
