@@ -11,7 +11,7 @@ from support.refiso import RefIso
 def usage():
     print __doc__
     print """
-Usage: bamutils stats in.bam {-model refiso.txt} {region}
+Usage: bamutils stats in.bam {-delim char} {-model refiso.txt} {region}
 
 If a RefIso file is given, counts corresponding to exons, introns, promoters,
 junctions, intergenic, and mitochondrial regions will be calculated.
@@ -19,6 +19,10 @@ junctions, intergenic, and mitochondrial regions will be calculated.
 If a region is given, only reads that map to that region will be counted. 
 Regions should be be in the format: 'ref:start-end' or 'ref:start' using 
 1-based start coordinates.
+
+If delimiter is given, the reference names are split by this delimiter
+and only the first token is summarized.
+
 """
     sys.exit(1)
 
@@ -101,7 +105,7 @@ class Bins(object):
         return len(self.bins)-1
         
 
-def bam_stats(infile,ref_file = None, region = None):
+def bam_stats(infile,ref_file = None, region = None, delim = None):
     bamfile = pysam.Samfile(infile,"rb")
     eta = ETA(0,bamfile=bamfile)
     
@@ -168,7 +172,10 @@ def bam_stats(infile,ref_file = None, region = None):
     refs = {}
 
     for rname in bamfile.references:
-        refs[rname] = 0
+        if delim:
+            refs[rname.split(delim)[0]] = 0
+        else:
+            refs[rname] = 0
 
     if region:
         def read_gen():
@@ -202,7 +209,11 @@ def bam_stats(infile,ref_file = None, region = None):
             eta.print_status(extra="%s:%s" % (bamfile.getrname(read.rname),read.pos),bam_pos=(read.rname,read.pos))
         
             mapped += 1
-            refs[bamfile.getrname(read.rname)]+=1
+            if delim:
+                refs[bamfile.getrname(read.rname).split(delim)[0]]+=1
+            else:
+                refs[bamfile.getrname(read.rname)]+=1
+
             try:
                 ih = int(read.opt('IH'))
             except:
@@ -298,9 +309,14 @@ def bam_stats(infile,ref_file = None, region = None):
         print ""
     
         print "Reference distribution"
-        print "ref\tlength\tcount\tcount per million bases"
-        for refname,reflen in zip(bamfile.references,bamfile.lengths):
-            print "%s\t%s\t%s\t%s" % (refname,reflen,refs[refname],refs[refname]/(float(reflen)/1000000))
+        if delim:
+            print "ref\tcount"
+            for refname in refs:
+                print "%s\t%s" % (refname,refs[refname])
+        else:
+            print "ref\tlength\tcount\tcount per million bases"
+            for refname,reflen in zip(bamfile.references,bamfile.lengths):
+                print "%s\t%s\t%s\t%s" % (refname,reflen,refs[refname],refs[refname]/(float(reflen)/1000000))
 
         if regions:
             print ""
@@ -319,6 +335,8 @@ if __name__ == '__main__':
     infile = None
     refiso = None
     region = None
+    delim = None
+    
     
     last = None
     for arg in sys.argv[1:]:
@@ -329,7 +347,10 @@ if __name__ == '__main__':
         elif last == '-model':
             refiso = arg
             last = None
-        elif arg in ['-model']:
+        elif last == '-delim':
+            delim = arg
+            last = None
+        elif arg in ['-model','-delim']:
             last = arg
         else:
             region = arg
@@ -337,5 +358,5 @@ if __name__ == '__main__':
     if not infile:
         usage()
     else:
-        bam_stats(infile,refiso,region)
+        bam_stats(infile,refiso,region,delim)
         
