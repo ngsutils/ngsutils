@@ -22,6 +22,12 @@ Entropy
 # gaps
 # inserts
 
+If -showminor is applied, a minor strand percentage is also calculated. This
+is calculated as: 
+    pct = (# reads with base on plus/ # reads with base total)
+    if pct > 0.5, 
+        pct = 1-pct
+
 Entropy is sum(a..t) { p log2 p } where p = freq(+pseudocount) / genomic freq.
 pseudo count = genomic freq * sqrt(N)
 
@@ -38,18 +44,18 @@ def usage():
 Usage: bamutils basecall {opts} in.bam {chrom:start-end}
 
 Options:
--ref   fname    Include reference basecalls from this file
--qual  val      Minimum quality level to use in calculations
-                (numeric, Sanger scale) (default 0)
+-ref   fname  Include reference basecalls from this file
+-qual  val    Minimum quality level to use in calculations
+              (numeric, Sanger scale) (default 0)
             
--count val      Report only bases with this minimum number of read-coverage
-                (matches, inserts, deletions counted) (default 0)
+-count val    Report only bases with this minimum number of read-coverage
+              (matches, inserts, deletions counted) (default 0)
 
--mask  val      The bitmask to use for filtering reads (default 1540)
+-mask  val    The bitmask to use for filtering reads (default 1540)
 
--showgaps       Report gaps/splice-junctions in RNA-seq data
--showstrands    Show the minor-strand percentages for each call 
-                (0-0.5 only shows the minor strand %)
+-showgaps     Report gaps/splice-junctions in RNA-seq data
+-showminor    Show the minor-strand percentages for each call 
+              (0-0.5 only shows the minor strand %)
 """
     sys.exit(1)
 
@@ -244,7 +250,7 @@ class BamBaseCaller(object):
                     buf_idx += 1
                 
         
-def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=None,end=None,mask=1540,quiet = False, showgaps=False, showstrands=False):
+def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=None,end=None,mask=1540,quiet = False, showgaps=False, showminor=False):
     if ref_fname:
         ref = pysam.Fastafile(ref_fname)
     else:
@@ -252,7 +258,7 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=N
 
     sys.stdout.write('chrom\tpos\tref\tcount\tave mappings\tentropy\tA\tC\tG\tT\tN\tDeletions\tGaps\tInsertions\tInserts')
 
-    if showstrands:
+    if showminor:
         sys.stdout.write('\tA minor %\tC minor %\tG minor %\tT minor %\tN minor %\tDeletion minor %\tInsertion minor %')
     
     sys.stdout.write('\n')
@@ -318,7 +324,7 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=N
                  incount,
                  ','.join(insert_str_ar)]
 
-        if showstrands:
+        if showminor:
             cols.append(basepos.a_minor)
             cols.append(basepos.c_minor)
             cols.append(basepos.g_minor)
@@ -344,7 +350,7 @@ if __name__ == '__main__':
     end = None
     quiet = False
     showgaps = False
-    showstrands = False
+    showminor = False
     
     last = None
     for arg in sys.argv[1:]:
@@ -366,8 +372,8 @@ if __name__ == '__main__':
             last = None
         elif arg == '-h':
             usage()
-        elif arg == '-showstrands':
-            showstrands = True
+        elif arg == '-showminor':
+            showminor = True
         elif arg == '-showgaps':
             showgaps = True
         elif arg == '-q':
@@ -401,5 +407,5 @@ if __name__ == '__main__':
     if not bam:
         usage()
     else:
-        bam_basecall(bam,ref,min_qual,min_count,chrom,start,end,mask,quiet,showgaps, showstrands)
+        bam_basecall(bam,ref,min_qual,min_count,chrom,start,end,mask,quiet,showgaps, showminor)
         
