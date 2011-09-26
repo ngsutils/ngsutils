@@ -38,16 +38,18 @@ def usage():
 Usage: bamutils basecall {opts} in.bam {chrom:start-end}
 
 Options:
--ref   val    Include reference basecalls from this file
--qual  val    Minimum quality level to use in calculations
-              (numeric, Sanger scale) (default 0)
+-ref   fname    Include reference basecalls from this file
+-qual  val      Minimum quality level to use in calculations
+                (numeric, Sanger scale) (default 0)
             
--count val    Report only bases with this minimum number of reads covering it
-              (matches, inserts, deletions counted) (default 0)
+-count val      Report only bases with this minimum number of read-coverage
+                (matches, inserts, deletions counted) (default 0)
 
--mask  val    The bitmask to use for filtering reads (default 1540)
+-mask  val      The bitmask to use for filtering reads (default 1540)
 
--showgaps     Report gaps/splice-junctions in RNA-seq data
+-showgaps       Report gaps/splice-junctions in RNA-seq data
+-showstrands    Show the minor-strand percentages for each call 
+                (0-0.5 only shows the minor strand %)
 """
     sys.exit(1)
 
@@ -78,7 +80,7 @@ def calc_entropy(a,c,t,g):
 
 MappingRecord = collections.namedtuple('MappingRecord','qpos cigar_op base qual read')
 MappingPos = collections.namedtuple('MappingPos','tid pos records')
-BasePosition = collections.namedtuple('BasePosition','tid pos total a c g t n deletions gaps insertions reads')
+BasePosition = collections.namedtuple('BasePosition','tid pos total a c g t n deletions gaps insertions reads a_minor c_minor g_minor t_minor n_minor del_minor ins_minor')
 
 class BamBaseCaller(object):
     def __init__(self, bam_fname, min_qual=0, min_count=0, chrom=None, start=0, end=0, mask=1540,quiet=False):
@@ -93,7 +95,6 @@ class BamBaseCaller(object):
         self.mask = mask
         self.quiet = quiet
         
-
         if chrom and start and end:
             def _gen():
                 for p in self.bam.fetch(chrom,start,end):
@@ -111,7 +112,9 @@ class BamBaseCaller(object):
         self.bam.close()
         
     def _calc_pos(self,tid,pos,records):
-        counts = {'A':0,'C':0,'G':0,'T':0,'N':0}
+        counts = {'A':0,'C':0,'G':0,'T':0,'N':0,'ins':0,'del':0}
+        plus_counts = {'A':0,'C':0,'G':0,'T':0,'N':0,'ins':0,'del':0}
+        
         insertions = {}
         deletions = 0
         gaps = 0
@@ -126,6 +129,8 @@ class BamBaseCaller(object):
                     reads.append(record)
 
                     counts[base] += 1
+                    if not read.is_reverse:
+                        plus_counts[base] += 1
             elif cigar_op == 1: # I
                 if qual >= self.min_qual and (read.flag & self.mask) == 0 :
                     reads.append(record)
@@ -134,19 +139,33 @@ class BamBaseCaller(object):
                         insertions[base] = 1
                     else:
                         insertions[base] += 1
+
+                        counts['ins'] +=1
+                    if not read.is_reverse:
+                        plus_counts['ins'] += 1
             elif cigar_op == 2: # D
-                deletions += 1
                 #total += 1 # not sure these should be included, 
                            # samtools mpileup includes them
                            # IGV doesn't
                            
+                counts['del'] +=1
                 reads.append(record)
+                if not read.is_reverse:
+                    plus_counts['del'] += 1
             elif cigar_op == 3: # N
                 gaps += 1
                 reads.append(record)
+
+        pcts =  {'A':0.0,'C':0.0,'G':0.0,'T':0.0,'N':0.0,'ins':0.0,'del':0.0}
+        for k in pcts:
+            if counts[k] > 0:
+                pcts[k] = plus_counts[k] / counts[k]
+            
+                if pcts[k] > 0.5:
+                    pcts[k] = 1 - pcts[k]
         
         if total >= self.min_count:
-            return BasePosition(tid,pos,total,counts['A'],counts['C'],counts['G'],counts['T'],counts['N'],deletions,gaps,insertions,reads)
+            return BasePosition(tid,pos,total,counts['A'],counts['C'],counts['G'],counts['T'],counts['N'],counts['del'],gaps,insertions,reads,pcts['A'],pcts['C'],pcts['G'],pcts['T'],pcts['N'],pcts['del'],pcts['ins'])
             
 
     def fetch(self):
@@ -225,13 +244,17 @@ class BamBaseCaller(object):
                     buf_idx += 1
                 
         
-def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=None,end=None,mask=1540,quiet = False, showgaps=False):
+def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=None,end=None,mask=1540,quiet = False, showgaps=False, showstrands=False):
     if ref_fname:
         ref = pysam.Fastafile(ref_fname)
     else:
         ref = None
 
-    sys.stdout.write('chrom\tpos\tref\tcount\tave mappings\tentropy\tA\tC\tG\tT\tN\tDeletions\tGaps\tInsertions\tInserts\n')
+    sys.stdout.write('chrom\tpos\tref\tcount\tave mappings\tentropy\tA\tC\tG\tT\tN\tDeletions\tGaps\tInsertions\tInserts')
+
+    if showstrands:
+        sys.stdout.write('\tA minor %\tC minor %\tG minor %\tT minor %\tN minor %\tDeletion minor %\tInsertion minor %\n')
+
     bbc = BamBaseCaller(bam_fname,min_qual,min_count,chrom,start,end,mask,quiet)
     for basepos in bbc.fetch():
         if start and end:
@@ -254,6 +277,8 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=N
         entropy = calc_entropy(basepos.a,basepos.c,basepos.g,basepos.t)
     
         read_ih_acc = 0
+        plus_count = 0
+        minus_count = 0
         for qpos,cigar_op,base,qual,read in basepos.reads:
             if cigar_op in [0,1,2]:
                 read_ih_acc += int(read.opt('IH'))
@@ -274,8 +299,32 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=N
             ave_mapping = (float(read_ih_acc) / big_total)
         else:
             ave_mapping = 0
-        
-        sys.stdout.write('%s\n' % '\t'.join([str(x) for x in (bbc.bam.references[basepos.tid],basepos.pos+1,refbase,basepos.total,ave_mapping,entropy,basepos.a,basepos.c,basepos.g,basepos.t,basepos.n,basepos.deletions,basepos.gaps,incount,','.join(insert_str_ar))]))
+            
+        cols  = [bbc.bam.references[basepos.tid],
+                 basepos.pos+1,
+                 refbase,
+                 basepos.total,
+                 ave_mapping,
+                 entropy,
+                 basepos.a,
+                 basepos.c,
+                 basepos.g,
+                 basepos.t,
+                 basepos.n,
+                 basepos.deletions,
+                 basepos.gaps,
+                 incount,
+                 ','.join(insert_str_ar)]
+
+        if showstrands:
+            cols.append(basepos.a_minor)
+            cols.append(basepos.c_minor)
+            cols.append(basepos.g_minor)
+            cols.append(basepos.t_minor)
+            cols.append(basepos.n_minor)
+            cols.append(basepos.del_minor)
+            cols.append(basepos.ins_minor)
+        sys.stdout.write('%s\n' % '\t'.join([str(x) for x in cols]))
 
     bbc.close()
     if ref:
@@ -293,6 +342,7 @@ if __name__ == '__main__':
     end = None
     quiet = False
     showgaps = False
+    showstrands = False
     
     last = None
     for arg in sys.argv[1:]:
@@ -314,16 +364,26 @@ if __name__ == '__main__':
             last = None
         elif arg == '-h':
             usage()
+        elif arg == '-showstrands':
+            showstrands = True
         elif arg == '-showgaps':
             showgaps = True
         elif arg == '-q':
             quiet = True
         elif arg in ['-qual','-count','-mask','-ref']:
             last = arg
-        elif not bam and os.path.exists(arg) and os.path.exists('%s.bai' % arg):
-            bam = arg
+        elif not bam and os.path.exists(arg):
+            if os.path.exists('%s.bai' % arg):
+                bam = arg
+            else:
+                print "Missing BAI index on %s" % arg
+                usage()
         elif not ref and os.path.exists(arg) and os.path.exists('%s.fai' % arg):
-            ref = arg
+            if os.path.exists('%s.fai' % arg):
+                ref = arg
+            else:
+                print "Missing FAI index on %s" % arg
+                usage()
         elif not chrom:
             chrom,startend = arg.split(':')
             if '-' in startend:
@@ -339,5 +399,5 @@ if __name__ == '__main__':
     if not bam:
         usage()
     else:
-        bam_basecall(bam,ref,min_qual,min_count,chrom,start,end,mask,quiet,showgaps)
+        bam_basecall(bam,ref,min_qual,min_count,chrom,start,end,mask,quiet,showgaps, showstrands)
         
