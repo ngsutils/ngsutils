@@ -159,7 +159,7 @@ class BamBaseCaller(object):
         pcts =  {'A':0.0,'C':0.0,'G':0.0,'T':0.0,'N':0.0,'ins':0.0,'del':0.0}
         for k in pcts:
             if counts[k] > 0:
-                pcts[k] = plus_counts[k] / counts[k]
+                pcts[k] = float(plus_counts[k]) / counts[k]
             
                 if pcts[k] > 0.5:
                     pcts[k] = 1 - pcts[k]
