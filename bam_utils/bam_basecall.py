@@ -253,7 +253,9 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=N
     sys.stdout.write('chrom\tpos\tref\tcount\tave mappings\tentropy\tA\tC\tG\tT\tN\tDeletions\tGaps\tInsertions\tInserts')
 
     if showstrands:
-        sys.stdout.write('\tA minor %\tC minor %\tG minor %\tT minor %\tN minor %\tDeletion minor %\tInsertion minor %\n')
+        sys.stdout.write('\tA minor %\tC minor %\tG minor %\tT minor %\tN minor %\tDeletion minor %\tInsertion minor %')
+    
+    sys.stdout.write('\n')
 
     bbc = BamBaseCaller(bam_fname,min_qual,min_count,chrom,start,end,mask,quiet)
     for basepos in bbc.fetch():
