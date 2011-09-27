@@ -34,7 +34,7 @@ def bam_readpos(fname,readname=None,ref=None,pos=None):
 def usage():
     print __doc__
     print """
-Usage: bamutils readpos {-read read_name} {-pos chr:pos}  bamfile
+Usage: bamutils readfilepos {-read read_name} {-pos chr:pos}  bamfile
 """
 
 if __name__ == "__main__":

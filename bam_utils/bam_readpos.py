@@ -26,7 +26,7 @@ def bam_read_names(fname,mapped=False,unmapped=False,whitelist=None):
 def usage():
     print __doc__
     print """\
-Usage: bamutils reads {opts} bamfile
+Usage: bamutils readpos {opts} bamfile
 
 Options
 -mapped            Output only mapped reads
