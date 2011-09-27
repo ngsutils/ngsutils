@@ -12,7 +12,7 @@ usage(){
      echo "    truncate          - Truncates reads to a maximum length"
      echo ""
      echo "Conversions"
-     echo "    bfq              - Converts to/from BFQ (binary-compressed FASTQ format"
+     echo "    bfq              - Converts to/from BFQ (binary-compressed FASTQ format)"
      echo "    convertqual      - Converts qual values from Illumina to Sanger scale"
      echo "    csencode         - Converts color-space FASTQ file to encoded FASTQ "
      echo "                       (01234. -> ACGTNN)"
