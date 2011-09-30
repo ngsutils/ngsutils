@@ -247,13 +247,15 @@ class BamBaseCaller(object):
                 self.buffer[buf_idx].records.append(MappingRecord(read_idx,op,inseq,inqual,read))
                 
             elif op == 2:
+                mr = MappingRecord(read_idx,op,None,None,read)
                 for i in xrange(length):
-                    self.buffer[buf_idx].records.append(MappingRecord(read_idx,op,None,None,read))
+                    self.buffer[buf_idx].records.append(mr)
                     buf_idx += 1
             
             elif op == 3:
+                mr = MappingRecord(read_idx,op,None,None,read)
                 for i in xrange(length):
-                    self.buffer[buf_idx].records.append(MappingRecord(read_idx,op,None,None,read))
+                    self.buffer[buf_idx].records.append(mr)
                     buf_idx += 1
                 
 def _calculate_consensus_minor(minorpct,a,c,g,t):
@@ -482,6 +484,6 @@ if __name__ == '__main__':
                 bam_basecall(bam,ref,min_qual,min_count,chrom,start,end,mask,quiet,showgaps, showstrand,minorpct,TimedProfiler())
             sys.stderr.write('Profiling...\n')
             cProfile.run('func()',profile)
-
-        bam_basecall(bam,ref,min_qual,min_count,chrom,start,end,mask,quiet,showgaps, showstrand,minorpct, None)
+        else:
+            bam_basecall(bam,ref,min_qual,min_count,chrom,start,end,mask,quiet,showgaps, showstrand,minorpct, None)
         
