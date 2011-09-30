@@ -394,7 +394,7 @@ class TimedProfiler(object):
     def __init__(self,secs_to_run=3600): # default is to run for one hour
         self.expire_ts = datetime.datetime.now()+datetime.timedelta(seconds=secs_to_run)
     def abort(self):
-        if datetime.now() > self.expire_ts:
+        if datetime.datetime.now() > self.expire_ts:
             return True
         return False
 
