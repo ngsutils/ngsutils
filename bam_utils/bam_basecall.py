@@ -13,6 +13,9 @@ chromosome
 position (1-based)
 reference base
 # reads that contain this base
+Consensus call
+Minor call
+Average mappings (number of mappings each read covering this base has)
 Entropy
 # A calls
 # C calls
@@ -22,7 +25,7 @@ Entropy
 # gaps
 # inserts
 
-If -showminor is applied, a minor strand percentage is also calculated. This
+If -showstrand is applied, a minor strand percentage is also calculated. This
 is calculated as: 
     pct = (# reads with base on plus/ # reads with base total)
     if pct > 0.5, 
@@ -44,18 +47,22 @@ def usage():
 Usage: bamutils basecall {opts} in.bam {chrom:start-end}
 
 Options:
--ref   fname  Include reference basecalls from this file
--qual  val    Minimum quality level to use in calculations
-              (numeric, Sanger scale) (default 0)
+-ref   fname   Include reference basecalls from this file
+-qual  val     Minimum quality level to use in calculations
+               (numeric, Sanger scale) (default 0)
             
--count val    Report only bases with this minimum number of read-coverage
-              (matches, inserts, deletions counted) (default 0)
+-count val     Report only bases with this minimum number of read-coverage
+               (matches, inserts, deletions counted) (default 0)
 
--mask  val    The bitmask to use for filtering reads (default 1540)
+-mask  val     The bitmask to use for filtering reads by flag
+               (default 1540 - see SAM format for details)
 
--showgaps     Report gaps/splice-junctions in RNA-seq data
--showminor    Show the minor-strand percentages for each call 
-              (0-0.5 only shows the minor strand %)
+-minorpct pct  Require a minor call to be within [pct] percent of the 
+               consensus call. Calculated as #minor / #consensus.
+               (0.0 -> 1.0, default 0.01)
+-showgaps      Report gaps/splice-junctions in RNA-seq data
+-showstrand    Show the minor-strand percentages for each call 
+               (0-0.5 only shows the minor strand %)
 """
     sys.exit(1)
 
@@ -249,16 +256,54 @@ class BamBaseCaller(object):
                     self.buffer[buf_idx].records.append(MappingRecord(read_idx,op,None,None,read))
                     buf_idx += 1
                 
-        
-def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=None,end=None,mask=1540,quiet = False, showgaps=False, showminor=False):
+def _calculate_consensus_minor(minorpct,a,c,g,t):
+    consensuscalls=[]
+    minorcalls=[]
+    
+    calls = [(a,'A'),(c,'C'),(g,'G'),(t,'T')]
+    calls.sort()
+    calls.reverse()
+
+    best = calls[0][0]
+    minor = 0
+
+    for count,base in calls:
+        if count == 0:
+            break
+        if count == best:
+            consensuscalls.append(base)
+        elif not minor:
+            minor = count
+            minorcalls.append(base)
+        elif count == minor:
+            minorcalls.append(base)
+        else:
+            # background
+            pass 
+
+    if best == 0:
+        return ('N','')
+
+    if best and (float(minor) / best) < minorpct:
+        minorcalls = []
+    
+    # if there is one major, there can be more than one minor
+    # however, if there is more than one major, there are *no* minors
+    #
+
+    if len(consensuscalls) == 1:
+        return (consensuscalls[0],'/'.join(minorcalls))
+    return ('/'.join(consensuscalls),'')
+    
+def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=None,end=None,mask=1540,quiet = False, showgaps=False, showstrand=False, minorpct=0.01):
     if ref_fname:
         ref = pysam.Fastafile(ref_fname)
     else:
         ref = None
 
-    sys.stdout.write('chrom\tpos\tref\tcount\tave mappings\tentropy\tA\tC\tG\tT\tN\tDeletions\tGaps\tInsertions\tInserts')
+    sys.stdout.write('chrom\tpos\tref\tcount\tconsensus call\tminor call\tave mappings\tentropy\tA\tC\tG\tT\tN\tDeletions\tGaps\tInsertions\tInserts')
 
-    if showminor:
+    if showstrand:
         sys.stdout.write('\tA minor %\tC minor %\tG minor %\tT minor %\tN minor %\tDeletion minor %\tInsertion minor %')
     
     sys.stdout.write('\n')
@@ -307,11 +352,15 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=N
             ave_mapping = (float(read_ih_acc) / big_total)
         else:
             ave_mapping = 0
-            
+        
+        consensuscall,minorcall = _calculate_consensus_minor(minorpct,basepos.a,basepos.c,basepos.g,basepos.t)
+        
         cols  = [bbc.bam.references[basepos.tid],
                  basepos.pos+1,
                  refbase,
                  basepos.total,
+                 consensuscall,
+                 minorcall,
                  ave_mapping,
                  entropy,
                  basepos.a,
@@ -323,8 +372,8 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=N
                  basepos.gaps,
                  incount,
                  ','.join(insert_str_ar)]
-
-        if showminor:
+                 
+        if showstrand:
             cols.append(basepos.a_minor)
             cols.append(basepos.c_minor)
             cols.append(basepos.g_minor)
@@ -332,6 +381,7 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=N
             cols.append(basepos.n_minor)
             cols.append(basepos.del_minor)
             cols.append(basepos.ins_minor)
+            
         sys.stdout.write('%s\n' % '\t'.join([str(x) for x in cols]))
 
     bbc.close()
@@ -350,8 +400,11 @@ if __name__ == '__main__':
     end = None
     quiet = False
     showgaps = False
-    showminor = False
+    showstrand = False
+    minorpct = 0.01
     
+    profile=None
+
     last = None
     for arg in sys.argv[1:]:
         if last == '-qual':
@@ -370,15 +423,21 @@ if __name__ == '__main__':
         elif last == '-mask':
             mask = int(arg)
             last = None
+        elif last == '-minorpct':
+            minorpct = float(arg)
+            last = None
+        elif last == '-profile':
+            profile = arg
+            last = None
         elif arg == '-h':
             usage()
-        elif arg == '-showminor':
-            showminor = True
+        elif arg == '-showstrand':
+            showstrand = True
         elif arg == '-showgaps':
             showgaps = True
         elif arg == '-q':
             quiet = True
-        elif arg in ['-qual','-count','-mask','-ref']:
+        elif arg in ['-qual','-count','-mask','-ref','-minorpct','-profile']:
             last = arg
         elif not bam and os.path.exists(arg):
             if os.path.exists('%s.bai' % arg):
@@ -407,5 +466,11 @@ if __name__ == '__main__':
     if not bam:
         usage()
     else:
-        bam_basecall(bam,ref,min_qual,min_count,chrom,start,end,mask,quiet,showgaps, showminor)
+        if profile:
+            import cProfile
+            def func():
+                bam_basecall(bam,ref,min_qual,min_count,chrom,start,end,mask,quiet,showgaps, showstrand,minorpct)
+            cProfile.run('func()',profile)
+
+        bam_basecall(bam,ref,min_qual,min_count,chrom,start,end,mask,quiet,showgaps, showstrand,minorpct)
         
