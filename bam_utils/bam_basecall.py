@@ -37,7 +37,7 @@ pseudo count = genomic freq * sqrt(N)
 We use the following genomic frequencies: A 0.3, C 0.2, G 0.2, T 0.3
 """
 
-import os,sys,math,collections
+import os,sys,math,collections, datetime
 from support.eta import ETA
 import pysam
 
@@ -295,7 +295,7 @@ def _calculate_consensus_minor(minorpct,a,c,g,t):
         return (consensuscalls[0],'/'.join(minorcalls))
     return ('/'.join(consensuscalls),'')
     
-def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=None,end=None,mask=1540,quiet = False, showgaps=False, showstrand=False, minorpct=0.01):
+def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=None,end=None,mask=1540,quiet = False, showgaps=False, showstrand=False, minorpct=0.01, profiler=None):
     if ref_fname:
         ref = pysam.Fastafile(ref_fname)
     else:
@@ -310,6 +310,8 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=N
 
     bbc = BamBaseCaller(bam_fname,min_qual,min_count,chrom,start,end,mask,quiet)
     for basepos in bbc.fetch():
+        if profiler and profiler.abort():
+            break
         if start and end:
             if basepos.pos < start or basepos.pos >= end:
                 continue
@@ -387,6 +389,14 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=N
     bbc.close()
     if ref:
         ref.close()
+
+class TimedProfiler(object):
+    def __init__(self,secs_to_run=3600): # default is to run for one hour
+        self.expire_ts = datetime.now()+datetime.timedelta(secs=secs_to_run)
+    def abort(self):
+        if datetime.now() > self.expire_ts:
+            return True
+        return False
 
 if __name__ == '__main__':
     bam = None
@@ -469,8 +479,8 @@ if __name__ == '__main__':
         if profile:
             import cProfile
             def func():
-                bam_basecall(bam,ref,min_qual,min_count,chrom,start,end,mask,quiet,showgaps, showstrand,minorpct)
+                bam_basecall(bam,ref,min_qual,min_count,chrom,start,end,mask,quiet,showgaps, showstrand,minorpct,TimedProfiler())
             cProfile.run('func()',profile)
 
-        bam_basecall(bam,ref,min_qual,min_count,chrom,start,end,mask,quiet,showgaps, showstrand,minorpct)
+        bam_basecall(bam,ref,min_qual,min_count,chrom,start,end,mask,quiet,showgaps, showstrand,minorpct, None)
         
