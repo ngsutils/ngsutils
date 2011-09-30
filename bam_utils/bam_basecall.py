@@ -480,6 +480,7 @@ if __name__ == '__main__':
             import cProfile
             def func():
                 bam_basecall(bam,ref,min_qual,min_count,chrom,start,end,mask,quiet,showgaps, showstrand,minorpct,TimedProfiler())
+            sys.stderr.write('Profiling...\n')
             cProfile.run('func()',profile)
 
         bam_basecall(bam,ref,min_qual,min_count,chrom,start,end,mask,quiet,showgaps, showstrand,minorpct, None)
