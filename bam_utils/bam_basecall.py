@@ -392,7 +392,7 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=N
 
 class TimedProfiler(object):
     def __init__(self,secs_to_run=3600): # default is to run for one hour
-        self.expire_ts = datetime.now()+datetime.timedelta(secs=secs_to_run)
+        self.expire_ts = datetime.datetime.now()+datetime.timedelta(secs=secs_to_run)
     def abort(self):
         if datetime.now() > self.expire_ts:
             return True
