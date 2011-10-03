@@ -29,19 +29,18 @@ def fastq_filter(filter_chain,stats_fname=None):
                 f.write('%s\t%s\t%s\t%s\n' % (name,kept,altered,removed))
             
 
-
 class FASTQReader(object):
-    def __init__(self,fname,verbose = False):
+    def __init__(self, fname, verbose=False):
         self.parent = None
         self.fname = fname
         self.verbose = verbose
-        
+
         self.altered = 0
         self.removed = 0
         self.kept = 0
-        
+
     def filter(self):
-        for tup in read_fastq(fname, quiet = not self.verbose):
+        for tup in read_fastq(fname, quiet=not self.verbose):
             self.kept += 1
             if self.verbose:
                 sys.stderr.write('[FASTQ] Read: %s\n' % tup[0])
@@ -296,7 +295,7 @@ if __name__ == '__main__':
             filters_config.append((SizeFilter,int(arg)))
             last = None
         elif last == '-suffixqual':
-            filters_config.append((SuffixQualFilter,int(arg)))
+            filters_config.append((SuffixQualFilter,arg))
             last = None
         elif last == '-qual':
             if not args:
