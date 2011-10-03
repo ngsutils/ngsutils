@@ -184,7 +184,7 @@ class SuffixQualFilter(object):
                 qual=qual[:-1]
                 seq=seq[:-1]
 
-            if altered:
+            if alt:
                 if self.verbose:
                     sys.stderr.write('[SuffixQual] %s (altered)\n' % (name,))
                 self.altered += 1
