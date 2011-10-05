@@ -192,7 +192,7 @@ class SuffixQualFilter(object):
                 if self.verbose:
                     sys.stderr.write('[SuffixQual] %s (altered)\n' % (name,))
                 self.altered += 1
-                name = '%s #suff'
+                name = '%s #suff' % name
             else:
                 if self.verbose:
                     sys.stderr.write('[SuffixQual] %s (kept)\n' % (name,))
