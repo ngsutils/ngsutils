@@ -9,7 +9,7 @@ import os,sys,gzip
 
 from fastq_utils import read_fastq,is_paired_fastq
 
-def fastq_split(fname,outbase,chunks,ignore_pairs = False, gz=False):
+def fastq_split(fname,outbase,chunks,ignore_pairs = False, gz=False, count_fname=None):
     i=0
     chunk=1
     if ignore_pairs:
@@ -37,8 +37,10 @@ def fastq_split(fname,outbase,chunks,ignore_pairs = False, gz=False):
 
     i = 0
     last_name = None
+    count = 0
 
     for name,seq,qual in read_fastq(fname):
+        count += 1
         sn = name.split()[0]
         if not is_paired:
             i += 1
@@ -57,6 +59,11 @@ def fastq_split(fname,outbase,chunks,ignore_pairs = False, gz=False):
 
     for tmp,fname in fnames:
         os.rename(tmp,fname)
+    
+    if count_fname:
+        with open(count_fname,'w') as f:
+            f.write(count)
+            
 
 def usage(msg=None):
     if msg:
@@ -73,6 +80,8 @@ Options:
                    paired FASTQ file back into separate files for each 
                    fragment.
 
+  -count fname     Write the number of reads in the FASTQ file to a text file
+
   -gz              gzip compress the output FASTQ files
 
 """
@@ -84,12 +93,19 @@ if __name__ == '__main__':
     chunks = 0
     ignore_pairs = False
     gz = False
-
+    countfname = None
+    last = None
+    
     for arg in sys.argv[1:]:
         if arg == '-ignorepaired':
             ignore_pairs = True
         elif arg == '-gz':
             gz = True
+        elif last == '-count':
+            countfname = arg
+            last = None
+        elif arg in ['-count']:
+            last = arg
         elif not fname:
             if not os.path.exists(arg):
                 usage("Missing file: %s" % arg)
@@ -102,4 +118,4 @@ if __name__ == '__main__':
     if not fname or not chunks or not outtemplate:
         usage()
         
-    fastq_split(fname,outtemplate,chunks,ignore_pairs,gz)
+    fastq_split(fname,outtemplate,chunks,ignore_pairs,gz,countfname)

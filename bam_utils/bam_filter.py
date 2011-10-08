@@ -23,7 +23,7 @@ Currently, the available filters are:
     -excludebed file.bed       Remove reads that are in any of the regions 
                                from the given BED file
                                
-    -include ref:start-end     Remove reads NO this region (can only be one)
+    -include ref:start-end     Remove reads NOT in the region (can only be one)
     -includebed file.bed       Remove reads that are NOT any of the regions 
                                from the given BED file
                                Note: If this is a large dataset, use 

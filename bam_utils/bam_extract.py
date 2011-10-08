@@ -6,6 +6,9 @@ map to the given BED regions.
 Specifically, if a read starts or ends within a BED region, it is extracted.
 However, if a read completely spans a region (starting before and ending 
 after), it is ignored.
+
+This tends to be faster than running 'bamutils filter' because this extracts
+reads from a region, without iterating over all of the reads in the BAM file.
 """
 
 import os,sys,gzip

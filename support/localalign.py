@@ -209,7 +209,7 @@ class Alignment(object):
         self.r_end = r_pos + r_len
         self.identity = float(self.matches) / (self.mismatches + self.matches)
 
-    def dump(self):
+    def dump(self, out=sys.stdout):
         i = self.q_pos
         j = self.r_pos
 
@@ -247,12 +247,12 @@ class Alignment(object):
                 r += '-//-'
                 m += '    '
 
-        print q, self.q_end
-        print m
-        print r, self.r_end
-        print "Score: %s" % self.score
-        print "Matches: %s (%.1f%%)" % (self.matches, self.identity * 100)
-        print "Mismatches: %s" % (self.mismatches,)
+        out.write("%s %s\n" % (q, self.q_end))
+        out.write("%s\n" % m)
+        out.write("%s %s\n" % (r, self.r_end))
+        out.write("Score: %s\n" % self.score)
+        out.write("Matches: %s (%.1f%%)\n" % (self.matches, self.identity * 100))
+        out.write("Mismatches: %s\n" % (self.mismatches,))
 
 if __name__ == '__main__':
     sw = LocalAlignment(NucleotideScoringMatrix(2, -1))

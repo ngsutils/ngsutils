@@ -418,62 +418,66 @@ if __name__ == '__main__':
     profile=None
 
     last = None
-    for arg in sys.argv[1:]:
-        if last == '-qual':
-            min_qual = int(arg)
-            last = None
-        elif last == '-ref':
-            if os.path.exists(arg) and os.path.exists('%s.fai' % arg):
-                ref = arg
-            else:
-                print "Missing FASTA file or index: %s" % arg
+    try:
+        for arg in sys.argv[1:]:
+            if last == '-qual':
+                min_qual = int(arg)
+                last = None
+            elif last == '-ref':
+                if os.path.exists(arg) and os.path.exists('%s.fai' % arg):
+                    ref = arg
+                else:
+                    print "Missing FASTA file or index: %s" % arg
+                    usage()
+                last = None
+            elif last == '-count':
+                min_count = int(arg)
+                last = None
+            elif last == '-mask':
+                mask = int(arg)
+                last = None
+            elif last == '-minorpct':
+                minorpct = float(arg)
+                last = None
+            elif last == '-profile':
+                profile = arg
+                last = None
+            elif arg == '-h':
                 usage()
-            last = None
-        elif last == '-count':
-            min_count = int(arg)
-            last = None
-        elif last == '-mask':
-            mask = int(arg)
-            last = None
-        elif last == '-minorpct':
-            minorpct = float(arg)
-            last = None
-        elif last == '-profile':
-            profile = arg
-            last = None
-        elif arg == '-h':
-            usage()
-        elif arg == '-showstrand':
-            showstrand = True
-        elif arg == '-showgaps':
-            showgaps = True
-        elif arg == '-q':
-            quiet = True
-        elif arg in ['-qual','-count','-mask','-ref','-minorpct','-profile']:
-            last = arg
-        elif not bam and os.path.exists(arg):
-            if os.path.exists('%s.bai' % arg):
-                bam = arg
+            elif arg == '-showstrand':
+                showstrand = True
+            elif arg == '-showgaps':
+                showgaps = True
+            elif arg == '-q':
+                quiet = True
+            elif arg in ['-qual','-count','-mask','-ref','-minorpct','-profile']:
+                last = arg
+            elif not bam and os.path.exists(arg):
+                if os.path.exists('%s.bai' % arg):
+                    bam = arg
+                else:
+                    print "Missing BAI index on %s" % arg
+                    usage()
+            elif not ref and os.path.exists(arg) and os.path.exists('%s.fai' % arg):
+                if os.path.exists('%s.fai' % arg):
+                    ref = arg
+                else:
+                    print "Missing FAI index on %s" % arg
+                    usage()
+            elif not chrom:
+                chrom,startend = arg.split(':')
+                if '-' in startend:
+                    start,end = [int(x) for x in startend.split('-')]
+                else:
+                    start = int(startend)
+                    end = start
+                start = start - 1
             else:
-                print "Missing BAI index on %s" % arg
+                print "Unknown option or missing index: %s" % arg
                 usage()
-        elif not ref and os.path.exists(arg) and os.path.exists('%s.fai' % arg):
-            if os.path.exists('%s.fai' % arg):
-                ref = arg
-            else:
-                print "Missing FAI index on %s" % arg
-                usage()
-        elif not chrom:
-            chrom,startend = arg.split(':')
-            if '-' in startend:
-                start,end = [int(x) for x in startend.split('-')]
-            else:
-                start = int(startend)
-                end = start
-            start = start - 1
-        else:
-            print "Unknown option or missing index: %s" % arg
-            usage()
+    except Exception, e:
+        print e
+        usage()
 
     if not bam:
         usage()

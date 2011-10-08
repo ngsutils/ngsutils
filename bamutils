@@ -16,6 +16,7 @@ usage(){
     echo "    expressed     - Finds regions expressed in a BAM file"
     echo "    extract       - Extracts reads based on regions in a BED file"
     echo "    filter        - Removes reads from a BAM file based on criteria"
+    echo "    merge         - Combine multiple BAM files together (taking best-matches)"
     echo "    readpos       - Output the position of specific reads"
     echo "    split         - Splits a BAM file into smaller pieces"
     echo "    stats         - Calculates simple stats for a BAM file"
