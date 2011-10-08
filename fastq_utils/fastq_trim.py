@@ -11,7 +11,7 @@ from fastq_utils import read_fastq, is_colorspace_fastq
 import support.localalign
 
 
-def fastq_trim(fname, linker_5=None, linker_3=None, out=sys.stdout, pct_identity=0.8, min_trim=4, min_len=25):
+def fastq_trim(fname, linker_5=None, linker_3=None, out=sys.stdout, pct_identity=0.8, min_trim=4, min_len=25, verbose=False):
     '''
     fname - the fastq filename
     linker_5 - the 5' linker to remove
@@ -26,16 +26,24 @@ def fastq_trim(fname, linker_5=None, linker_3=None, out=sys.stdout, pct_identity
     removed = 0
     trimmed = 0
     for name, seq, qual in read_fastq(fname):
+        if verbose:
+            sys.stderr.write('Read: %s\n    : %s\n' % (name, seq))
         left = 0
         right = len(seq)
 
         if linker_5:
             aln = sw.align(seq, linker_5)
+            if verbose:
+                sys.stderr.write("5' alignment:\n")
+                aln.dump(sys.stderr)
             if aln.r_pos < min_trim and aln.identity > pct_identity:
                 left = aln.r_end
 
         if linker_3:
             aln = sw.align(seq, linker_3)
+            if verbose:
+                sys.stderr.write("3' alignment:\n")
+                aln.dump(sys.stderr)
             if aln.r_end > len(seq) - min_trim and aln.identity > pct_identity:
                 right = aln.r_pos
 
@@ -72,6 +80,7 @@ Options
   -pct val    Required percent identity (0->1.0) [default: 0.8]
   -min val    Minumum number of bases to trim (or minumum dist. from the ends)
               [default: 4]
+  -v          Verbose output for each alignment
 """
     sys.exit(1)
 
@@ -83,6 +92,7 @@ if __name__ == '__main__':
     min_len = 25
     min_trim = 4
     pct_identity = 0.8
+    verbose = False
 
     for arg in sys.argv[1:]:
         if last == '-5':
@@ -100,6 +110,8 @@ if __name__ == '__main__':
         elif last == '-min':
             min_trim = int(arg)
             last = None
+        elif arg == '-v':
+            verbose = True
         elif arg in ['-3', '-5', '-min', '-len', '-pct']:
             last = arg
         elif not fastq:
@@ -115,4 +127,4 @@ if __name__ == '__main__':
         if linker_3:
             sys.stderr.write("Removing %s from 3' end\n" % linker_3)
 
-        fastq_trim(fastq, linker_5, linker_3, min_len=min_len, pct_identity=pct_identity, min_trim=min_trim)
+        fastq_trim(fastq, linker_5, linker_3, min_len=min_len, pct_identity=pct_identity, min_trim=min_trim, verbose=verbose)
