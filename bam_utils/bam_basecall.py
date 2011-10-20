@@ -306,7 +306,7 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=N
     sys.stdout.write('chrom\tpos\tref\tcount\tconsensus call\tminor call\tave mappings\tentropy\tA\tC\tG\tT\tN\tDeletions\tGaps\tInsertions\tInserts')
 
     if showstrand:
-        sys.stdout.write('\tA minor %\tC minor %\tG minor %\tT minor %\tN minor %\tDeletion minor %\tInsertion minor %')
+        sys.stdout.write('\t+ strand %\tA minor %\tC minor %\tG minor %\tT minor %\tN minor %\tDeletion minor %\tInsertion minor %')
     
     sys.stdout.write('\n')
 
@@ -334,12 +334,15 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=N
         entropy = calc_entropy(basepos.a,basepos.c,basepos.g,basepos.t)
     
         read_ih_acc = 0
-        plus_count = 0
-        minus_count = 0
-        for qpos,cigar_op,base,qual,read in basepos.reads:
-            if cigar_op in [0,1,2]:
+        plus_count = 0.0  # needs to be float
+        total_count = 0
+        for qpos, cigar_op, base, qual, read in basepos.reads:
+            total_count += 1
+            if not read.is_reverse:
+                plus_count += 1.0
+            if cigar_op in [0, 1, 2]:
                 read_ih_acc += int(read.opt('IH'))
-        
+
         inserts = []
         for insert in basepos.insertions:
             inserts.append((basepos.insertions[insert],insert))
@@ -376,8 +379,9 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=N
                  basepos.gaps,
                  incount,
                  ','.join(insert_str_ar)]
-                 
+
         if showstrand:
+            cols.append(plus_count / total_count)
             cols.append(basepos.a_minor)
             cols.append(basepos.c_minor)
             cols.append(basepos.g_minor)
@@ -385,7 +389,7 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=N
             cols.append(basepos.n_minor)
             cols.append(basepos.del_minor)
             cols.append(basepos.ins_minor)
-            
+
         sys.stdout.write('%s\n' % '\t'.join([str(x) for x in cols]))
 
     bbc.close()
