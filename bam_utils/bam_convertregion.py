@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 """
-This takes a BAM file that has been mapped to a genomic region and converts 
+This takes a BAM file that has been mapped to a genomic region and converts
 the mapping to genomic coordinates.  This can be used to convert reads mapped
-against a junction library or targetted resequencing back to genomic 
+against a junction library or targeted resequencing back to genomic
 coordinates.  The names of the reference sequences should be named:
 chrom:start-end (0-based start).  If there are gaps (junctions), they should
 be named: chrom:start-end,start-end,etc...
 
-In this is the case, this script will ensure the proper conversion of 
+In this is the case, this script will ensure the proper conversion of
 reference, start position, and CIGAR alignment.
 
-Example 1: 
+Example 1:
 chr1:1000-2000    20    50M
 
 converted to:
@@ -24,9 +24,10 @@ chr1    1025    25M950N50M950M25M
 
 """
 
-import os,sys,gzip
-from support.eta import ETA
+import os
+import sys
 import pysam
+
 
 def usage():
     print __doc__
@@ -39,11 +40,12 @@ Options:
 """
     sys.exit(1)
 
-bam_cigar = ['M','I','D','N','S','H','P']
+bam_cigar = ['M', 'I', 'D', 'N', 'S', 'H', 'P']
 
 _region_cache = {}
 
-def region_pos_to_genomic_pos(name,start,cigar):
+
+def region_pos_to_genomic_pos(name, start, cigar):
     '''
         converts a junction position to a genomic location given a junction
         ref name, the junction position, and the cigar alignment.
@@ -52,69 +54,70 @@ def region_pos_to_genomic_pos(name,start,cigar):
     '''
     # example name: chr3R:17630851-17630897,17634338-17634384       17       39M
     if name in _region_cache:
-        chrom,fragments = _region_cache[name]
+        chrom, fragments = _region_cache[name]
     else:
         c1 = name.split(':')
         chrom = c1[0]
 
         fragments = []
         for fragment in c1[1].split(','):
-            s,e = fragment.split('-')
-            fragments.append((int(s),int(e)))
-        
-        _region_cache[name] = (chrom,fragments)
-    
+            s, e = fragment.split('-')
+            fragments.append((int(s), int(e)))
+
+        _region_cache[name] = (chrom, fragments)
+
     chr_cigar = []
     chr_start = fragments[0][0]
-    
+
     read_start = int(start)
-    
+
     frag_idx = 0
     frag_start = 0
     frag_end = 0
-    
-    for i,(s,e) in enumerate(fragments):
-        if chr_start+read_start < e:
+
+    for i, (s, e) in enumerate(fragments):
+        if chr_start + read_start < e:
             chr_start += read_start
             frag_idx = i
             frag_start = s
             frag_end = e
             break
-            
+
         else:
-            chr_start += (e-s)
-            read_start -= (e-s)
-    
+            chr_start += (e - s)
+            read_start -= (e - s)
+
     cur_pos = chr_start
-    
-    for op,length in cigar:
+
+    for op, length in cigar:
         if op == 1:
-            chr_cigar.append((op,length))
-            
-        elif op in [0,2]:
+            chr_cigar.append((op, length))
+
+        elif op in [0, 2]:
             if cur_pos + length <= frag_end:
                 cur_pos += length
-                chr_cigar.append((op,length))
-                
+                chr_cigar.append((op, length))
+
             else:
                 while cur_pos + length > frag_end:
-                    chr_cigar.append((op,frag_end-cur_pos))
-                    length -= (frag_end-cur_pos)
+                    chr_cigar.append((op, frag_end - cur_pos))
+                    length -= (frag_end - cur_pos)
                     cur_pos = frag_end
                     frag_idx += 1
                     frag_start, frag_end = fragments[frag_idx]
-                    chr_cigar.append((3,frag_start-cur_pos))
+                    chr_cigar.append((3, frag_start - cur_pos))
                     cur_pos = frag_start
 
                 cur_pos = cur_pos + length
-                chr_cigar.append((op,length))
+                chr_cigar.append((op, length))
         else:
             print "Unsupported CIGAR operation (%s)" % bam_cigar[op]
             sys.exit(1)
-    
-    return (chrom,chr_start,chr_cigar)
 
-def is_junction_valid(cigar,min_overlap=4):
+    return (chrom, chr_start, chr_cigar)
+
+
+def is_junction_valid(cigar, min_overlap=4):
     '''
         Does the genomic cigar alignment represent a 'good' alignment.
         Used for checking junction->genome alignments
@@ -123,26 +126,24 @@ def is_junction_valid(cigar,min_overlap=4):
         2) the alignment must not start or end with an overhang
         3) the alignment must overhang the splice junction by min_overlap (4)
 
-
-
+        |     Exon1       |     Intron     |      Exon2       |
         |-----------------|oooooooooooooooo|------------------|
                                             XXXXXXXXXXXXXXXXXXXXXXXX (bad 1)
-      XXXXXXXXXXXXX (bad 2)                           XXXXXXXXXXXXXXXX (bad 2)                         
+      XXXXXXXXXXXXX (bad 2)                           XXXXXXXXXXXXXXXX (bad 2)
                         XX-----------------XXXXXXXXXXXXXXXXX (bad 3)
-
     '''
     first = True
     pre_gap = True
 
     pre_gap_count = 0
     post_gap_count = 0
-    
+
     has_gap = False
-    
-    for op,length in cigar:
+
+    for op, length in cigar:
         # mapping can't start at a gap
         if first and op == 3:
-            return (False,'Starts at gap (%s)'% cigar)
+            return (False, 'Starts at gap (%s)' % cigar)
         first = False
 
         if op == 3:
@@ -158,13 +159,14 @@ def is_junction_valid(cigar,min_overlap=4):
         # mapping must start with more than min_overlap base match
 
     if not has_gap:
-        return (False,"Doesn't cover junction")
+        return (False, "Doesn't cover junction")
     elif pre_gap_count < min_overlap:
         return (False, "Too short overlap at 5' (%s)" % cigar)
     elif post_gap_count < min_overlap:
         return (False, "Too short overlap at 3' (%s)" % cigar)
 
-    return True,''
+    return True, ''
+
 
 def bam_batch_reads(bam):
     reads = []
@@ -179,8 +181,9 @@ def bam_batch_reads(bam):
     if reads:
         yield reads
 
-def bam_convertregion(infile,outfname,chrom_sizes, enforce_overlap=False):
-    bamfile = pysam.Samfile(infile,"rb")
+
+def bam_convertregion(infile, outfname, chrom_sizes, enforce_overlap=False):
+    bamfile = pysam.Samfile(infile, "rb")
     header = bamfile.header
     header['SQ'] = []
 
@@ -188,10 +191,10 @@ def bam_convertregion(infile,outfname,chrom_sizes, enforce_overlap=False):
         for line in f:
             if line[0] != '#':
                 cols = line.strip().split('\t')
-                header['SQ'].append({'LN':int(cols[1]),'SN':cols[0]})
-    
-    outfile = pysam.Samfile('%s.tmp' % outfname,"wb",header=header)
-    
+                header['SQ'].append({'LN': int(cols[1]), 'SN': cols[0]})
+
+    outfile = pysam.Samfile('%s.tmp' % outfname, "wb", header=header)
+
     # eta = ETA(0,bamfile=bamfile)
     # count = 0
     converted_count = 0
@@ -208,24 +211,24 @@ def bam_convertregion(infile,outfname,chrom_sizes, enforce_overlap=False):
             #     eta.print_status(extra="conv:%d inv:%d un:%d" % (converted_count,invalid_count,unmapped_count),bam_pos=(batch[0].rname,batch[0].pos))
             # else:
             #     eta.print_status(bam_pos=(batch[0].rname,batch[0].pos))
-            
+
         for read in batch:
             if read.is_unmapped and not read.is_secondary:
-                unmapped_count+=1
+                unmapped_count += 1
                 if not enforce_overlap:
                     outfile.write(read)
                 continue
-                
-            chrom,pos,cigar = region_pos_to_genomic_pos(bamfile.getrname(read.rname),read.pos,read.cigar)
-        
+
+            chrom, pos, cigar = region_pos_to_genomic_pos(bamfile.getrname(read.rname), read.pos, read.cigar)
+
             read.pos = pos
             read.cigar = cigar
-            
-            chrom_found=False
-            for i,name in enumerate(outfile.references):
+
+            chrom_found = False
+            for i, name in enumerate(outfile.references):
                 if name == chrom:
                     read.rname = i
-                    chrom_found=True
+                    chrom_found = True
                     break
             if not chrom_found:
                 print "Can't find chrom: %s" % chrom
@@ -235,23 +238,23 @@ def bam_convertregion(infile,outfname,chrom_sizes, enforce_overlap=False):
                 outfile.write(read)
                 continue
 
-            valid,reason = is_junction_valid(cigar)
+            valid, reason = is_junction_valid(cigar)
             if valid:
                 converted_count += 1
                 outreads.append(read)
             else:
                 invalid_count += 1
-        
+
         if enforce_overlap and outreads:
-            for i,read in enumerate(outreads):
+            for i, read in enumerate(outreads):
                 newtags = []
-                for key,val in read.tags:
+                for key, val in read.tags:
                     if key == 'HI':
-                        newtags.append(('HI',i+1))
+                        newtags.append(('HI', i + 1))
                     elif key == 'IH':
-                        newtags.append(('IH',len(outreads)))
+                        newtags.append(('IH', len(outreads)))
                     else:
-                        newtags.append((key,val))
+                        newtags.append((key, val))
                 read.tags = newtags
                 outfile.write(read)
         #
@@ -274,31 +277,32 @@ def bam_convertregion(infile,outfname,chrom_sizes, enforce_overlap=False):
         #         read.tags = [('PG',batch[0].opt('PG')),('AS',2147483649),('NH',0),("IH",1),("HI",1),('CS',batch[0].opt('CS')),('CQ',batch[0].opt('CQ'))]
         #     else:
         #         read.tags = [('PG',batch[0].opt('PG')),('AS',2147483649),('NH',0),("IH",1),("HI",1),]
-        # 
+        #
         #     outfile.write(read)
-            
+
     # eta.done()
     bamfile.close()
     outfile.close()
-    
-    sys.stderr.write("converted:%d\ninvalid:%d\nunmapped:%d\n" % (converted_count,invalid_count,unmapped_count))
-    
-    os.rename('%s.tmp' % outfname,outfname)
+
+    sys.stderr.write("converted:%d\ninvalid:%d\nunmapped:%d\n" % (converted_count, invalid_count, unmapped_count))
+
+    os.rename('%s.tmp' % outfname, outfname)
+
 
 def test():
-    
-    chrom,start,cigar = region_pos_to_genomic_pos('chr1:1000-1050,2000-2050,3000-4000',25,[(0,100)])
-    
+
+    chrom, start, cigar = region_pos_to_genomic_pos('chr1:1000-1050,2000-2050,3000-4000', 25, [(0, 100)])
+
     assert chrom == 'chr1'
     assert start == 1025
     assert cigar == [(0, 25), (3, 950), (0, 50), (3, 950), (0, 25)]
-    
+
 if __name__ == '__main__':
     infile = None
     outfile = None
     chrom_sizes = None
     overlap = False
-    
+
     for arg in sys.argv[1:]:
         if arg == '-h':
             usage()
@@ -314,5 +318,4 @@ if __name__ == '__main__':
     if not infile or not outfile or not chrom_sizes:
         usage()
     else:
-        bam_convertregion(infile,outfile,chrom_sizes,overlap)
-        
+        bam_convertregion(infile, outfile, chrom_sizes, overlap)
