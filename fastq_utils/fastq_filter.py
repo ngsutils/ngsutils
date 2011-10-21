@@ -147,7 +147,7 @@ class QualFilter(object):
         for name, seq, qual in self.parent.filter():
             quals = [ord(q) - 33 for q in qual]  # convert from phred to int[]
             yielded = False
-            for i in xrange(len(qual)):
+            for i in xrange(len(qual) - self.window_size):
                 acc = 0.0
                 for q in quals[i:i + self.window_size]:
                     acc += q
