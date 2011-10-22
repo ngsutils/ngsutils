@@ -315,20 +315,29 @@ def bam_stats(infile, ref_file=None, region=None, delim=None):
         print "Max edit distance (NM):\t%s" % edits.max()
         print ""
         print "Read lengths"
+        acc = 0
         for i, v in enumerate(lengths.bins[::-1]):
             if v:
-                print "%s\t%s" % (lengths.max() - i, v)
+                print "%s\t%s\t(%.1f%%)" % (lengths.max() - i, v, float(mapped - acc) * 100 / mapped)
+                acc += v
+
         print ""
         print "# of alignments (IH)"
+        
+        acc = 0
         for i, v in enumerate(alignments.bins):
             if v:
-                print "%s\t%s" % (i, v)
+                print "%s\t%s\t(%.1f%%)" % (i, v, float(mapped - acc) * 100 / mapped)
+                acc += v
 
         print ""
         print "Edit distances (NM)"
+        
+        acc = 0
         for i, v in enumerate(edits.bins):
             if v:
-                print "%s\t%s" % (i, v)
+                print "%s\t%s\t(%.1f%%)" % (i, v, float(mapped - acc) * 100 / mapped)
+                acc += v
         print ""
 
         print "Reference distribution"
