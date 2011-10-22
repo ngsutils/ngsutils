@@ -318,8 +318,8 @@ def bam_stats(infile, ref_file=None, region=None, delim=None):
         acc = 0
         for i, v in enumerate(lengths.bins[::-1]):
             if v:
-                print "%s\t%s\t(%.1f%%)" % (lengths.max() - i, v, float(mapped - acc) * 100 / mapped)
                 acc += v
+                print "%s\t%s\t(%.1f%%)" % (lengths.max() - i, v, float(mapped - acc) * 100 / mapped)
 
         print ""
         print "# of alignments (IH)"
@@ -327,8 +327,8 @@ def bam_stats(infile, ref_file=None, region=None, delim=None):
         acc = 0
         for i, v in enumerate(alignments.bins):
             if v:
-                print "%s\t%s\t(%.1f%%)" % (i, v, float(mapped - acc) * 100 / mapped)
                 acc += v
+                print "%s\t%s\t(%.1f%%)" % (i, v, float(mapped - acc) * 100 / mapped)
 
         print ""
         print "Edit distances (NM)"
@@ -336,8 +336,8 @@ def bam_stats(infile, ref_file=None, region=None, delim=None):
         acc = 0
         for i, v in enumerate(edits.bins):
             if v:
-                print "%s\t%s\t(%.1f%%)" % (i, v, float(mapped - acc) * 100 / mapped)
                 acc += v
+                print "%s\t%s\t(%.1f%%)" % (i, v, float(mapped - acc) * 100 / mapped)
         print ""
 
         print "Reference distribution"
