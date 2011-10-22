@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 """
-Given a BAM file and a genomic reference, for each position covered in the 
-BAM file, show the reference base, and the number of A/T/C/G's and InDels. 
+Given a BAM file and a genomic reference, for each position covered in the
+BAM file, show the reference base, and the number of A/T/C/G's and InDels.
 
-You can also optionally filter out all bases whose quality score is below a 
-threshold, bases that aren't covered by enough reads, bases that have no 
+You can also optionally filter out all bases whose quality score is below a
+threshold, bases that aren't covered by enough reads, bases that have no
 variation compared to reference, or bases whose variation is too low.
 
 The output is a tab-delimited file that contains the following for each base:
@@ -25,10 +25,10 @@ Entropy
 # gaps
 # inserts
 
-If -showstrand is applied, a minor strand percentage is also calculated. This
-is calculated as: 
+If -showstrand is applied, a minor strand percentage is also calculated.p This
+is calculated as:
     pct = (# reads with base on plus/ # reads with base total)
-    if pct > 0.5, 
+    if pct > 0.5,
         pct = 1-pct
 
 Entropy is sum(a..t) { p log2 p } where p = freq(+pseudocount) / genomic freq.
@@ -37,9 +37,14 @@ pseudo count = genomic freq * sqrt(N)
 We use the following genomic frequencies: A 0.3, C 0.2, G 0.2, T 0.3
 """
 
-import os,sys,math,collections, datetime
+import os
+import sys
+import math
+import collections
+import datetime
 from support.eta import ETA
 import pysam
+
 
 def usage():
     print __doc__
@@ -50,36 +55,37 @@ Options:
 -ref   fname   Include reference basecalls from this file
 -qual  val     Minimum quality level to use in calculations
                (numeric, Sanger scale) (default 0)
-            
+
 -count val     Report only bases with this minimum number of read-coverage
                (matches, inserts, deletions counted) (default 0)
 
 -mask  val     The bitmask to use for filtering reads by flag
                (default 1540 - see SAM format for details)
 
--minorpct pct  Require a minor call to be within [pct] percent of the 
+-minorpct pct  Require a minor call to be within [pct] percent of the
                consensus call. Calculated as #minor / #consensus.
                (0.0 -> 1.0, default 0.01)
 -showgaps      Report gaps/splice-junctions in RNA-seq data
--showstrand    Show the minor-strand percentages for each call 
+-showstrand    Show the minor-strand percentages for each call
                (0-0.5 only shows the minor strand %)
 """
     sys.exit(1)
 
-__genomic_freq = {'A': 0.3, 'C': 0.2, 'G': 0.2,'T': 0.3}
+__genomic_freq = {'A': 0.3, 'C': 0.2, 'G': 0.2, 'T': 0.3}
 
-def calc_entropy(a,c,t,g):
-    counts = {'A':a,'C':c,'G':g,'T':t,}
+
+def calc_entropy(a, c, t, g):
+    counts = {'A': a, 'C': c, 'G': g, 'T': t}
 
     N = counts['A'] + counts['C'] + counts['G'] + counts['T']
     if N == 0:
         return 0
-        
+
     N_sqrt = math.sqrt(N)
-    
+
     count_pseudo = {}
     N_pseudo = 0
-    
+
     for base in 'ATCG':
         count_pseudo[base] = counts[base] + (__genomic_freq[base] * N_sqrt)
         N_pseudo += count_pseudo[base]
@@ -87,17 +93,18 @@ def calc_entropy(a,c,t,g):
     acc = 0
     for base in 'ATCG':
         p = float(count_pseudo[base]) / N_pseudo / __genomic_freq[base]
-        acc += (p * math.log(p,2))
-    
+        acc += (p * math.log(p, 2))
+
     return acc
 
-MappingRecord = collections.namedtuple('MappingRecord','qpos cigar_op base qual read')
-MappingPos = collections.namedtuple('MappingPos','tid pos records')
-BasePosition = collections.namedtuple('BasePosition','tid pos total a c g t n deletions gaps insertions reads a_minor c_minor g_minor t_minor n_minor del_minor ins_minor')
+MappingRecord = collections.namedtuple('MappingRecord', 'qpos cigar_op base qual read')
+MappingPos = collections.namedtuple('MappingPos', 'tid pos records')
+BasePosition = collections.namedtuple('BasePosition', 'tid pos total a c g t n deletions gaps insertions reads a_minor c_minor g_minor t_minor n_minor del_minor ins_minor')
+
 
 class BamBaseCaller(object):
-    def __init__(self, bam_fname, min_qual=0, min_count=0, chrom=None, start=0, end=0, mask=1540,quiet=False):
-        self.bam = pysam.Samfile(bam_fname,'rb')
+    def __init__(self, bam_fname, min_qual=0, min_count=0, chrom=None, start=0, end=0, mask=1540, quiet=False):
+        self.bam = pysam.Samfile(bam_fname, 'rb')
         self.min_qual = min_qual
         self.min_count = 0
 
@@ -107,45 +114,47 @@ class BamBaseCaller(object):
 
         self.mask = mask
         self.quiet = quiet
-        
+
+        def _gen1():
+            for p in self.bam.fetch(chrom, start, end):
+                yield p
+
+        def _gen2():
+            for p in self.bam:
+                yield p
+
         if chrom and start and end:
-            def _gen():
-                for p in self.bam.fetch(chrom,start,end):
-                    yield p
+            self._gen = _gen1
         else:
-            def _gen():
-                for p in self.bam:
-                    yield p
-        self._gen = _gen
+            self._gen = _gen2
 
         self.buffer = None
         self.current_tid = None
-    
+
     def close(self):
         self.bam.close()
-        
-    def _calc_pos(self,tid,pos,records):
-        counts = {'A':0,'C':0,'G':0,'T':0,'N':0,'ins':0,'del':0}
-        plus_counts = {'A':0,'C':0,'G':0,'T':0,'N':0,'ins':0,'del':0}
-        
+
+    def _calc_pos(self, tid, pos, records):
+        counts = {'A': 0, 'C': 0, 'G': 0, 'T': 0, 'N': 0, 'ins': 0, 'del': 0}
+        plus_counts = {'A': 0, 'C': 0, 'G': 0, 'T': 0, 'N': 0, 'ins': 0, 'del': 0}
+
         insertions = {}
-        deletions = 0
         gaps = 0
         total = 0
         reads = []
 
         for record in records:
-            qpos,cigar_op,base,qual,read = record
-            if cigar_op == 0: # M
-                if qual >= self.min_qual and (read.flag & self.mask) == 0 :
+            qpos, cigar_op, base, qual, read = record
+            if cigar_op == 0:  # M
+                if qual >= self.min_qual and (read.flag & self.mask) == 0:
                     total += 1
                     reads.append(record)
 
                     counts[base] += 1
                     if not read.is_reverse:
                         plus_counts[base] += 1
-            elif cigar_op == 1: # I
-                if qual >= self.min_qual and (read.flag & self.mask) == 0 :
+            elif cigar_op == 1:  # I
+                if qual >= self.min_qual and (read.flag & self.mask) == 0:
                     reads.append(record)
 
                     if not base in insertions:
@@ -153,85 +162,83 @@ class BamBaseCaller(object):
                     else:
                         insertions[base] += 1
 
-                        counts['ins'] +=1
+                        counts['ins'] += 1
                     if not read.is_reverse:
                         plus_counts['ins'] += 1
-            elif cigar_op == 2: # D
-                #total += 1 # not sure these should be included, 
+            elif cigar_op == 2:  # D
+                #total += 1 # not sure these should be included,
                            # samtools mpileup includes them
                            # IGV doesn't
-                           
-                counts['del'] +=1
+
+                counts['del'] += 1
                 reads.append(record)
                 if not read.is_reverse:
                     plus_counts['del'] += 1
-            elif cigar_op == 3: # N
+            elif cigar_op == 3:  # N
                 gaps += 1
                 reads.append(record)
 
-        pcts =  {'A':0.0,'C':0.0,'G':0.0,'T':0.0,'N':0.0,'ins':0.0,'del':0.0}
+        pcts = {'A': 0.0, 'C': 0.0, 'G': 0.0, 'T': 0.0, 'N': 0.0, 'ins': 0.0, 'del': 0.0}
         for k in pcts:
             if counts[k] > 0:
                 pcts[k] = float(plus_counts[k]) / counts[k]
-            
+
                 if pcts[k] > 0.5:
                     pcts[k] = 1 - pcts[k]
-        
+
         if total >= self.min_count:
-            return BasePosition(tid,pos,total,counts['A'],counts['C'],counts['G'],counts['T'],counts['N'],counts['del'],gaps,insertions,reads,pcts['A'],pcts['C'],pcts['G'],pcts['T'],pcts['N'],pcts['del'],pcts['ins'])
-            
+            return BasePosition(tid, pos, total, counts['A'], counts['C'], counts['G'], counts['T'], counts['N'], counts['del'], gaps, insertions, reads, pcts['A'], pcts['C'], pcts['G'], pcts['T'], pcts['N'], pcts['del'], pcts['ins'])
 
     def fetch(self):
         self.current_tid = None
         self.buffer = collections.deque()
         if not self.quiet:
-            eta = ETA(0,bamfile=self.bam)
+            eta = ETA(0, bamfile=self.bam)
         else:
             eta = None
 
         for read in self._gen():
             if eta:
-                eta.print_status(extra='%s:%s (%s)' % (self.bam.references[read.tid],read.pos,len(self.buffer)),bam_pos=(read.tid,read.pos))
-            
-            if self.current_tid != read.tid: # new chromosome
+                eta.print_status(extra='%s:%s (%s)' % (self.bam.references[read.tid], read.pos, len(self.buffer)), bam_pos=(read.tid, read.pos))
+
+            if self.current_tid != read.tid:  # new chromosome
                 while self.buffer:
-                    tid,pos,records = self.buffer.popleft()
-                    yield self._calc_pos(tid,pos,records)
-                
+                    tid, pos, records = self.buffer.popleft()
+                    yield self._calc_pos(tid, pos, records)
+
                 self.current_tid = read.tid
-            
+
             # handle all positions that are 5' of the current one
             while self.buffer and read.pos > self.buffer[0].pos:
-                tid,pos,records = self.buffer.popleft()
-                yield self._calc_pos(tid,pos,records)
-                
+                tid, pos, records = self.buffer.popleft()
+                yield self._calc_pos(tid, pos, records)
+
             self._push_read(read)
-        
+
         # flush buffer for the end
         while self.buffer:
-            tid,pos,records = self.buffer.popleft()
-            yield self._calc_pos(tid,pos,records)
-        
+            tid, pos, records = self.buffer.popleft()
+            yield self._calc_pos(tid, pos, records)
+
         if eta:
             eta.done()
-        
-    def _push_read(self,read):
-        
+
+    def _push_read(self, read):
         if not self.buffer:
             self.buffer.append(MappingPos(read.tid, read.pos, []))
-        
+
         while self.buffer[-1].pos < read.aend:
-            self.buffer.append(MappingPos(read.tid, self.buffer[-1].pos+1, []))
-        
+            self.buffer.append(MappingPos(read.tid, self.buffer[-1].pos + 1, []))
+
         buf_idx = 0
         while self.buffer[0].pos < read.pos:
             buf_idx += 1
-            
+
         read_idx = 0
-        for op,length in read.cigar:
+        for op, length in read.cigar:
             if op == 0:
                 for i in xrange(length):
-                    self.buffer[buf_idx].records.append(MappingRecord(read_idx,op,read.seq[read_idx],read.qual[read_idx],read))
+                    self.buffer[buf_idx].records.append(MappingRecord(read_idx, op, read.seq[read_idx], read.qual[read_idx], read))
                     buf_idx += 1
                     read_idx += 1
             elif op == 1:
@@ -239,37 +246,38 @@ class BamBaseCaller(object):
                 inqual = 0
                 for i in xrange(length):
                     inseq += read.seq[read_idx]
-                    inqual += ord(read.qual[read_idx])-33
+                    inqual += ord(read.qual[read_idx]) - 33
                     read_idx += 1
-                
+
                 inqual = inqual / len(inseq)
-                
-                self.buffer[buf_idx].records.append(MappingRecord(read_idx,op,inseq,inqual,read))
-                
+
+                self.buffer[buf_idx].records.append(MappingRecord(read_idx, op, inseq, inqual, read))
+
             elif op == 2:
-                mr = MappingRecord(read_idx,op,None,None,read)
+                mr = MappingRecord(read_idx, op, None, None, read)
                 for i in xrange(length):
                     self.buffer[buf_idx].records.append(mr)
                     buf_idx += 1
-            
+
             elif op == 3:
-                mr = MappingRecord(read_idx,op,None,None,read)
+                mr = MappingRecord(read_idx, op, None, None, read)
                 for i in xrange(length):
                     self.buffer[buf_idx].records.append(mr)
                     buf_idx += 1
-                
-def _calculate_consensus_minor(minorpct,a,c,g,t):
-    consensuscalls=[]
-    minorcalls=[]
-    
-    calls = [(a,'A'),(c,'C'),(g,'G'),(t,'T')]
+
+
+def _calculate_consensus_minor(minorpct, a, c, g, t):
+    consensuscalls = []
+    minorcalls = []
+
+    calls = [(a, 'A'), (c, 'C'), (g, 'G'), (t, 'T')]
     calls.sort()
     calls.reverse()
 
     best = calls[0][0]
     minor = 0
 
-    for count,base in calls:
+    for count, base in calls:
         if count == 0:
             break
         if count == best:
@@ -281,23 +289,24 @@ def _calculate_consensus_minor(minorpct,a,c,g,t):
             minorcalls.append(base)
         else:
             # background
-            pass 
+            pass
 
     if best == 0:
-        return ('N','')
+        return ('N', '')
 
     if best and (float(minor) / best) < minorpct:
         minorcalls = []
-    
+
     # if there is one major, there can be more than one minor
     # however, if there is more than one major, there are *no* minors
     #
 
     if len(consensuscalls) == 1:
-        return (consensuscalls[0],'/'.join(minorcalls))
-    return ('/'.join(consensuscalls),'')
-    
-def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=None,end=None,mask=1540,quiet = False, showgaps=False, showstrand=False, minorpct=0.01, profiler=None):
+        return (consensuscalls[0], '/'.join(minorcalls))
+    return ('/'.join(consensuscalls), '')
+
+
+def bam_basecall(bam_fname, ref_fname, min_qual=0, min_count=0, chrom=None, start=None, end=None, mask=1540, quiet=False, showgaps=False, showstrand=False, minorpct=0.01, profiler=None):
     if ref_fname:
         ref = pysam.Fastafile(ref_fname)
     else:
@@ -307,32 +316,32 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=N
 
     if showstrand:
         sys.stdout.write('\t+ strand %\tA minor %\tC minor %\tG minor %\tT minor %\tN minor %\tDeletion minor %\tInsertion minor %')
-    
+
     sys.stdout.write('\n')
 
-    bbc = BamBaseCaller(bam_fname,min_qual,min_count,chrom,start,end,mask,quiet)
+    bbc = BamBaseCaller(bam_fname, min_qual, min_count, chrom, start, end, mask, quiet)
     for basepos in bbc.fetch():
         if profiler and profiler.abort():
             break
         if start and end:
             if basepos.pos < start or basepos.pos >= end:
                 continue
-        
+
         big_total = basepos.total + basepos.deletions + len(basepos.insertions)
-        
+
         if big_total < min_count:
             continue
-        
+
         if big_total == 0 and not (showgaps and basepos.gaps > 0):
             continue
-            
+
         if ref:
-            refbase = ref.fetch(bbc.bam.references[basepos.tid],basepos.pos,basepos.pos+1).upper()
+            refbase = ref.fetch(bbc.bam.references[basepos.tid], basepos.pos, basepos.pos + 1).upper()
         else:
             refbase = 'N'
 
-        entropy = calc_entropy(basepos.a,basepos.c,basepos.g,basepos.t)
-    
+        entropy = calc_entropy(basepos.a, basepos.c, basepos.g, basepos.t)
+
         read_ih_acc = 0
         plus_count = 0.0  # needs to be float
         total_count = 0
@@ -345,25 +354,25 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=N
 
         inserts = []
         for insert in basepos.insertions:
-            inserts.append((basepos.insertions[insert],insert))
+            inserts.append((basepos.insertions[insert], insert))
         inserts.sort()
         inserts.reverse()
-        
+
         insert_str_ar = []
         incount = 0
-        for count,insert in inserts:
-            insert_str_ar.append('%s:%s' % (insert,count))
+        for count, insert in inserts:
+            insert_str_ar.append('%s:%s' % (insert, count))
             incount += count
-        
+
         if big_total > 0:
             ave_mapping = (float(read_ih_acc) / big_total)
         else:
             ave_mapping = 0
-        
-        consensuscall,minorcall = _calculate_consensus_minor(minorpct,basepos.a,basepos.c,basepos.g,basepos.t)
-        
-        cols  = [bbc.bam.references[basepos.tid],
-                 basepos.pos+1,
+
+        consensuscall, minorcall = _calculate_consensus_minor(minorpct, basepos.a, basepos.c, basepos.g, basepos.t)
+
+        cols = [bbc.bam.references[basepos.tid],
+                 basepos.pos + 1,
                  refbase,
                  basepos.total,
                  consensuscall,
@@ -396,9 +405,11 @@ def bam_basecall(bam_fname,ref_fname,min_qual=0, min_count=0, chrom=None,start=N
     if ref:
         ref.close()
 
+
 class TimedProfiler(object):
-    def __init__(self,secs_to_run=3600): # default is to run for one hour
-        self.expire_ts = datetime.datetime.now()+datetime.timedelta(seconds=secs_to_run)
+    def __init__(self, secs_to_run=3600):  # default is to run for one hour
+        self.expire_ts = datetime.datetime.now() + datetime.timedelta(seconds=secs_to_run)
+
     def abort(self):
         if datetime.datetime.now() > self.expire_ts:
             return True
@@ -407,7 +418,7 @@ class TimedProfiler(object):
 if __name__ == '__main__':
     bam = None
     ref = None
-    
+
     min_qual = 0
     min_count = 0
     mask = 1540
@@ -418,8 +429,8 @@ if __name__ == '__main__':
     showgaps = False
     showstrand = False
     minorpct = 0.01
-    
-    profile=None
+
+    profile = None
 
     last = None
     try:
@@ -454,7 +465,7 @@ if __name__ == '__main__':
                 showgaps = True
             elif arg == '-q':
                 quiet = True
-            elif arg in ['-qual','-count','-mask','-ref','-minorpct','-profile']:
+            elif arg in ['-qual', '-count', '-mask', '-ref', '-minorpct', '-profile']:
                 last = arg
             elif not bam and os.path.exists(arg):
                 if os.path.exists('%s.bai' % arg):
@@ -469,9 +480,9 @@ if __name__ == '__main__':
                     print "Missing FAI index on %s" % arg
                     usage()
             elif not chrom:
-                chrom,startend = arg.split(':')
+                chrom, startend = arg.split(':')
                 if '-' in startend:
-                    start,end = [int(x) for x in startend.split('-')]
+                    start, end = [int(x) for x in startend.split('-')]
                 else:
                     start = int(startend)
                     end = start
@@ -488,10 +499,10 @@ if __name__ == '__main__':
     else:
         if profile:
             import cProfile
+
             def func():
-                bam_basecall(bam,ref,min_qual,min_count,chrom,start,end,mask,quiet,showgaps, showstrand,minorpct,TimedProfiler())
+                bam_basecall(bam, ref, min_qual, min_count, chrom, start, end, mask, quiet, showgaps, showstrand, minorpct, TimedProfiler())
             sys.stderr.write('Profiling...\n')
-            cProfile.run('func()',profile)
+            cProfile.run('func()', profile)
         else:
-            bam_basecall(bam,ref,min_qual,min_count,chrom,start,end,mask,quiet,showgaps, showstrand,minorpct, None)
-        
+                bam_basecall(bam, ref, min_qual, min_count, chrom, start, end, mask, quiet, showgaps, showstrand, minorpct, None)
