@@ -4,6 +4,10 @@ Given a BAM file, this script will only allow reads that meet filtering
 criteria to be written to output. The output is another BAM file with the 
 reads not matching the criteria removed.
 
+Note: this does not adjust tag values reflecting any filtering. (for example: 
+      if a read mapped to two locations (IH:i:2), and one was removed by 
+      filtering, the IH:i tag would still read IH:i:2).
+
 Currently, the available filters are:
     -mapped                    Keep only mapped reads
     
