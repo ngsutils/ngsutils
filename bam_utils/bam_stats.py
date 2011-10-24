@@ -245,7 +245,6 @@ def bam_stats(infile, ref_file=None, region=None, delim=None):
                 flag_counts[read.flag] += 1
 
             names.add(read.qname)
-            lengths.add(len(read.seq))
             total += 1
             if read.is_unmapped:
                 unmapped += 1
@@ -254,6 +253,8 @@ def bam_stats(infile, ref_file=None, region=None, delim=None):
             eta.print_status(extra="%s:%s" % (bamfile.getrname(read.rname), read.pos), bam_pos=(read.rname, read.pos))
 
             mapped += 1
+            lengths.add(len(read.seq))
+
             if delim:
                 refs[bamfile.getrname(read.rname).split(delim)[0]] += 1
             else:
