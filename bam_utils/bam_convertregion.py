@@ -100,8 +100,9 @@ def region_pos_to_genomic_pos(name, start, cigar):
 
             else:
                 while cur_pos + length > frag_end:
-                    chr_cigar.append((op, frag_end - cur_pos))
-                    length -= (frag_end - cur_pos)
+                    if frag_end - cur_pos > 0:
+                        chr_cigar.append((op, frag_end - cur_pos))
+                        length -= (frag_end - cur_pos)
                     cur_pos = frag_end
                     frag_idx += 1
                     frag_start, frag_end = fragments[frag_idx]
