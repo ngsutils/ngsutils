@@ -50,11 +50,11 @@ def fastq_stats(fname):
             
             line += 4
             total += 1
-            while len(qual) >= len(lengths):
+            while len(qual) > len(lengths):
                 lengths.append(0)
                 qualities.append(0)
         
-            lengths[len(qual)] += 1
+            lengths[len(qual)-1] += 1
         
             for idx,q in enumerate([ord(x) for x in qual]):
                 qualities[idx]+=q
@@ -66,7 +66,7 @@ def fastq_stats(fname):
     print "Lengths"
     for idx,count in enumerate(lengths[::-1]):
         if count:
-            print "%s\t%s" % (len(lengths)-idx-1,count)
+            print "%s\t%s" % (len(lengths)-idx,count)
 
     print ""
     print "Quality by position"
