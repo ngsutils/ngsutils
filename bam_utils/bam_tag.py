@@ -14,7 +14,7 @@ def bam_tag(suffix, infname, outfname):
     
     # write to a tmp file, then move afterwards
     tmp = os.path.join(os.path.dirname(outfname),'.tmp.%s' % os.path.basename(outfname))
-    outbam = pysam.Samfile(tmp,'wb')
+    outbam = pysam.Samfile(tmp,'wb', template=bamfile)
 
     for read in bamfile:
         eta.print_status(extra=read.qname,bam_pos=(read.rname,read.pos))
