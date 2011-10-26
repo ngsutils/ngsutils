@@ -60,7 +60,7 @@ if __name__ == "__main__":
             infname = arg
         elif not outfname:
             if not force and os.path.exists(arg):
-                sys.stderr.write('%s already exists! Not overwriting without force (-f)!')
+                sys.stderr.write('%s already exists! Not overwriting without force (-f)!' % arg)
                 sys.exit(1)
             outfname = arg
             
