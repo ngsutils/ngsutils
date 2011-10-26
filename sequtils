@@ -9,6 +9,8 @@ usage(){
     echo "    genesize    - Extract genomic/transcript sizes for genes (in RefIso)"
     echo "    junctions   - Build a junction library from FASTA and RefIso "
     echo ""
+    echo "    tobed       - Converts a RefIso model to BED format"
+    echo ""
     echo "See 'sequtils help CMD' for more information about a specific command"
     echo -n "ngsutils "
     cat $DIR/VERSION
