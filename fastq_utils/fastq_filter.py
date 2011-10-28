@@ -286,7 +286,7 @@ Options:
   -v                          Verbose
 
 Filters:
-  -wildcard num               Discard reads with too many wildcards (N or .)
+  -wildcard num               Discard reads w/ more than N wildcards (N or .)
 
   -size minsize               Discard reads that are too short
 
@@ -380,7 +380,7 @@ if __name__ == '__main__':
     if discard_fname:
         _d_file = open(discard_fname,'w')
         def _callback(name):
-            _d_file.write('%s\n' % name)
+            _d_file.write('%s\n' % name[1:])
         
         discard = _callback
         
