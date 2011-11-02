@@ -145,10 +145,11 @@ class PairedFilter(object):
 
 
 class QualFilter(object):
-    def __init__(self, parent, min_qual, window_size, verbose=False, discard=None):
+    def __init__(self, parent, min_qual, window_size, illumina=False, verbose=False, discard=None):
         self.parent = parent
         self.min_qual = min_qual
         self.window_size = window_size
+        self.illumina = illumina
         self.verbose = verbose
 
         self.altered = 0
@@ -157,9 +158,16 @@ class QualFilter(object):
         
         self.discard = discard
 
+    def _convert_quals(self, qual):
+        if self.illumina:
+            return [ord(q) - 64 for q in qual]
+        else:
+            return [ord(q) - 33 for q in qual]
+            
+
     def filter(self):
         for name, seq, qual in self.parent.filter():
-            quals = [ord(q) - 33 for q in qual]  # convert from phred to int[]
+            quals = self._convert_quals(qual)  # convert from phred to int[]
             yielded = False
             for i in xrange(len(qual) - self.window_size):
                 acc = 0.0
@@ -282,6 +290,8 @@ def usage():
     print """Usage: fastqutils filter {opts} {filters} file.fastq{.gz}
 Options:
   -discard filename           Write the name of all discarded reads to a file
+  -illumina                   Use Illumina scaling for quality values 
+                              (-qual filter) [default: Sanger-scale]
   -stats filename             Write filter stats out to a file
   -v                          Verbose
 
@@ -313,6 +323,7 @@ if __name__ == '__main__':
     discard_fname = None
     verbose = False
     veryverbose = False
+    illumina = False
     filters_config = []
 
     last = None
@@ -361,6 +372,8 @@ if __name__ == '__main__':
             last = None
         elif arg in ['-wildcard', '-size', '-qual', '-suffixqual', '-trim', '-stats', '-discard']:
             last = arg
+        elif arg == '-illumina':
+            illumina = True
         elif arg == '-v':
             verbose = True
         elif arg == '-vv':
@@ -393,7 +406,12 @@ if __name__ == '__main__':
 
         clazz = config[0]
         opts = config[1:]
-        chain = clazz(chain, *opts, verbose=veryverbose, discard=discard)
+        
+        if clazz == QualFilter:
+            chain = clazz(chain, *opts, verbose=veryverbose, discard=discard, illumina=illumina)
+        else:
+            chain = clazz(chain, *opts, verbose=veryverbose, discard=discard)
+            
 
     fastq_filter(chain)
     if _d_file:
