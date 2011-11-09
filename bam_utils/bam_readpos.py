@@ -1,66 +1,77 @@
 #!/usr/bin/env python
 '''
-Finds the realtive position of a read or reference:position in a BAM file.
-This is returned as a line number out of the total number of lines in the 
-file.
+Ouputs the names and positions of all reads in a BAM file.
 '''
-
-
-
 import sys,os
+from support.eta import ETA
 import pysam
 
-def bam_readpos(fname,readname=None,ref=None,pos=None):
+def bam_read_names(fname,mapped=False,unmapped=False,whitelist=None):
     bamfile = pysam.Samfile(fname,"rb")
-    count = 0
-    i = 0
-    
-    for read in bamfile:
-        if readname and read.qname == readname:
-            i = count
-        elif bamfile.getrname(read.rname) == ref:
-            if not i and read.pos >= pos:
-                i = count
-        count += 1
-        
-    bamfile.close()
+    eta = ETA(0,bamfile=bamfile)
 
-    if readname:
-        print "%s position: %s of %s (%.2f%%)" % (readname,i,count,float(i)*100/count)
-    else:
-        print "%s:%s position: %s of %s (%.2f%%)" % (ref,pos,i,count,float(i)*100/count)
+    for read in bamfile:
+        eta.print_status(extra=read.qname,bam_pos=(read.rname,read.pos))
+        if whitelist and not read.qname in whitelist:
+            continue
         
+        if mapped and not read.is_unmapped:
+            print '%s\t%s\t%s\t%s' % (read.qname, bamfile.getrname(read.rname), read.pos, ''.join(['%s%s' % (length,bam_cigar[op]) for op,length in read.cigar]))
+        elif unmapped and read.is_unmapped:
+            print '%s\t*\t0\t\n' % (read.qname)
+    
+    eta.done()
+    bamfile.close()
 
 def usage():
     print __doc__
-    print """
-Usage: bamutils readpos {-read read_name} {-pos chr:pos}  bamfile
+    print """\
+Usage: bamutils readpos {opts} bamfile
+
+Options
+-mapped            Output only mapped reads
+-unmapped          Output only unmapped reads
+
+-reads file.txt    Output only reads that are listed in this text file
 """
+    sys.exit(1)
 
 if __name__ == "__main__":
-    readname = None
-    ref = None
-    pos = None
+    mapped = False
+    unmapped = False
     fname = None
-    
+    readfname = None
     last = None
+    
     for arg in sys.argv[1:]:
-        if last == '-read':
-            readname = arg
+        if last == '-reads':
+            if not os.path.exists(arg):
+                print "Error: %s missing!" % arg
+                usage()
+            readfname = arg
             last = None
-        elif last == '-pos':
-            ref = arg.split(':')[0]
-            pos = int(arg.split(':')[1])
-            last = None
-        elif arg in ['-pos','-read']:
+        elif arg in ['-reads']:
             last = arg
+        elif arg == '-h':
+            usage()
+        elif arg == '-unmapped':
+            unmapped = True
+        elif arg == '-mapped':
+            mapped = True
         elif os.path.exists(arg):
             fname = arg
-    
-    if readname and fname:
-        bam_readpos(fname,read=readname)
-    elif ref and pos and fname:
-        bam_readpos(fname,ref=ref,pos=pos)
-    else:
+            
+    if not fname:
         usage()
         sys.exit(1)
+
+    wl = None
+    if readfname:
+        with open(readfname) as f:
+            wl = [x.strip() for x in f]
+
+    if not unmapped and not mapped:
+        bam_read_names(fname,True,True,wl)
+    else:
+        bam_read_names(fname,mapped,unmapped,wl)
+

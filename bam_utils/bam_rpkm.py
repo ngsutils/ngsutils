@@ -93,14 +93,14 @@ def calc_rpkm(bam_fname,refiso_name,stranded=True,multiple='complete',normalizat
 def calc_bed(bam_fname,bed_name,stranded=True,multiple='complete',normalization='genes',whitelist=None,blacklist=None,uniq=False,coverage=False):
     assert multiple in ['complete','partial','ignore']
     assert normalization in ['genes','total','quartile','none']
-    
+
     bam = pysam.Samfile(bam_fname,'rb')
     bed = open(bed_name)
 
     eta = ETA(os.stat(bed_name).st_size,fileobj=bed)
     all_reads = set()
     regions = []
-    
+
     for line in bed:
         cols = line.strip().split('\t')
         chrom = cols[0]
@@ -111,7 +111,7 @@ def calc_bed(bam_fname,bed_name,stranded=True,multiple='complete',normalization=
 
         if not chrom in bam.references:
             continue
-        
+
         eta.print_status(extra=name)
         coding_len = end-start
 
@@ -121,7 +121,7 @@ def calc_bed(bam_fname,bed_name,stranded=True,multiple='complete',normalization=
         if coverage:
             cols.extend(calc_coverage(bam,chrom,strand if stranded else None,[start],[end],whitelist,blacklist))
             eta.print_status(extra='%s coverage' % name)
-        
+
         regions.append(cols)
         all_reads.update(reads)
 
@@ -132,7 +132,7 @@ def calc_bed(bam_fname,bed_name,stranded=True,multiple='complete',normalization=
         mapped_count = _find_mapped_count(bam,bam_fname,whitelist,blacklist)
     elif normalization == 'quartile':
         mapped_count = _find_mapped_count_quartile([region[-1] for region in regions])
-        
+
 
     print "#multiple\t%s" % multiple
     if not stranded:
@@ -152,8 +152,8 @@ def calc_bed(bam_fname,bed_name,stranded=True,multiple='complete',normalization=
         mil_mapped = mapped_count / 1000000.0
     else:
         mil_mapped = 0
-    
-    
+
+
     print ""
     print '\t'.join(headers)
 
@@ -171,6 +171,73 @@ def calc_bed(bam_fname,bed_name,stranded=True,multiple='complete',normalization=
     eta.done()
     bam.close()
     bed.close()
+
+def calc_bin(bam_fname,bin_size,stranded=True,multiple='complete',normalization='total',whitelist=None,blacklist=None):
+    assert multiple in ['complete','partial','ignore']
+    assert normalization in ['total','quartile','none']
+    
+    bam = pysam.Samfile(bam_fname,'rb')
+    size = 0
+    for chrom,chrom_len in zip(bam.references,bam.lengths):
+        for pos in xrange(0,chrom_len,bin_size):
+            size += 2
+
+    eta = ETA(size)
+    all_reads = set()
+    regions = []
+    i=0
+    
+    strands = '+-'
+    if not stranded:
+        strands = '+'
+    
+    for chrom,chrom_len in zip(bam.references,bam.lengths):
+        for start,end in [(pos,pos+bin_size) for pos in xrange(0,chrom_len,bin_size)]:
+            for strand in strands:
+                i+=1
+                eta.print_status(i,extra='%s %s-%s[%s]' % (chrom,start,end,strand))
+                coding_len = end-start
+
+                count,reads = _fetch_reads(bam,chrom,strand if stranded else None,[start],[end],multiple,False,whitelist,blacklist)
+                cols = [chrom,start,end,strand,count]
+
+                regions.append(cols)
+                all_reads.update(reads)
+
+    mapped_count = 0
+    if normalization == 'total':
+        mapped_count = len(all_reads)
+    elif normalization == 'quartile':
+        mapped_count = _find_mapped_count_quartile([region[-1] for region in regions if region[-1] > 0 ]) # pull the counts for all regions where count > 0
+        
+
+    print "#multiple\t%s" % multiple
+    if not stranded:
+        print "#nostrand"
+
+    print "#normalization\t%s" % normalization
+    headers = "chrom start end strand count".split()
+
+    if mapped_count:
+        print "#mapped_count\t%s" % mapped_count
+        headers.append('RPM')
+        mil_mapped = mapped_count / 1000000.0
+    else:
+        mil_mapped = 0
+    
+    
+    print ""
+    print '\t'.join(headers)
+
+    for region in regions:
+        if region[-1] > 0:
+            if mil_mapped:
+                count = region[-1]
+                region.append(count / mil_mapped)
+            print '\t'.join([str(x) for x in region])
+
+    eta.done()
+    bam.close()
 
 def calc_repeat(bam_fname,repeat_fname,stranded=True,multiple='complete',normalization='genes',whitelist=None,blacklist=None):
     assert multiple in ['complete','partial','ignore']
@@ -267,7 +334,7 @@ def calc_repeat(bam_fname,repeat_fname,stranded=True,multiple='complete',normali
 
 def calc_alt(bam_fname,refiso_name,stranded=True,multiple='complete',normalization='genes',whitelist=None,blacklist=None):
     assert multiple in ['complete','partial','ignore']
-    assert normalization in ['genes','total','none']
+    assert normalization in ['genes','total','none','quartile']
 
     bam = pysam.Samfile(bam_fname,'rb')
     refiso = RefIso(refiso_name)
@@ -587,10 +654,12 @@ def _fetch_reads(bam,chrom,strand,starts,ends,multiple,exclusive,whitelist=None,
                             pass #ignore...
     return count,reads
 
-def usage():
+def usage(msg=None):
+    if msg:
+        print 'Error: %s' % msg
     print __doc__
     print """\
-Usage: bamutils rpkm [gene|alt|bed|repeat] annotation_file {opts} bamfile
+Usage: bamutils rpkm [type] annotation_file {opts} bamfile
 
 Common options:
     -nostrand          ignore strand in counting reads
@@ -601,6 +670,8 @@ Common options:
                        only these read-names will be used in the calcs
     -blacklist=<file>  file containing a black-list of read names
                        these read-names will not be used in the calcs
+
+Valid calculation types: gene, alt, bed, repeat, bin
 
 [gene]
     Calculate the number of reads that map within the coding regions of each 
@@ -647,6 +718,17 @@ Common options:
     Annotation: RepeatMasker output file
     Calculates: # reads, RPKM
 
+[bin]
+    Calculates the number of reads in bins of N bases (default 100K). Reads 
+    that span a bin-bin boundry will be counted for each bin. Valid 
+    normalization options: total, quartile, none. If quartile normalization
+    is performed, only bins that include a read will be used.
+    
+    Annotation: None
+    Calculates: # reads
+    
+    Bin options:
+    -bin-size    Size of the bin [default: 100000]
 
 Possible values for {-norm}:
     genes    - count all reads that map to a gene/region
@@ -665,17 +747,27 @@ Possible values for {-multiple}:
                (1/number of matches, ex: 1/3)
 
 """
+    sys.exit(-1)
 
 if __name__ == '__main__':
-    try:
-        opts,(cmd,annotation,bam) = support.ngs_utils.parse_args(sys.argv[1:],{'nostrand':False,'coverage':False,'multiple':'complete','norm':'genes','whitelist':None,'blacklist':None,'uniq':False})
-    except:
-        usage()
-        sys.exit(-1)
     
-    if not cmd in ['gene','alt','bed','repeat'] or not bam or not annotation or not os.path.exists(bam) or not os.path.exists(annotation):
-        usage()
-        sys.exit(-1)
+    try:
+        opts,(cmd,annotation,bam) = support.ngs_utils.parse_args(sys.argv[1:],{'nostrand':False,'coverage':False,'multiple':'complete','norm':'genes','whitelist':None,'blacklist':None,'uniq':False,'bin-size':100000},3)
+    except:
+        usage("Parsing arguments")
+
+    if cmd not in ['gene','alt','bed','repeat','bin']:
+        usage("Invalid command: %s" % cmd)
+    elif cmd == 'bin':
+        bam = annotation
+        if opts['norm'] == 'genes':
+            opts['norm'] = 'total'
+        if not bam or not os.path.exists(bam):
+            usage("Missing BAM file: %s" % bam)
+    elif not bam or not os.path.exists(bam):
+        usage("Missing BAM file: %s" % bam)
+    elif not annotation or not os.path.exists(annotation):
+        usage("Missing annotation file: %s" % annotation)
 
     whitelist = None
     if opts['whitelist'] and os.path.exists(opts['whitelist']):
@@ -702,4 +794,6 @@ if __name__ == '__main__':
         calc_alt(bam,annotation,not opts['nostrand'],opts['multiple'],opts['norm'],whitelist,blacklist)
     elif cmd == 'repeat':
         calc_repeat(bam,annotation,not opts['nostrand'],opts['multiple'],opts['norm'],whitelist,blacklist)
+    elif cmd == 'bin':
+        calc_bin(bam,opts['bin-size'],not opts['nostrand'],opts['multiple'],opts['norm'],whitelist,blacklist)
 
