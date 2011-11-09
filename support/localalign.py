@@ -138,7 +138,7 @@ class LocalAlignment(object):
                 count = 1
             last = op
             
-        ret.append((count,op.upper()))
+        ret.append((count,last.upper()))
         return ret
         
 
