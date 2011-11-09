@@ -258,8 +258,8 @@ Filters:
                               window_size)
 
   -suffixqual minval          Trim away bases from the 3' end with low quality 
-                              value should be given as a character (Sanger 
-                              scale)(a.k.a Illumina B-trim)
+                              value should be given as a character (in Sanger 
+                              scale)(like Illumina B-trim)
 
   -trim seq mismatch mintrim  Trim away at least [mintrim] bases that match a 
                               [sequence] (3' adaptor) allowing for a certain 
