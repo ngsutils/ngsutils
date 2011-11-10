@@ -143,7 +143,8 @@ class LocalAlignment(object):
                 count = 1
             last = op
 
-        ret.append((count,last.upper()))
+        if last:
+            ret.append((count,last.upper()))
         return ret
 
     def dump_matrix(self, ref, query, matrix, show_row=-1, show_col=-1):
