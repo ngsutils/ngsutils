@@ -208,7 +208,10 @@ class Alignment(object):
 
         self.q_end = q_pos + q_len
         self.r_end = r_pos + r_len
-        self.identity = float(self.matches) / (self.mismatches + self.matches)
+        if self.mismatches + self.matches > 0:
+            self.identity = float(self.matches) / (self.mismatches + self.matches)
+        else:
+            self.identity = 0
 
     def dump(self, out=sys.stdout):
         i = self.q_pos
