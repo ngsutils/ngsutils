@@ -8,6 +8,7 @@ order (so we don't have to load all the data and merge it).
 
 import sys
 import os
+import gzip
 from support.eta import ETA
 
 
@@ -60,10 +61,16 @@ def getline(fs):
 
 def merge_files(fasta, qual, suffix=None, common_qual=None):
     sys.stderr.write('Merging %s and %s\n' % (os.path.basename(fasta), os.path.basename(qual) if qual else common_qual))
-    f = open(fasta)
+    if fasta.lower()[-3:] == '.gz':
+        f = gzip.open(fasta)
+    else:
+        f = open(fasta)
 
     if qual:
-        q = open(qual)
+        if qual.lower()[-3:] == '.gz':
+            q = gzip.open(qual)
+        else:
+            q = open(qual)
     elif common_qual:
         q = None
     else:
