@@ -4,7 +4,7 @@ Takes an isoform/gene model, an BAM file and calculates how many reads show
 support of each gene / region.
 '''
 
-import sys,os,gzip,re,math
+import sys,os,math
 import support.ngs_utils
 from support.eta import ETA
 from support.refiso import RefIso
@@ -40,7 +40,7 @@ def calc_rpkm(bam_fname,refiso_name,stranded=True,multiple='complete',normalizat
         count,reads = _fetch_reads(bam,gene.chrom,gene.strand if stranded else None,starts,ends,multiple,False,whitelist,blacklist)
         cols = [gene.name,gene.iso_id,gene.chrom,gene.strand,gene.tx_start,gene.tx_end,coding_len,count]
         if coverage:
-            cols.extend(calc_coverage(bam,chrom,strand if stranded else None,[start],[end],whitelist,blacklist))
+            cols.extend(calc_coverage(bam,gene.chrom,gene.strand if stranded else None,[start],[end],whitelist,blacklist))
             eta.print_status(extra='%s coverage' % gene.name)
         genes.append(cols)
         all_reads.update(reads)
@@ -116,7 +116,7 @@ def calc_bed(bam_fname,bed_name,stranded=True,multiple='complete',normalization=
         coding_len = end-start
 
         count,reads = _fetch_reads(bam,chrom,strand if stranded else None,[start],[end],multiple,False,whitelist,blacklist,uniq)
-        cols = [chrom,start,end,0,name,strand,coding_len,count]
+        cols = [chrom,start,end,name,0,strand,coding_len,count]
 
         if coverage:
             cols.extend(calc_coverage(bam,chrom,strand if stranded else None,[start],[end],whitelist,blacklist))
@@ -196,7 +196,7 @@ def calc_bin(bam_fname,bin_size,stranded=True,multiple='complete',normalization=
             for strand in strands:
                 i+=1
                 eta.print_status(i,extra='%s %s-%s[%s]' % (chrom,start,end,strand))
-                coding_len = end-start
+                #coding_len = end-start
 
                 count,reads = _fetch_reads(bam,chrom,strand if stranded else None,[start],[end],multiple,False,whitelist,blacklist)
                 cols = [chrom,start,end,strand,count]
