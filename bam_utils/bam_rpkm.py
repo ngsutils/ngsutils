@@ -675,7 +675,7 @@ Valid calculation types: gene, alt, bed, repeat, bin
 
 [gene]
     Calculate the number of reads that map within the coding regions of each 
-    gene. If [matches] is given, an RPKM calculation is also performed, 
+    gene. If [-norm] is given, an RPKM calculation is also performed, 
     yielding the normalized RPKM value for each gene.
 
     Annotation: RefIso
