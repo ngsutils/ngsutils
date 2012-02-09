@@ -1,44 +1,46 @@
 #!/usr/bin/env python
 '''
-Merges two (or more) paired end FASTQ files together for combined mapping. 
-The files need to have the paired reads in the same order. They will be 
+Merges two (or more) paired end FASTQ files together for combined mapping.
+The files need to have the paired reads in the same order. They will be
 written out as:
 
-@name1 pair1
-seq
+@name1
+seq1
 +
-qual
-@name1 pair2
-seq
+qual1
+@name1
+seq2
 +
-qual
+qual2
 ...
 
 The merged file is written to stdout.
 '''
 
-import os,sys,gzip
+import os
+import sys
 
 from fastq_utils import read_fastq
 
-def fastq_merge(fnames,split_slashes=False):
+
+def fastq_merge(fnames, split_slashes=False):
     infiles = []
-    
+
     first = True
     for fname in fnames:
-        gen = read_fastq(fname, quiet = not first)
-        infiles.append((fname,gen))
+        gen = read_fastq(fname, quiet=not first)
+        infiles.append((fname, gen))
         first = False
 
     while True:
         lastname = None
-        
+
         try:
-            for fname,generator in infiles:
-                name,seq,qual = generator.next()
-            
+            for fname, generator in infiles:
+                name, seq, qual = generator.next()
+
                 if split_slashes and '/' in name:
-                    spl = name.split('/',1)
+                    spl = name.split('/', 1)
                     name = spl[0]
                     desc = ' /%s' % spl[1]
                 else:
@@ -52,16 +54,17 @@ def fastq_merge(fnames,split_slashes=False):
                 if not lastname:
                     lastname = name
                 elif name != lastname:
-                    sys.stderr.write('Files are not paired! (error in: %s)\nExpected: %s\nGot     : %s\n' % (fname,lastname,name))
+                    sys.stderr.write('Files are not paired! (error in: %s)\nExpected: %s\nGot     : %s\n' % (fname, lastname, name))
                     sys.exit(1)
-        
-                sys.stdout.write('%s%s\n%s\n+\n%s\n' % (name,desc,seq,qual))
+
+                sys.stdout.write('%s %s\n%s\n+\n%s\n' % (name, desc, seq, qual))
         except:
             break
 
+
 def usage():
     print __doc__
-    print """Usage: fastqutils merge {-slash} file1.fastq{.gz} file2.fastq{.gz} ... 
+    print """Usage: fastqutils merge {-slash} file1.fastq{.gz} file2.fastq{.gz} ...
 
 -slash    Split the read name at a '/' (Illumina paired format)
 """
@@ -78,5 +81,5 @@ if __name__ == '__main__':
 
     if not fnames:
         usage()
-        
-    fastq_merge(fnames,split_slashes)
+
+    fastq_merge(fnames, split_slashes)
