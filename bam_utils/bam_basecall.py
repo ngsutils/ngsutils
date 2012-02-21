@@ -350,7 +350,10 @@ def bam_basecall(bam_fname, ref_fname, min_qual=0, min_count=0, chrom=None, star
             if not read.is_reverse:
                 plus_count += 1.0
             if cigar_op in [0, 1, 2]:
-                read_ih_acc += int(read.opt('IH'))
+                try:
+                    read_ih_acc += int(read.opt('IH'))
+                except KeyError:
+                    read_ih_acc += 1
 
         inserts = []
         for insert in basepos.insertions:
