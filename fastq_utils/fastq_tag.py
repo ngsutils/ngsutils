@@ -15,7 +15,11 @@ def fastq_tag(fname, prefix, suffix):
     for name, seq, qual in read_fastq(fname):
         spl = name[1:].split(None, 1)
         nname = ''
-        desc = spl[1]
+        if len(spl) > 1:
+            desc = spl[1]
+        else:
+            desc = None
+
         if prefix and suffix:
             nname = '%s%s%s' % (prefix, spl[0], suffix)
         elif prefix:
