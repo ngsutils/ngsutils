@@ -3,9 +3,11 @@
 Writes out the read names present in the FASTQ file.
 '''
 
-import os,sys
+import os
+import sys
 
 from fastq_utils import read_fastq
+
 
 def usage():
     print __doc__
@@ -21,7 +23,6 @@ if __name__ == '__main__':
 
     if not fname:
         usage()
-        
-    for name,seq,qual in read_fastq(fname):
+
+    for name, seq, qual in read_fastq(fname):
         sys.stdout.write('%s\n' % name.split()[0][1:])
-        
