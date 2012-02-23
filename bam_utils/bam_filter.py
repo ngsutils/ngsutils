@@ -286,7 +286,7 @@ class SecondaryFlag(object):
 
 class ReadLength(object):
     def __init__(self, minval):
-        self.minval = minval
+        self.minval = int(minval)
 
     def __repr__(self):
         return "read length min: %s" % self.minval
