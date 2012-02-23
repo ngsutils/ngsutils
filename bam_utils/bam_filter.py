@@ -1,43 +1,43 @@
 #!/usr/bin/env python
 """
-Given a BAM file, this script will only allow reads that meet filtering 
-criteria to be written to output. The output is another BAM file with the 
+Given a BAM file, this script will only allow reads that meet filtering
+criteria to be written to output. The output is another BAM file with the
 reads not matching the criteria removed.
 
-Note: this does not adjust tag values reflecting any filtering. (for example: 
-      if a read mapped to two locations (IH:i:2), and one was removed by 
+Note: this does not adjust tag values reflecting any filtering. (for example:
+      if a read mapped to two locations (IH:i:2), and one was removed by
       filtering, the IH:i tag would still read IH:i:2).
 
 Currently, the available filters are:
+    -length minval             Remove reads that are smaller than {minval}
     -mapped                    Keep only mapped reads
-    
+    -mask bitmask              Remove reads that match the mask (base 10/hex)
+
     -mismatch num              # mismatches or indels
                                indel always counts as 1 regardless of length
                                (requires NM tag in reads)
-    -mismatch_ref num ref.fa   # mismatches or indel - looks up mismatches 
-                               directly in a ref FASTA file (if NM not 
+    -mismatch_ref num ref.fa   # mismatches or indel - looks up mismatches
+                               directly in a ref FASTA file (if NM not
                                available)
-                            
-    -nosecondary               Remove reads that have the 0x100 flag set
     -noqcfail                  Remove reads that have the 0x200 flag set
-    
-    -mask bitmask              Remove reads that match the mask (base 10/hex)
+    -nosecondary               Remove reads that have the 0x100 flag set
+
 
     -exclude ref:start-end     Remove reads in this region (1-based start)
-    -excludebed file.bed       Remove reads that are in any of the regions 
+    -excludebed file.bed       Remove reads that are in any of the regions
                                from the given BED file
-                               
+
     -include ref:start-end     Remove reads NOT in the region (can only be one)
-    -includebed file.bed       Remove reads that are NOT any of the regions 
+    -includebed file.bed       Remove reads that are NOT any of the regions
                                from the given BED file
-                               Note: If this is a large dataset, use 
+                               Note: If this is a large dataset, use
                                "bamutils extract" instead.
 
     -whitelist fname           Remove reads that aren't on this list (by name)
     -blacklist fname           Remove reads that are on this list (by name)
-                                 These lists can be whitespace-delimited with 
+                                 These lists can be whitespace-delimited with
                                  the read name as the first column.
-    
+
     -eq  tag_name value
     -lt  tag_name value
     -lte tag_name value
@@ -45,12 +45,12 @@ Currently, the available filters are:
     -gte tag_name value
 
     Where tag_name should be the full name, plus the type eg: AS:i
-    
+
 Common tags to filter by:
     AS:i    Alignment score
     NM:i    Edit distance (each indel counts as many as it's length)
     IH:i    Number of alignments
-    
+
 """
 
 import os,sys,gzip
@@ -284,6 +284,16 @@ class SecondaryFlag(object):
         return not read.is_secondary
 
 
+class ReadLength(object):
+    def __init__(self, minval):
+        self.minval = minval
+
+    def __repr__(self):
+        return "read length min: %s" % self.minval
+
+    def filter(self, bam, read):
+        return len(read.seq) >= self.minval
+
 class QCFailFlag(object):
     def __repr__(self):
         return "no 0x200 (qcfail) flag"
@@ -364,10 +374,12 @@ _criteria = {
     'include': IncludeRegion,
     'includebed': IncludeBED,
     'whitelist': Whitelist,
-    'blacklist': Blacklist
+    'blacklist': Blacklist,
+    'length': ReadLength
 }
 
-def bam_filter(infile,outfile,criteria,failedfile = None, verbose = False):
+
+def bam_filter(infile, outfile, criteria, failedfile=None, verbose=False):
     if verbose:
         sys.stderr.write('Input file  : %s\n' % infile)
         sys.stderr.write('Output file : %s\n' % outfile)
@@ -376,30 +388,30 @@ def bam_filter(infile,outfile,criteria,failedfile = None, verbose = False):
         sys.stderr.write('Criteria:\n')
         for criterion in criteria:
             sys.stderr.write('    %s\n' % criterion)
-    
+
         sys.stderr.write('\n')
-    
-    bamfile = pysam.Samfile(infile,"rb")
-    outfile = pysam.Samfile(outfile,"wb",template=bamfile)
+
+    bamfile = pysam.Samfile(infile, "rb")
+    outfile = pysam.Samfile(outfile, "wb", template=bamfile)
     if failedfile:
-        failed_out = open(failedfile,'w')
+        failed_out = open(failedfile, 'w')
     else:
         failed_out = None
-    eta = ETA(0,bamfile=bamfile)
-    
+    eta = ETA(0, bamfile=bamfile)
+
     passed = 0
     failed = 0
-    
+
     for read in bamfile:
-        eta.print_status(extra="kept:%s, failed:%s" % (passed,failed),bam_pos=(read.rname,read.pos))
-        p=True
+        eta.print_status(extra="kept:%s, failed:%s" % (passed, failed), bam_pos=(read.rname, read.pos))
+        p = True
 
         for criterion in criteria:
-            if not criterion.filter(bamfile,read):
+            if not criterion.filter(bamfile, read):
                 p = False
-                failed+=1
+                failed += 1
                 if failed_out:
-                    failed_out.write('%s\n'%read.qname)
+                    failed_out.write('%s\n' % read.qname)
                 #outfile.write(read_to_unmapped(read))
                 break
         if p:
@@ -411,21 +423,22 @@ def bam_filter(infile,outfile,criteria,failedfile = None, verbose = False):
     outfile.close()
     if failed_out:
         failed_out.close()
-    sys.stdout.write("%s kept\n%s failed\n" % (passed,failed))
+    sys.stdout.write("%s kept\n%s failed\n" % (passed, failed))
+
 
 def read_to_unmapped(read):
     '''
     Example unmapped read
     2358_2045_1839    |  4 | *                             |  0    |  0   | *                  | *  |  0 |  0 | GGACGAGAAGGAGTATTTCTCCGAGAACACATTCACGGAGAGTCTAACTC           | 0QT\VNO^IIRJKXTIHIKTY\STZZ[XOJKPWLHJQQQ^XPQYIIRQII           | PG:Z:bfast   | AS:i:-                     | NH:i:0   | IH:i:1   | HI:i:1                                     | CS:Z:T10213222020221330022203222011113021130222212230122             | CQ:Z:019=2+><%@.'>52%)'15?90<7;:5+(-49('-7-<>5-@5%<.2%=            | CM:i:0   | XA:i:4
-    
+
     Example mapped read:
-    2216_1487_198     |  16 | chr11:19915291-19925392      |  5531 |   12 | 24M2D26M           | *  |  0 |  0 | TCTGTCTGGGTGCAGTAGCTATACGTAATCCCAGCACTTTGGGAGGCCAA           | 1C8FZ`M""""""WZ""%"#\I;"`R@D]``ZZ``\QKX\Y]````IK^`           | PG:Z:bfast   | AS:i:1150   | NM:i:2   | NH:i:10   | IH:i:1   | HI:i:1   | MD:Z:24^CT26                   | CS:Z:T00103022001002113210023031213331122121223321221122             | CQ:Z:A8=%;AB<;97<3/9:>>3>@?5&18@-%;866:94=14:=?,%?:7&)1            | CM:i:9   | XA:i:4   | XE:Z:-------23322---2-11----2----------------------------               
-    
+    2216_1487_198     |  16 | chr11:19915291-19925392      |  5531 |   12 | 24M2D26M           | *  |  0 |  0 | TCTGTCTGGGTGCAGTAGCTATACGTAATCCCAGCACTTTGGGAGGCCAA           | 1C8FZ`M""""""WZ""%"#\I;"`R@D]``ZZ``\QKX\Y]````IK^`           | PG:Z:bfast   | AS:i:1150   | NM:i:2   | NH:i:10   | IH:i:1   | HI:i:1   | MD:Z:24^CT26                   | CS:Z:T00103022001002113210023031213331122121223321221122             | CQ:Z:A8=%;AB<;97<3/9:>>3>@?5&18@-%;866:94=14:=?,%?:7&)1            | CM:i:9   | XA:i:4   | XE:Z:-------23322---2-11----2----------------------------
+
     '''
     # TODO: rewrite read properties to unmapped state
     #       if colorspace: convert CS to NT directly
     #       remove excess tags
-    
+
     read.is_unmapped = True
     read.rname = None
     read.pos = 0
@@ -438,11 +451,11 @@ if __name__ == '__main__':
     failed = None
     criteria = []
 
-    crit_args=[]
+    crit_args = []
     last = None
     verbose = False
     fail = False
-    
+
     for arg in sys.argv[1:]:
         if last == '-failed':
             failed = arg
@@ -463,7 +476,7 @@ if __name__ == '__main__':
                 fail = True
             if crit_args:
                 criteria.append(_criteria[crit_args[0][1:]](*crit_args[1:]))
-            crit_args = [arg,]
+            crit_args = [arg, ]
         elif crit_args:
             crit_args.append(arg)
         else:
@@ -472,11 +485,11 @@ if __name__ == '__main__':
 
     if crit_args:
         criteria.append(_criteria[crit_args[0][1:]](*crit_args[1:]))
-    
+
     if fail or not infile or not outfile or not criteria:
         if not infile and not outfile and not criteria:
             usage()
-        
+
         if not infile:
             print "Missing: input bamfile"
         if not outfile:
@@ -485,5 +498,4 @@ if __name__ == '__main__':
             print "Missing: filtering criteria"
         usage()
     else:
-        bam_filter(infile,outfile,criteria,failed,verbose)
-        
+        bam_filter(infile, outfile, criteria, failed, verbose)
