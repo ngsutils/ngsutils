@@ -53,9 +53,11 @@ Common tags to filter by:
 
 """
 
-import os,sys,gzip
-from support.eta import ETA
+import os
+import sys
 import pysam
+from support.eta import ETA
+
 
 def usage():
     print __doc__
@@ -63,40 +65,46 @@ def usage():
 Usage: bamutils filter in.bam out.bam {-failed out.txt} criteria...
 
 Options:
-  -failed fname    A text file containing the read names of all reads 
+  -failed fname    A text file containing the read names of all reads
                    that were removed with filtering
 
-Example: 
+Example:
 bamutils filter filename.bam output.bam -mapped -gte AS:i 1000
 
-This will remove all unmapped reads, as well as any reads that have an AS:i 
+This will remove all unmapped reads, as well as any reads that have an AS:i
 value less than 1000.
 """
     sys.exit(1)
 
-bam_cigar = ['M','I','D','N','S','H','P']
+bam_cigar = ['M', 'I', 'D', 'N', 'S', 'H', 'P']
+
 
 class Blacklist(object):
-    def __init__(self,fname):
+    def __init__(self, fname):
         self.fname = fname
         self.notallowed = []
         with open(fname) as f:
             for line in f:
                 self.notallowed.append(line.strip().split()[0])
-    def filter(self,bam,read):
+
+    def filter(self, bam, read):
         return read.qname not in self.notallowed
+
     def __repr__(self):
         return 'Blacklist: %s' % (self.fname)
 
+
 class Whitelist(object):
-    def __init__(self,fname):
+    def __init__(self, fname):
         self.fname = fname
         self.allowed = []
         with open(fname) as f:
             for line in f:
                 self.allowed.append(line.strip().split()[0])
-    def filter(self,bam,read):
+
+    def filter(self, bam, read):
         return read.qname in self.allowed
+
     def __repr__(self):
         return 'Whitelist: %s' % (self.fname)
 
@@ -104,43 +112,48 @@ class Whitelist(object):
 class IncludeRegion(object):
     _excludes = []
     _last = None
-    def __init__(self,region):
+
+    def __init__(self, region):
         IncludeRegion._excludes.append(ExcludeRegion(region))
         # self.excl = ExcludeRegion(region)
-    def filter(self,bam,read):
+
+    def filter(self, bam, read):
         if read == IncludeRegion._last:
             return True
-        
+
         IncludeRegion._last = read
-        
+
         for excl in IncludeRegion._excludes:
-            if not excl.filter(bam,read):
+            if not excl.filter(bam, read):
                 return True
         return False
-        
+
         # return not self.excl.filter(bam,read)
     def __repr__(self):
         return 'Including: %s' % (self.excl.region)
 
+
 class IncludeBED(object):
-    def __init__(self,fname):
+    def __init__(self, fname):
         self.excl = ExcludeBED(fname)
-    def filter(self,bam,read):
-        return not self.excl.filter(bam,read)
+
+    def filter(self, bam, read):
+        return not self.excl.filter(bam, read)
+
     def __repr__(self):
         return 'Including from BED: %s' % (self.excl.fname)
 
-    
+
 class ExcludeRegion(object):
-    def __init__(self,region):
+    def __init__(self, region):
         self.region = region
         spl = region.split(':')
         self.chrom = spl[0]
         se = [int(x) for x in spl[1].split('-')]
-        self.start = se[0]-1
+        self.start = se[0] - 1
         self.end = se[1]
-        
-    def filter(self,bam,read):
+
+    def filter(self, bam, read):
         if not read.is_unmapped:
             if bam.getrname(read.rname) == self.chrom:
                 if self.start <= read.pos <= self.end:
@@ -148,11 +161,13 @@ class ExcludeRegion(object):
                 if self.start <= read.aend <= self.end:
                     return False
         return True
+
     def __repr__(self):
         return 'Excluding: %s' % (self.region)
 
+
 class ExcludeBED(object):
-    def __init__(self,fname):
+    def __init__(self, fname):
         self.regions = []
         self.fname = fname
         with open(fname) as f:
@@ -162,27 +177,30 @@ class ExcludeBED(object):
                 if line[0] == '#':
                     continue
                 cols = line.strip().split('\t')
-                self.regions.append((cols[0],int(cols[1]),int(cols[2])))
+                self.regions.append((cols[0], int(cols[1]), int(cols[2])))
 
-    def filter(self,bam,read):
+    def filter(self, bam, read):
         if not read.is_unmapped:
-            for chrom,start,end in self.regions:
+            for chrom, start, end in self.regions:
                 if bam.getrname(read.rname) == chrom:
                     if start <= read.pos <= end:
                         return False
                     if start <= read.aend <= end:
                         return False
         return True
+
     def __repr__(self):
         return 'Excluding from BED: %s' % (self.fname)
 
+
 class Mismatch(object):
-    def __init__(self,num):
+    def __init__(self, num):
         self.num = int(num)
-    def filter(self,bam,read):
+
+    def filter(self, bam, read):
         if read.is_unmapped:
             return False
-        
+
         inserts = 0
         deletions = 0
         indels = 0
@@ -191,46 +209,48 @@ class Mismatch(object):
         # NM counts the length of indels
         # We really just care about *if* there is an indel, not the size
         #
-        
-        for op,length in read.cigar:
+
+        for op, length in read.cigar:
             if op == 1:
                 inserts += length
                 indels += 1
             elif op == 2:
                 deletions += length
                 indels += 1
-        
+
         mismatches = edits - inserts - deletions + indels
-        
+
         if mismatches > self.num:
             return False
-                
+
         return True
+
     def __repr__(self):
-        return '%s mismatch%s in %s' % (self.num,'' if self.num == 1 else 'es',os.path.basename(self.refname))
+        return '%s mismatch%s in %s' % (self.num, '' if self.num == 1 else 'es', os.path.basename(self.refname))
+
 
 class MismatchRef(object):
-    def __init__(self,num,refname):
+    def __init__(self, num, refname):
         self.num = int(num)
         self.refname = refname
-        
+
         if not os.path.exists('%s.fai' % refname):
             pysam.faidx(refname)
-        
+
         self.ref = pysam.Fastafile(refname)
 
-    def filter(self,bam,read):
+    def filter(self, bam, read):
         if read.is_unmapped:
             return False
         chrom = bam.getrname(read.rname)
         start = read.pos
-        end = read.aend
-        
+        #end = read.aend
+
         edits = 0
         ref_pos = 0
         read_pos = 0
 
-        for op,length in read.cigar:
+        for op, length in read.cigar:
             if op == 1:
                 edits += 1
                 read_pos += length
@@ -240,47 +260,55 @@ class MismatchRef(object):
             elif op == 3:
                 ref_pos += length
             elif op == 0:
-                refseq = self.ref.fetch(chrom,start+ref_pos,start+ref_pos+length)
-                for refbase,readbase in zip(refseq,read.seq[read_pos:read_pos+length]):
+                refseq = self.ref.fetch(chrom, start + ref_pos, start + ref_pos + length)
+                for refbase, readbase in zip(refseq, read.seq[read_pos:read_pos + length]):
                     if refbase.upper() != readbase.upper():
                         edits += 1
                 ref_pos += length
                 read_pos += length
-                
+
             if edits > self.num:
                 return False
         return True
+
     def __repr__(self):
-        return '%s mismatch%s in %s' % (self.num,'' if self.num == 1 else 'es',os.path.basename(self.refname))
-        
+        return '%s mismatch%s in %s' % (self.num, '' if self.num == 1 else 'es', os.path.basename(self.refname))
+
 
 class Mapped(object):
     def __init__(self):
         pass
-    def filter(self,bam,read):
+
+    def filter(self, bam, read):
         if read.is_paired and (read.is_unmapped or read.mate_is_unmapped):
             return False
         elif read.is_unmapped:
             return False
         return True
+
     def __repr__(self):
         return 'is mapped'
 
+
 class MaskFlag(object):
-    def __init__(self,value):
+    def __init__(self, value):
         if value[0:2] == '0x':
-            self.flag = int(value,16)
+            self.flag = int(value, 16)
         else:
             self.flag = int(value)
+
     def __repr__(self):
         return "Doesn't match flag: %s" % self.flag
-    def filter(self,bam,read):
+
+    def filter(self, bam, read):
         return (read.flag & self.flag) == 0
+
 
 class SecondaryFlag(object):
     def __repr__(self):
         return "no 0x100 (secondary) flag"
-    def filter(self,bam,read):
+
+    def filter(self, bam, read):
         return not read.is_secondary
 
 
@@ -294,65 +322,79 @@ class ReadLength(object):
     def filter(self, bam, read):
         return len(read.seq) >= self.minval
 
+
 class QCFailFlag(object):
     def __repr__(self):
         return "no 0x200 (qcfail) flag"
-    def filter(self,bam,read):
+
+    def filter(self, bam, read):
         return not read.is_qcfail
 
+
 class _TagCompare(object):
-    def __init__(self,tag,value):
-        self.args = '%s %s' % (tag,value)
+    def __init__(self, tag, value):
+        self.args = '%s %s' % (tag, value)
         if ':' in tag:
             self.tag = tag[0:tag.find(':')]
         else:
             self.tag = tag
-            
+
         if tag[-1] == 'i':
             self.value = int(value)
         elif tag[-1] == 'f':
             self.value = float(value)
         else:
             self.value = value
+
     def __repr__(self):
-        return "%s %s %s" % (self.tag,self.__class__.op,self.value)
-            
+        return "%s %s %s" % (self.tag, self.__class__.op, self.value)
+
+
 class TagLessThan(_TagCompare):
     op = '<'
-    def filter(self,bam,read):
-        for name,value in read.tags:
+
+    def filter(self, bam, read):
+        for name, value in read.tags:
             if name == self.tag and value < self.value:
                 return True
         return False
 
+
 class TagLessThanEquals(_TagCompare):
     op = '<='
-    def filter(self,bam,read):
-        for name,value in read.tags:
+
+    def filter(self, bam, read):
+        for name, value in read.tags:
             if name == self.tag and value <= self.value:
                 return True
         return False
 
+
 class TagGreaterThan(_TagCompare):
     op = '>'
-    def filter(self,bam,read):
-        for name,value in read.tags:
+
+    def filter(self, bam, read):
+        for name, value in read.tags:
             if name == self.tag and value > self.value:
                 return True
         return False
 
+
 class TagGreaterThanEquals(_TagCompare):
     op = '>='
-    def filter(self,bam,read):
-        for name,value in read.tags:
+
+    def filter(self, bam, read):
+        for name, value in read.tags:
             if name == self.tag and value > self.value:
                 return True
         return False
-        
+
+
 class TagEquals(_TagCompare):
     op = '='
-    def filter(self,bam,read):
-        for name,value in read.tags:
+
+    def filter(self, bam, read):
+        for name, value in read.tags:
             if name == self.tag and value == self.value:
                 return True
         return False
