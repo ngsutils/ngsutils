@@ -453,7 +453,7 @@ def bam_filter(infile, outfile, criteria, failedfile=None, verbose=False):
                 p = False
                 failed += 1
                 if failed_out:
-                    failed_out.write('%s\n' % read.qname)
+                    failed_out.write('%s\t%s\n' % (read.qname, criterion))
                 #outfile.write(read_to_unmapped(read))
                 break
         if p:
