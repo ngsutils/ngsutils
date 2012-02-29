@@ -19,6 +19,9 @@ Usage: bedutils reduce {opts} bedfile
                     first number extends the region in the 5' direction and
                     the second number extends the region in the 3' direction.
 
+-clip               Only extend the reads to find overlapping regions, don't
+                    extend the edges of the regions.
+
 -c                  Output the number of regions merged as the score (count).
                     Otherwise, the scores for all of the regions are added
                     together.
@@ -31,62 +34,79 @@ class MergedRegion(object):
     '''
     Manages regions to be merged together.
     '''
-    def __init__(self, extend=(0, 0), strand='+'):
+    def __init__(self, extend=(0, 0), strand='+', clip=False):
         '''
         extend is a tuple or list. The first is the 5' extension,
         the last is the 3' extension. These are strand specific.
         '''
         self.extend = extend
         self.strand = strand
+        self.clip = clip
         self._reset()
 
     def _reset(self):
         self.chrom = None
-        self.start = 0
-        self.end = 0
+        self.extended_start = 0
+        self.extended_end = 0
         self.score = 0
+        self.region_start = 0
+        self.region_end = 0
         self.members = []
 
     def add(self, chrom, start, end, name, score, strand):
         if strand == '+':
-            start = start - self.extend[0]
-            end = end + self.extend[1]
+            newstart = start - self.extend[0]
+            newend = end + self.extend[1]
         else:
-            start = start - self.extend[1]
-            end = end + self.extend[0]
+            newstart = start - self.extend[1]
+            newend = end + self.extend[0]
 
-        if start < 0:
-            start = 0
+        if newstart < 0:
+            newstart = 0
 
         if self.chrom != chrom:
             self.write()
             self._reset()
-        elif start > self.end:
+        elif newstart > self.extended_end:
             self.write()
             self._reset()
 
-        if self.start == 0:
-            self.start = start
+        if not self.extended_start:
+            self.extended_start = newstart
+
+        if self.clip:
+            if not self.region_start:
+                self.region_start = start
+
+            self.region_end = end
+        else:
+            if not self.region_start:
+                self.region_start = newstart
+
+            self.region_end = newend
 
         self.chrom = chrom
-        self.start = min(self.start, start)
-        self.end = max(self.end, end)
+        self.extended_start = min(self.extended_start, newstart)
+        self.extended_end = max(self.extended_end, newend)
         self.members.append(name)
         self.score += score
 
     def write(self):
-        if self.chrom and self.start and self.end:
-            sys.stdout.write('%s\t%s\t%s\t%s\t%s\t%s\n' % (self.chrom, self.start, self.end, ','.join(self.members), self.score, self.strand))
+        if self.chrom and self.region_start and self.region_end:
+            sys.stdout.write('%s\t%s\t%s\t%s\t%s\t%s\n' % (self.chrom, self.region_start, self.region_end, ','.join(self.members), self.score, self.strand))
+
+        self.region_start = 0
+        self.region_end = 0
 
 
-def bed_reduce(fname, extend=(0, 0), stranded=True, count=False):
+def bed_reduce(fname, extend=(0, 0), stranded=True, count=False, clip=False):
     if fname == '-':
         f = sys.stdin
     else:
         f = open(fname)
 
-    plus_region = MergedRegion(extend, '+')
-    minus_region = MergedRegion(extend, '-')
+    plus_region = MergedRegion(extend, '+', clip)
+    minus_region = MergedRegion(extend, '-', clip)
 
     # these are just for checking that the file is sorted
     lchrom = None
@@ -128,6 +148,7 @@ if __name__ == '__main__':
     stranded = True
     count = False
     last = None
+    clip = False
 
     for arg in sys.argv[1:]:
         if last == '-extend':
@@ -138,6 +159,8 @@ if __name__ == '__main__':
             last = None
         elif arg in ['-extend']:
             last = arg
+        elif arg == '-clip':
+            clip = True
         elif arg == '-nostrand':
             stranded = False
         elif arg == '-c':
@@ -153,4 +176,4 @@ if __name__ == '__main__':
         usage()
         sys.exit(1)
 
-    bed_reduce(fname, extend, stranded, count)
+    bed_reduce(fname, extend, stranded, count, clip)
