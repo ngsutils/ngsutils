@@ -326,7 +326,7 @@ def bam_stats(infile, ref_file=None, region=None, delim=None):
 
         print ""
         print "# of alignments (IH)"
-        
+
         acc = 0
         for i, v in enumerate(alignments.bins):
             if v:
@@ -335,7 +335,7 @@ def bam_stats(infile, ref_file=None, region=None, delim=None):
 
         print ""
         print "Edit distances (NM)"
-        
+
         acc = 0
         for i, v in enumerate(edits.bins):
             if v:
@@ -369,8 +369,7 @@ if __name__ == '__main__':
     refiso = None
     region = None
     delim = None
-    
-    
+
     last = None
     for arg in sys.argv[1:]:
         if arg == '-h':
@@ -383,7 +382,7 @@ if __name__ == '__main__':
         elif last == '-delim':
             delim = arg
             last = None
-        elif arg in ['-model','-delim']:
+        elif arg in ['-model', '-delim']:
             last = arg
         else:
             region = arg
@@ -391,5 +390,4 @@ if __name__ == '__main__':
     if not infile:
         usage()
     else:
-        bam_stats(infile,refiso,region,delim)
-        
+        bam_stats(infile, refiso, region, delim)
