@@ -69,6 +69,8 @@ class RangeMatch(object):
                 self.ranges[chrom][bin].insert(0, (start, end, strand))
 
     def get_tag(self, chrom, strand, pos, ignore_strand=False):
+        if not chrom in self.ranges:
+            return None
         bin = pos / 100000
         rev_match = False
         if not bin in self.ranges[chrom]:
