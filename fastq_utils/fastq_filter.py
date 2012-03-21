@@ -40,7 +40,7 @@ class FASTQReader(object):
         self.altered = 0
         self.removed = 0
         self.kept = 0
-        
+
         self.discard = discard
 
     def filter(self):
@@ -62,7 +62,7 @@ class TrimFilter(object):
         self.altered = 0
         self.removed = 0
         self.kept = 0
-        
+
         self.discard = discard
 
     def filter(self):
@@ -113,7 +113,7 @@ class PairedFilter(object):
         self.altered = 0
         self.removed = 0
         self.kept = 0
-        
+
         self.discard = discard
 
     def filter(self):
@@ -155,7 +155,7 @@ class QualFilter(object):
         self.altered = 0
         self.removed = 0
         self.kept = 0
-        
+
         self.discard = discard
 
     def _convert_quals(self, qual):
@@ -163,7 +163,6 @@ class QualFilter(object):
             return [ord(q) - 64 for q in qual]
         else:
             return [ord(q) - 33 for q in qual]
-            
 
     def filter(self):
         for name, seq, qual in self.parent.filter():
@@ -201,7 +200,7 @@ class SuffixQualFilter(object):
         self.altered = 0
         self.removed = 0
         self.kept = 0
-        
+
         self.discard = discard
 
     def filter(self):
@@ -234,7 +233,7 @@ class WildcardFilter(object):
         self.altered = 0
         self.removed = 0
         self.kept = 0
-        
+
         self.discard = discard
 
     def filter(self):
@@ -267,7 +266,7 @@ class SizeFilter(object):
         self.altered = 0
         self.removed = 0
         self.kept = 0
-        
+
         self.discard = discard
 
     def filter(self):
@@ -290,7 +289,7 @@ def usage():
     print """Usage: fastqutils filter {opts} {filters} file.fastq{.gz}
 Options:
   -discard filename           Write the name of all discarded reads to a file
-  -illumina                   Use Illumina scaling for quality values 
+  -illumina                   Use Illumina scaling for quality values
                               (-qual filter) [default: Sanger-scale]
   -stats filename             Write filter stats out to a file
   -v                          Verbose
@@ -304,8 +303,8 @@ Filters:
                               below a threshold (floating average over
                               window_size)
 
-  -suffixqual minval          Trim away bases from the 3' end with low quality 
-                              value should be given as a character (in Sanger 
+  -suffixqual minval          Trim away bases from the 3' end with low quality
+                              value should be given as a character (in Sanger
                               scale)(like Illumina B-trim)
 
   -trim seq mismatch mintrim  Trim away at least [mintrim] bases that match a
@@ -391,12 +390,12 @@ if __name__ == '__main__':
     discard = None
     _d_file = None
     if discard_fname:
-        _d_file = open(discard_fname,'w')
+        _d_file = open(discard_fname, 'w')
+
         def _callback(name):
             _d_file.write('%s\n' % name[1:])
-        
+
         discard = _callback
-        
 
     chain = FASTQReader(fname, verbose)
     for config in filters_config:
@@ -406,12 +405,11 @@ if __name__ == '__main__':
 
         clazz = config[0]
         opts = config[1:]
-        
+
         if clazz == QualFilter:
             chain = clazz(chain, *opts, verbose=veryverbose, discard=discard, illumina=illumina)
         else:
             chain = clazz(chain, *opts, verbose=veryverbose, discard=discard)
-            
 
     fastq_filter(chain)
     if _d_file:
