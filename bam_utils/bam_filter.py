@@ -48,7 +48,7 @@ Currently, the available filters are:
 
 Common tags to filter by:
     AS:i    Alignment score
-    NM:i    Edit distance (each indel counts as many as it's length)
+    NM:i    Edit distance (each indel counts as many as its length)
     IH:i    Number of alignments
 
 """
