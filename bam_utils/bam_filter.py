@@ -44,12 +44,15 @@ Currently, the available filters are:
     -gt  tag_name value
     -gte tag_name value
 
-    Where tag_name should be the full name, plus the type eg: AS:i
+    Where tag_name should be the full name, plus the type eg: AS:i. As a
+    special case, "MAPQ" can be used as the tag_name and the SAM MAPQ value
+    will be used.
 
 Common tags to filter by:
     AS:i    Alignment score
     NM:i    Edit distance (each indel counts as many as its length)
     IH:i    Number of alignments
+    MAPQ    Mapping quality (defined as part of SAM spec)
 
 """
 
@@ -346,6 +349,16 @@ class _TagCompare(object):
         else:
             self.value = value
 
+    def get_value(self, read):
+        if self.tag == 'MAPQ':
+            return read.mapq
+
+        for name, value in read.tags:
+            if name == self.tag:
+                return value
+
+        return None
+
     def __repr__(self):
         return "%s %s %s" % (self.tag, self.__class__.op, self.value)
 
@@ -354,9 +367,8 @@ class TagLessThan(_TagCompare):
     op = '<'
 
     def filter(self, bam, read):
-        for name, value in read.tags:
-            if name == self.tag and value < self.value:
-                return True
+        if self.get_value(read) < self.value:
+            return True
         return False
 
 
@@ -364,9 +376,8 @@ class TagLessThanEquals(_TagCompare):
     op = '<='
 
     def filter(self, bam, read):
-        for name, value in read.tags:
-            if name == self.tag and value <= self.value:
-                return True
+        if self.get_value(read) <= self.value:
+            return True
         return False
 
 
@@ -374,9 +385,8 @@ class TagGreaterThan(_TagCompare):
     op = '>'
 
     def filter(self, bam, read):
-        for name, value in read.tags:
-            if name == self.tag and value > self.value:
-                return True
+        if self.get_value(read) > self.value:
+            return True
         return False
 
 
@@ -384,9 +394,8 @@ class TagGreaterThanEquals(_TagCompare):
     op = '>='
 
     def filter(self, bam, read):
-        for name, value in read.tags:
-            if name == self.tag and value > self.value:
-                return True
+        if self.get_value(read) >= self.value:
+            return True
         return False
 
 
@@ -394,9 +403,8 @@ class TagEquals(_TagCompare):
     op = '='
 
     def filter(self, bam, read):
-        for name, value in read.tags:
-            if name == self.tag and value == self.value:
-                return True
+        if self.get_value(read) == self.value:
+            return True
         return False
 
 _criteria = {
