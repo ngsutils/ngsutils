@@ -60,6 +60,7 @@ import os
 import sys
 import pysam
 from support.eta import ETA
+from bam_utils import read_calc_mismatches, read_calc_mismatches_ref
 
 
 def usage():
@@ -96,6 +97,9 @@ class Blacklist(object):
     def __repr__(self):
         return 'Blacklist: %s' % (self.fname)
 
+    def close(self):
+        pass
+
 
 class Whitelist(object):
     def __init__(self, fname):
@@ -110,6 +114,9 @@ class Whitelist(object):
 
     def __repr__(self):
         return 'Whitelist: %s' % (self.fname)
+
+    def close(self):
+        pass
 
 
 class IncludeRegion(object):
@@ -135,6 +142,9 @@ class IncludeRegion(object):
     def __repr__(self):
         return 'Including: %s' % (self.excl.region)
 
+    def close(self):
+        pass
+
 
 class IncludeBED(object):
     def __init__(self, fname):
@@ -145,6 +155,9 @@ class IncludeBED(object):
 
     def __repr__(self):
         return 'Including from BED: %s' % (self.excl.fname)
+
+    def close(self):
+        pass
 
 
 class ExcludeRegion(object):
@@ -167,6 +180,9 @@ class ExcludeRegion(object):
 
     def __repr__(self):
         return 'Excluding: %s' % (self.region)
+
+    def close(self):
+        pass
 
 
 class ExcludeBED(object):
@@ -195,6 +211,9 @@ class ExcludeBED(object):
     def __repr__(self):
         return 'Excluding from BED: %s' % (self.fname)
 
+    def close(self):
+        pass
+
 
 class Mismatch(object):
     def __init__(self, num):
@@ -204,32 +223,16 @@ class Mismatch(object):
         if read.is_unmapped:
             return False
 
-        inserts = 0
-        deletions = 0
-        indels = 0
-        edits = int(read.opt('NM'))
-        #
-        # NM counts the length of indels
-        # We really just care about *if* there is an indel, not the size
-        #
-
-        for op, length in read.cigar:
-            if op == 1:
-                inserts += length
-                indels += 1
-            elif op == 2:
-                deletions += length
-                indels += 1
-
-        mismatches = edits - inserts - deletions + indels
-
-        if mismatches > self.num:
+        if read_calc_mismatches(read) > self.num:
             return False
 
         return True
 
     def __repr__(self):
         return '%s mismatch%s' % (self.num, '' if self.num == 1 else 'es')
+
+    def close(self):
+        pass
 
 
 class MismatchRef(object):
@@ -245,37 +248,18 @@ class MismatchRef(object):
     def filter(self, bam, read):
         if read.is_unmapped:
             return False
+
         chrom = bam.getrname(read.rname)
-        start = read.pos
-        #end = read.aend
+        if read_calc_mismatches_ref(self.ref, read, chrom) > self.num:
+            return False
 
-        edits = 0
-        ref_pos = 0
-        read_pos = 0
-
-        for op, length in read.cigar:
-            if op == 1:
-                edits += 1
-                read_pos += length
-            elif op == 2:
-                edits += 1
-                ref_pos += length
-            elif op == 3:
-                ref_pos += length
-            elif op == 0:
-                refseq = self.ref.fetch(chrom, start + ref_pos, start + ref_pos + length)
-                for refbase, readbase in zip(refseq, read.seq[read_pos:read_pos + length]):
-                    if refbase.upper() != readbase.upper():
-                        edits += 1
-                ref_pos += length
-                read_pos += length
-
-            if edits > self.num:
-                return False
         return True
 
     def __repr__(self):
         return '%s mismatch%s in %s' % (self.num, '' if self.num == 1 else 'es', os.path.basename(self.refname))
+
+    def close(self):
+        self.ref.close()
 
 
 class Mapped(object):
@@ -292,6 +276,9 @@ class Mapped(object):
     def __repr__(self):
         return 'is mapped'
 
+    def close(self):
+        pass
+
 
 class MaskFlag(object):
     def __init__(self, value):
@@ -306,6 +293,9 @@ class MaskFlag(object):
     def filter(self, bam, read):
         return (read.flag & self.flag) == 0
 
+    def close(self):
+        pass
+
 
 class SecondaryFlag(object):
     def __repr__(self):
@@ -313,6 +303,9 @@ class SecondaryFlag(object):
 
     def filter(self, bam, read):
         return not read.is_secondary
+
+    def close(self):
+        pass
 
 
 class ReadLength(object):
@@ -325,6 +318,9 @@ class ReadLength(object):
     def filter(self, bam, read):
         return len(read.seq) >= self.minval
 
+    def close(self):
+        pass
+
 
 class QCFailFlag(object):
     def __repr__(self):
@@ -332,6 +328,9 @@ class QCFailFlag(object):
 
     def filter(self, bam, read):
         return not read.is_qcfail
+
+    def close(self):
+        pass
 
 
 class _TagCompare(object):
@@ -361,6 +360,9 @@ class _TagCompare(object):
 
     def __repr__(self):
         return "%s %s %s" % (self.tag, self.__class__.op, self.value)
+
+    def close(self):
+        pass
 
 
 class TagLessThan(_TagCompare):
@@ -474,6 +476,9 @@ def bam_filter(infile, outfile, criteria, failedfile=None, verbose=False):
     if failed_out:
         failed_out.close()
     sys.stdout.write("%s kept\n%s failed\n" % (passed, failed))
+
+    for criterion in criteria:
+        criterion.close()
 
 
 def read_to_unmapped(read):
