@@ -8,23 +8,54 @@ import sys
 import pysam
 from support.eta import ETA
 from support.refiso import RefIso
+from bam_utils import read_calc_mismatches
+from support.ngs_utils import natural_sort
 
 
 def usage():
     print __doc__
     print """
-Usage: bamutils stats in.bam {-delim char} {-model refiso.txt} {region}
-
-If a RefIso file is given, counts corresponding to exons, introns, promoters,
-junctions, intergenic, and mitochondrial regions will be calculated.
+Usage: bamutils stats in.bam {options} {region}
 
 If a region is given, only reads that map to that region will be counted.
 Regions should be be in the format: 'ref:start-end' or 'ref:start' using
 1-based start coordinates.
 
-If delimiter is given, the reference names are split by this delimiter
-and only the first token is summarized.
+Options:
+    -tags    tag_name{:sort_order},tag_name{:sort_order},...
 
+            For each tag that is given, the values for that tag will be
+            tallied for all reads. Then a list of the counts will be presented
+            along with the mean and maximum values. The optional sort order
+            should be either '+' or '-' (defaults to +).
+
+            For example, to tally the "IH" tag (number of alignments):
+                -tag IH
+
+            There are also special case tags that can be used as well:
+                MAPQ     - use the mapq score
+                LENGTH   - use the length of the read
+                MISMATCH - use the mismatch score (# mismatches) + (# indels)
+                           where indels count for 1 regardless of length
+
+                           Note: this requires the 'NM' tag (edit distance)
+                           to be present
+
+            Common tags:
+                AS    Alignment score
+                IH    Number of alignments
+                NM    Edit distance (each indel counts as many as its length)
+
+    -delim  char
+
+            If delimiter is given, the reference names are split by this
+            delimiter and only the first token is summarized.
+
+    -model  refiso.txt
+
+            If a RefIso file is given, counts corresponding to exons, introns,
+            promoters, junctions, intergenic, and mitochondrial regions will
+            be calculated.
 """
     sys.exit(1)
 
@@ -85,30 +116,72 @@ class RangeMatch(object):
         return None
 
 
-class Bins(object):
-    '''
-    Setup simple binning.  Bins are continuous 0->max.  Values are added to
-    bins and then means / distributions can be calculated.
-    '''
-    def __init__(self):
-        self.bins = []
+class FeatureBin(object):
+    '''track feature stats'''
+    def __init__(self, tag):
+        spl = tag.split(':')
+        self.tag = spl[0]
+        self.asc = True
+        if len(spl) > 1:
+            self.asc = True if spl[1] == '+' else False
 
-    def add(self, val):
-        while len(self.bins) <= val:
-            self.bins.append(0)
-        self.bins[val] += 1
+        self.bins = {}
+        self._keys = []
+        self._min = None
+        self._max = None
+        self.__cur_pos = -1
 
+    def __iter__(self):
+        self._keys.sort()
+        if not self.asc:
+            self._keys.reverse()
+
+        self.__cur_pos = -1
+        return self
+
+    def next(self):
+        self.__cur_pos += 1
+        if len(self._keys) <= self.__cur_pos:
+            raise StopIteration
+        else:
+            return (self._keys[self.__cur_pos], self.bins[self._keys[self.__cur_pos]])
+
+    @property
     def mean(self):
         acc = 0
         count = 0
-        for i, val in enumerate(self.bins):
-            acc += (i * val)
-            count += val
+        for k in self.bins:
+            try:
+                acc += (k * self.bins[k])
+                count += self.bins[k]
+            except:
+                return 0
 
         return float(acc) / count
 
+    @property
     def max(self):
-        return len(self.bins) - 1
+        return self._max
+
+    def add(self, read):
+        if self.tag in ['LENGTH', 'LEN']:
+            val = len(read.seq)
+        elif self.tag == 'MAPQ':
+            val = read.mapq
+        elif self.tag == 'MISMATCH':
+            val = read_calc_mismatches(read)
+        else:
+            val = read.opt(self.tag)
+
+        if not val in self.bins:
+            self.bins[val] = 0
+            self._keys.append(val)
+
+        self.bins[val] += 1
+        if not self._min or self._min > val:
+            self._min = val
+        if not self._max or self._max < val:
+            self._max = val
 
 
 class RegionTagger(object):
@@ -181,7 +254,7 @@ class RegionTagger(object):
             self.counts[tag] += 1
 
 
-def bam_stats(infile, ref_file=None, region=None, delim=None):
+def bam_stats(infile, ref_file=None, region=None, delim=None, tags=[]):
     bamfile = pysam.Samfile(infile, "rb")
     eta = ETA(0, bamfile=bamfile)
 
@@ -209,11 +282,12 @@ def bam_stats(infile, ref_file=None, region=None, delim=None):
     total = 0
     mapped = 0
     unmapped = 0
-    lengths = Bins()
-    alignments = Bins()
-    edits = Bins()
     names = set()
     refs = {}
+
+    tagbins = []
+    for tag in tags:
+        tagbins.append(FeatureBin(tag))
 
     for rname in bamfile.references:
         if delim:
@@ -221,6 +295,7 @@ def bam_stats(infile, ref_file=None, region=None, delim=None):
         else:
             refs[rname] = 0
 
+    # setup region or whole-file readers
     def _foo1():
         for read in bamfile.fetch(ref, start, end):
             yield read
@@ -253,29 +328,18 @@ def bam_stats(infile, ref_file=None, region=None, delim=None):
                 continue
 
             eta.print_status(extra="%s:%s" % (bamfile.getrname(read.rname), read.pos), bam_pos=(read.rname, read.pos))
-
             mapped += 1
-            lengths.add(len(read.seq))
 
             if delim:
                 refs[bamfile.getrname(read.rname).split(delim)[0]] += 1
             else:
                 refs[bamfile.getrname(read.rname)] += 1
 
-            try:
-                ih = int(read.opt('IH'))
-            except:
-                ih = 0
-            try:
-                nm = int(read.opt('NM'))
-            except:
-                nm = 0
-
-            alignments.add(ih)
-            edits.add(nm)
-
             if regiontagger:
                 regiontagger.add_read(read, bamfile.getrname(read.rname))
+
+            for tagbin in tagbins:
+                tagbin.add(read)
 
     except KeyboardInterrupt:
         pass
@@ -309,49 +373,33 @@ def bam_stats(infile, ref_file=None, region=None, delim=None):
 
         print ""
         print ""
-        print "Ave length:\t%s" % lengths.mean()
-        print ""
-        print "Ave # alignments (IH):\t%s" % alignments.mean()
-        print "Max # alignments (IH):\t%s" % alignments.max()
-        print
-        print "Ave edit distance (NM):\t%s" % edits.mean()
-        print "Max edit distance (NM):\t%s" % edits.max()
-        print ""
-        print "Read lengths"
-        acc = 0
-        for i, v in enumerate(lengths.bins[::-1]):
-            if v:
-                acc += v
-                print "%s\t%s\t(%.1f%%)" % (lengths.max() - i, v, float(acc) * 100 / mapped)
 
-        print ""
-        print "# of alignments (IH)"
+        for tagbin in tagbins:
+            print "Ave %s:\t%s" % (tagbin.tag, tagbin.mean)
+            print "Max %s:\t%s" % (tagbin.tag, tagbin.max)
+            print "%s distribution:" % (tagbin.tag)
 
-        acc = 0
-        for i, v in enumerate(alignments.bins):
-            if v:
-                acc += v
-                print "%s\t%s\t(%.1f%%)" % (i, v, float(acc) * 100 / mapped)
+            acc = 0.0
+            for val, count in tagbin:
+                acc += count
+                pct = acc * 100 / mapped
+                print '%s\t%s\t%.1f%%' % (val, count, pct)
 
-        print ""
-        print "Edit distances (NM)"
-
-        acc = 0
-        for i, v in enumerate(edits.bins):
-            if v:
-                acc += v
-                print "%s\t%s\t(%.1f%%)" % (i, v, float(acc) * 100 / mapped)
-        print ""
+            print ""
 
         print "Reference distribution"
         if delim:
             print "ref\tcount"
-            for refname in refs:
+            for refname in natural_sort(refs):
                 print "%s\t%s" % (refname, refs[refname])
         else:
             print "ref\tlength\tcount\tcount per million bases"
+            reflens = {}
             for refname, reflen in zip(bamfile.references, bamfile.lengths):
-                print "%s\t%s\t%s\t%s" % (refname, reflen, refs[refname], refs[refname] / (float(reflen) / 1000000))
+                reflens[refname] = reflen
+
+            for refname in natural_sort(refs):
+                print "%s\t%s\t%s\t%s" % (refname, reflens[refname], refs[refname], refs[refname] / (float(reflens[refname]) / 1000000))
 
         if regiontagger:
             print ""
@@ -369,6 +417,7 @@ if __name__ == '__main__':
     refiso = None
     region = None
     delim = None
+    tags = []
 
     last = None
     for arg in sys.argv[1:]:
@@ -382,7 +431,10 @@ if __name__ == '__main__':
         elif last == '-delim':
             delim = arg
             last = None
-        elif arg in ['-model', '-delim']:
+        elif last == '-tags':
+            tags = arg.split(',')
+            last = None
+        elif arg in ['-model', '-delim', '-tags']:
             last = arg
         else:
             region = arg
@@ -390,4 +442,4 @@ if __name__ == '__main__':
     if not infile:
         usage()
     else:
-        bam_stats(infile, refiso, region, delim)
+        bam_stats(infile, refiso, region, delim, tags)

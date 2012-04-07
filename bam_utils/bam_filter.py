@@ -44,14 +44,14 @@ Currently, the available filters are:
     -gt  tag_name value
     -gte tag_name value
 
-    Where tag_name should be the full name, plus the type eg: AS:i. As a
-    special case, "MAPQ" can be used as the tag_name and the SAM MAPQ value
-    will be used.
+    As a special case, "MAPQ" can be used as the tag_name and the SAM MAPQ
+    value will be used.
 
 Common tags to filter by:
-    AS:i    Alignment score
-    NM:i    Edit distance (each indel counts as many as its length)
-    IH:i    Number of alignments
+    AS      Alignment score
+    IH      Number of alignments
+    NM      Edit distance (each indel counts as many as its length)
+
     MAPQ    Mapping quality (defined as part of SAM spec)
 
 """
@@ -336,17 +336,15 @@ class QCFailFlag(object):
 class _TagCompare(object):
     def __init__(self, tag, value):
         self.args = '%s %s' % (tag, value)
-        if ':' in tag:
-            self.tag = tag[0:tag.find(':')]
-        else:
-            self.tag = tag
+        self.tag = tag
 
-        if tag[-1] == 'i':
+        try:
             self.value = int(value)
-        elif tag[-1] == 'f':
-            self.value = float(value)
-        else:
-            self.value = value
+        except:
+            try:
+                self.value = float(value)
+            except:
+                self.value = value
 
     def get_value(self, read):
         if self.tag == 'MAPQ':
