@@ -1,45 +1,49 @@
 #!/usr/bin/env python
 """
-RefIso is a format which is similar to RefFlat, except that it adds one 
-additional column.  The first column is a number indicating what genes should 
+RefIso is a format which is similar to RefFlat, except that it adds one
+additional column.  The first column is a number indicating what genes should
 be considered isoforms of each other.
 
-For well annotated organisms, these is somewhat redundant as the gene-name 
-should be unique among genes.  However, for less well annotated organisms, 
+For well annotated organisms, these is somewhat redundant as the gene-name
+should be unique among genes.  However, for less well annotated organisms,
 or organisms with a lot of gene duplication, this is a required step.
 """
 
-import sys,os,gzip
-from ngs_utils import dictify,gzip_opener
+import sys
+import os
+
+from ngs_utils import dictify, gzip_opener
 from eta import ETA
 import pysam
 
+
 class RefIso(object):
-    def __init__(self,filename):
+    def __init__(self, filename):
         self._genes = {}
         self._pos = 0
         with gzip_opener(filename) as f:
             for line in f:
                 cols = line.rstrip().split('\t')
                 if not cols[0] in self._genes:
-                    self._genes[cols[0]] = _RefGene(cols[0],cols[1],cols[3],cols[4])
+                    self._genes[cols[0]] = _RefGene(cols[0], cols[1], cols[3], cols[4])
                 self._genes[cols[0]].add_transcript(_RefTranscript.from_cols(cols))
-    
+
     def fsize(self):
         return len(self._genes)
 
     def tell(self):
         return self._pos
-        
+
     @property
     def genes(self):
         self._pos = 0
         for gene in self._genes:
             yield self._genes[gene]
             self._pos += 1
-            
+
+
 class _RefGene(object):
-    def __init__(self,iso_id,name,chrom,strand):
+    def __init__(self, iso_id, name, chrom, strand):
         self.iso_id = iso_id
         self.name = name
         self.chrom = chrom
@@ -47,11 +51,11 @@ class _RefGene(object):
         self.exons = set()
         self._regions = None
         self._transcripts = {}
-        
+
         self.tx_start = None
         self.tx_end = None
-    
-    def add_transcript(self,transcript):
+
+    def add_transcript(self, transcript):
         self._transcripts[transcript.name] = transcript
         if self.tx_start is None or transcript.tx_start < self.tx_start:
             self.tx_start = transcript.tx_start
@@ -63,7 +67,7 @@ class _RefGene(object):
     def transcripts(self):
         for t in self._transcripts:
             yield self._transcripts[t]
-    
+
     @property
     def regions(self):
         if not self._regions:
