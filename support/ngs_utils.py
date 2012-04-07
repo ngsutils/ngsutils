@@ -4,20 +4,41 @@
 Common util classes / functions for the NGS project
 
 """
-import sys,os,gzip
+import sys
+import os
+import gzip
+import re
 
-def dictify(values,colnames):
+
+def natural_sort(ar):
+    to_sort = []
+    for item in ar:
+        spl = re.split('(\d+)', item)
+        l2 = []
+        for el in spl:
+            try:
+                n = int(el)
+            except:
+                n = el
+            l2.append(n)
+        to_sort.append((l2, item))
+
+    to_sort.sort()
+    return [x[1] for x in to_sort]
+
+
+def dictify(values, colnames):
     """
     Convert a list of values into a dictionary based upon given column names.
-    
+
     If the column name starts with an '@', the value is assumed to be a comma
     separated list.
-    
+
     If the name starts with a '#', the value is assumed to be an int.
-    
+
     If the name starts with '@#', the value is assumed to  a comma separated
     list of ints.
-    
+
     """
     d = {}
     for i in xrange(len(colnames)):
@@ -48,15 +69,16 @@ def dictify(values,colnames):
             d[key] = None
 
     return d
-    
-    
+
+
 class gzip_opener:
     '''
     A Python 2.6 class to handle 'with' opening of text files that may
     or may not be gzip compressed.
     '''
-    def __init__(self,fname):
+    def __init__(self, fname):
         self.fname = fname
+
     def __enter__(self):
         if self.fname == '-':
             self.f = sys.stdin
@@ -65,36 +87,38 @@ class gzip_opener:
         else:
             self.f = open(os.path.expanduser(self.fname))
         return self.f
+
     def __exit__(self, type, value, traceback):
         if self.f != sys.stdin:
             self.f.close()
         return False
 
-def filenames_to_uniq(names,new_delim='.'):
+
+def filenames_to_uniq(names, new_delim='.'):
     '''
     Given a set of file names, produce a list of names consisting of the
     uniq parts of the names. This works from the end of the name.  Chunks of
     the name are split on '.' and '-'.
-    
+
     For example:
         A.foo.bar.txt
         B.foo.bar.txt
         returns: ['A','B']
-    
+
         AA.BB.foo.txt
         CC.foo.txt
         returns: ['AA.BB','CC']
-    
+
     '''
     name_words = []
     maxlen = 0
     for name in names:
-        name_words.append(name.replace('.',' ').replace('-',' ').strip().split())
+        name_words.append(name.replace('.', ' ').replace('-', ' ').strip().split())
         name_words[-1].reverse()
         if len(name_words[-1]) > maxlen:
             maxlen = len(name_words[-1])
 
-    common = [False,] * maxlen
+    common = [False, ] * maxlen
     for i in xrange(maxlen):
         last = None
         same = True
@@ -119,31 +143,33 @@ def filenames_to_uniq(names,new_delim='.'):
         newnames.append(new_delim.join(nn))
     return newnames
 
-def parse_args(argv,defaults=None, expected_argc=0):
+
+def parse_args(argv, defaults=None, expected_argc=0):
     opts = {}
     if defaults:
         opts.update(defaults)
 
     args = []
 
-    i=0
-    while i<len(argv):
+    i = 0
+    while i < len(argv):
         if argv[i][0] == '-':
             arg = argv[i].lstrip('-')
             if '=' in arg:
-                k,v=arg.split('=',2)
+                k, v = arg.split('=', 2)
                 if k in defaults:
                     if type(defaults[k]) == float:
-                        opts[k]=float(v)
+                        opts[k] = float(v)
                     elif type(defaults[k]) == int:
-                        opts[k]=int(v)
+                        opts[k] = int(v)
                     else:
-                        opts[k]=v
+                        opts[k] = v
             else:
-                opts[arg]=True 
+                opts[arg] = True
         else:
             args.append(argv[i])
-        i+=1
+        i += 1
+
     while len(args) < expected_argc:
         args.append(None)
-    return opts,args        
+    return opts, args
