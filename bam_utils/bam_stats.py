@@ -29,10 +29,6 @@ Options:
             along with the mean and maximum values. The optional sort order
             should be either '+' or '-' (defaults to +).
 
-            For example, to tally the "IH" tag (number of alignments) and the
-            read length:
-                -tags IH,LENGTH
-
             There are also special case tags that can be used as well:
                 MAPQ     - use the mapq score
                 LENGTH   - use the length of the read
@@ -46,6 +42,11 @@ Options:
                 AS    Alignment score
                 IH    Number of alignments
                 NM    Edit distance (each indel counts as many as its length)
+
+            For example, to tally the "IH" tag (number of alignments) and the
+            read length:
+                -tags IH,LENGTH
+
 
     -delim  char
 
