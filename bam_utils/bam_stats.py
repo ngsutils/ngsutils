@@ -436,8 +436,11 @@ if __name__ == '__main__':
             last = None
         elif arg in ['-model', '-delim', '-tags']:
             last = arg
-        else:
+        elif ':' in arg:
             region = arg
+        else:
+            sys.stderr.write('Unknown option: %s\n' % arg)
+            usage()
 
     if not infile:
         usage()
