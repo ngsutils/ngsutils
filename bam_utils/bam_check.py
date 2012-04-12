@@ -6,12 +6,13 @@ import sys
 import os
 import pysam
 
+
 def bam_check(fname):
     sys.stdout.write('%s: ' % fname)
     sys.stdout.flush()
     fail = False
     try:
-        bamfile = pysam.Samfile(fname,"rb")
+        bamfile = pysam.Samfile(fname, "rb")
         for read in bamfile:
             pass
         bamfile.close()
@@ -21,13 +22,13 @@ def bam_check(fname):
     except:
         fail = True
         pass
-    
+
     if fail:
         sys.stdout.write('ERROR\n')
         return False
-    
+
     sys.stdout.write('OK\n')
-    
+
 
 def usage():
     print __doc__
@@ -36,7 +37,7 @@ def usage():
 
 if __name__ == "__main__":
     fnames = []
-    
+
     for arg in sys.argv[1:]:
         if arg == "-h":
             usage()
@@ -45,7 +46,7 @@ if __name__ == "__main__":
         else:
             sys.stderr.write("File: %s not found!\n" % arg)
             usage()
-            
+
     if not fnames:
         usage()
 
@@ -53,6 +54,6 @@ if __name__ == "__main__":
     for f in fnames:
         if not bam_check(f):
             fail = True
-        
+
     if fail:
         sys.exit(1)
