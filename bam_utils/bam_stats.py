@@ -314,16 +314,17 @@ def bam_stats(infile, ref_file=None, region=None, delim=None, tags=[]):
     sys.stderr.write('Calculating Read stats...\n')
     try:
         for read in read_gen():
-            if read.qname in names:
-                # reads only count once for this...
-                continue
+            if read.opt('IH') > 1:
+                if read.qname in names:
+                    # reads only count once for this...
+                    continue
+                names.add(read.qname)
 
             if not read.flag in flag_counts:
                 flag_counts[read.flag] = 1
             else:
                 flag_counts[read.flag] += 1
 
-            names.add(read.qname)
             total += 1
             if read.is_unmapped:
                 unmapped += 1
@@ -371,7 +372,7 @@ def bam_stats(infile, ref_file=None, region=None, delim=None, tags=[]):
                     count += flag_counts[f]
 
             if count > 0:
-                print "[0x%03x] %-*s:\t%s (%.1f%%)" % (flag, maxsize, flag_descriptions[flag], count, (float(count) * 100 / total))
+                print "[0x%03x] %-*s:\t%s\t%.1f%%" % (flag, maxsize, flag_descriptions[flag], count, (float(count) * 100 / total))
 
         print ""
         print ""
