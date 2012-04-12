@@ -22,7 +22,7 @@ Regions should be be in the format: 'ref:start-end' or 'ref:start' using
 1-based start coordinates.
 
 Options:
-    -tags    tag_name{:sort_order},tag_name{:sort_order},...
+    -tags   tag_name{:sort_order},tag_name{:sort_order},...
 
             For each tag that is given, the values for that tag will be
             tallied for all reads. Then a list of the counts will be presented
