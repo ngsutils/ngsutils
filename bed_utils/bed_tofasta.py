@@ -1,15 +1,17 @@
 #!/usr/bin/env python
 
-import sys,gzip,os
+import sys
+import os
 from support.eta import ETA
 import pysam
 
+
 def bed_tofasta(fname, ref_fasta, min_size=50, stranded=True):
     if not os.path.exists('%s.fai' % ref_fasta):
-        pysam.faidx( ref_fasta )
+        pysam.faidx(ref_fasta)
 
     fasta = pysam.Fastafile(ref_fasta)
-    
+
     refs = set()
     with open('%s.fai' % ref_fasta) as f:
         for line in f:
@@ -17,7 +19,7 @@ def bed_tofasta(fname, ref_fasta, min_size=50, stranded=True):
 
     with open(fname) as f:
         fsize = os.stat(fname).st_size
-        eta = ETA(fsize,fileobj=f,modulo=1000)
+        eta = ETA(fsize, fileobj=f, modulo=1000)
 
         for line in f:
             if line[0] == '#':
@@ -25,36 +27,37 @@ def bed_tofasta(fname, ref_fasta, min_size=50, stranded=True):
             eta.print_status()
 
             cols = line.strip().split('\t')
-        
+
             ref = cols[0]
             start = int(cols[1])
             end = int(cols[2])
             strand = cols[5]
-        
-            if end-start >= min_size and ref in refs:
-                seq = fasta.fetch(ref,start,end)
+
+            if end - start >= min_size and ref in refs:
+                seq = fasta.fetch(ref, start, end)
                 if stranded:
                     if strand == '-':
                         seq = revcomp(seq)
-                    print '>%s:%d-%d[%s]\n%s' % (ref,start,end,strand,seq)
+                    print '>%s:%d-%d[%s]\n%s' % (ref, start, end, strand, seq)
                 else:
-                    print '>%s:%d-%d\n%s' % (ref,start,end,seq)
-    
+                    print '>%s:%d-%d\n%s' % (ref, start, end, seq)
+
         eta.done()
     fasta.close()
 
 _compliments = {
-'a':'t',
-'A':'T',
-'c':'g',
-'C':'G',
-'g':'c',
-'G':'C',
-'t':'a',
-'T':'A',
-'n':'n',
-'N':'N'
+'a': 't',
+'A': 'T',
+'c': 'g',
+'C': 'G',
+'g': 'c',
+'G': 'C',
+'t': 'a',
+'T': 'A',
+'n': 'n',
+'N': 'N'
 }
+
 
 def revcomp(seq):
     ret = []
@@ -65,13 +68,14 @@ def revcomp(seq):
     ret.reverse()
     return ''.join(ret)
 
+
 def usage():
     print """\
 Usage: bedutils tofasta {-min size} {-ns} bedfile ref.fasta
 
 Outputs the sequences of each BED region to FASTA format.
 
-Option: 
+Option:
 -min  The minumum size of a region
 -ns   Ignore the strand of a region (always return seq from the + strand)
 """
@@ -79,10 +83,10 @@ Option:
 if __name__ == "__main__":
 
     min_size = 50
-    bed=None
-    ref=None
+    bed = None
+    ref = None
     stranded = True
-    
+
     last = None
     for arg in sys.argv[1:]:
         if last == '-min':
@@ -101,4 +105,4 @@ if __name__ == "__main__":
         usage()
         sys.exit(1)
 
-    bed_tofasta(bed,ref,min_size=min_size,stranded=stranded)
+    bed_tofasta(bed, ref, min_size=min_size, stranded=stranded)
