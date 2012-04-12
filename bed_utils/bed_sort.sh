@@ -15,9 +15,11 @@ if [[ "$1" == "" || "$1" == "-h" ]]; then
 fi
 
 if [ "$2" == "" ]; then
-    TMP=".$1.sort.$$"
-    sort -k1,1 -k2,2n $1 > $TMP
-    mv $TMP $1
+    DN=`dirname "$1"`
+    BASE=`basename "$1"`
+    TMP="$DN/.$BASE.sort.$$"
+    sort -k1,1 -k2,2n "$1" > "$TMP"
+    mv "$TMP" "$1"
 else
-    sort -k1,1 -k2,2n $1 > $2
+    sort -k1,1 -k2,2n "$1" > "$2"
 fi
