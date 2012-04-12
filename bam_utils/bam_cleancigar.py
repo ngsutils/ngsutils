@@ -6,9 +6,10 @@ import sys
 import os
 import pysam
 
+
 def bam_cleancigar(infile, outfile):
-    bam = pysam.Samfile(infile,"rb")
-    out = pysam.Samfile(outfile,"wb", template=bam)
+    bam = pysam.Samfile(infile, "rb")
+    out = pysam.Samfile(outfile, "wb", template=bam)
     total = 0
     count = 0
     for read in bam:
@@ -17,20 +18,20 @@ def bam_cleancigar(infile, outfile):
         if not read.is_unmapped:
             for op, length in read.cigar:
                 if length > 0:
-                    newcigar.append((op,length))
+                    newcigar.append((op, length))
                 else:
                     changed = True
-        
+
             if changed:
                 read.cigar = newcigar
                 count += 1
         total += 1
         out.write(read)
-        
+
     bam.close()
     out.close()
-    sys.stderr.write('Wrote: %s reads\nAltered: %s\n' % (total,count))
-    
+    sys.stderr.write('Wrote: %s reads\nAltered: %s\n' % (total, count))
+
 
 def usage():
     print __doc__
@@ -45,7 +46,7 @@ if __name__ == "__main__":
     infile = None
     outfile = None
     force = False
-    
+
     for arg in sys.argv[1:]:
         if arg == "-h":
             usage()
@@ -65,8 +66,8 @@ if __name__ == "__main__":
                 usage()
         else:
             usage()
-            
+
     if not infile or not outfile:
         usage()
 
-    bam_cleancigar(infile,outfile)
+    bam_cleancigar(infile, outfile)
