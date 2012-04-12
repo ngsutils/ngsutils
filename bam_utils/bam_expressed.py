@@ -4,7 +4,6 @@ Scans a BAM file, looking for regions of mapped reads. Reads in a BAM file,
 and outputs regions of expression in BED format.
 '''
 import sys
-import gzip
 import os
 from support.eta import ETA
 
