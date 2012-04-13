@@ -132,6 +132,7 @@ class FeatureBin(object):
         self._min = None
         self._max = None
         self.__cur_pos = -1
+        self.missing = 0
 
     def __iter__(self):
         self._keys.sort()
@@ -173,7 +174,11 @@ class FeatureBin(object):
         elif self.tag == 'MISMATCH':
             val = read_calc_mismatches(read)
         else:
-            val = read.opt(self.tag)
+            try:
+                val = read.opt(self.tag)
+            except KeyError:
+                self.missing += 1
+                return
 
         if not val in self.bins:
             self.bins[val] = 0
@@ -320,7 +325,7 @@ def bam_stats(infile, ref_file=None, region=None, delim=None, tags=[]):
                         # reads only count once for this...
                         continue
                     names.add(read.qname)
-            except:
+            except KeyError:
                 #missing IH tag - ignore
                 pass
 
@@ -384,6 +389,9 @@ def bam_stats(infile, ref_file=None, region=None, delim=None, tags=[]):
         for tagbin in tagbins:
             print "Ave %s:\t%s" % (tagbin.tag, tagbin.mean)
             print "Max %s:\t%s" % (tagbin.tag, tagbin.max)
+            if tagbin.missing:
+                print 'Missing %s:\t%s' % (tagbin.tag, tagbin.missing)
+
             print "%s distribution:" % (tagbin.tag)
 
             acc = 0.0
