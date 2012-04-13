@@ -314,11 +314,15 @@ def bam_stats(infile, ref_file=None, region=None, delim=None, tags=[]):
     sys.stderr.write('Calculating Read stats...\n')
     try:
         for read in read_gen():
-            if read.opt('IH') > 1:
-                if read.qname in names:
-                    # reads only count once for this...
-                    continue
-                names.add(read.qname)
+            try:
+                if read.opt('IH') > 1:
+                    if read.qname in names:
+                        # reads only count once for this...
+                        continue
+                    names.add(read.qname)
+            except:
+                #missing IH tag - ignore
+                pass
 
             if not read.flag in flag_counts:
                 flag_counts[read.flag] = 1
