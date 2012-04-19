@@ -1,2 +1,3 @@
 *.pyc
-ext/
+env/
+build/

@@ -103,7 +103,7 @@ Scripts for assembling the gene model used in `bedutils` and `bamutils` scripts.
 tab-delimited format, except that it adds one column to the beginning indicating isoforms. For some organisms this column can be redundant. 
 But for others, it is a required step to ensure annotated isoforms are on the same chromosome and overlap. We are calling this format 
 **RefIso**. RefIso files can be compiled from UCSC refFlat or KnownGene files. If needed, these can be automatically downloaded for each 
-organism.
+organism. It is possible that this format will be deprecated in the future.
 
 Building RefIso
 
@@ -119,9 +119,9 @@ General
 Installing
 ---
 
-Checkout the code and run `build_deps.sh`. This will download and compile `pysam` (and if needed, `Cython`). Cython will be installed into your
-user-packages folder for Python (usually in `$HOME/.local`). Pysam will be installed in the `ngsutils/ext` folder and loaded as needed by the main
-scripts.
+Checkout the code and run `make`. This will create a virtualenv folder (env) and install the needed libraries. The only libraries that are
+mandatory are *pysam* and *cython*. Cython requires that the Python headers be present on the system. For a linux system this can be
+achieved by installing 'python-devel' or similar.
 
 If you need read-only access use:
 `git clone git://github.iu.edu/mbreese/ngsutils.git`
@@ -129,7 +129,12 @@ If you need read-only access use:
 Requires
 
 * Python 2.6+ (including development packages)
-* curl
+* virtualenv
+
+Will install
+
+* pysam
+* Cython
 
 Recommended
 
@@ -143,4 +148,4 @@ Center for Computational Biology and Bioinformatics
 Indiana University School of Medicine
 
 
-&copy;2010-2011 Trustees of Indiana University
+&copy;2010-2012 Trustees of Indiana University
