@@ -3,8 +3,9 @@
 Postprocesses a BAM file to remove all clipping from reads and alignments.
 
 Hard clipping is removed from the alignment. Soft clipping is removed from
-the alignment and the sequence. The number of clipped bases is added as the
-'ZA:i' (5' clipping) and 'ZB:i' (3' clipping) tags.
+the alignment and the sequence. The number of soft clipped bases is added as
+the 'ZA:i' (5' clipping) and 'ZB:i' (3' clipping) tags. The percentage of soft
+clipped bases is given in the 'ZC:f' tag.
 '''
 import sys
 import os
@@ -41,6 +42,7 @@ def bam_removeclipping(infile, outfile):
 
             if changed:
                 read.cigar = newcigar
+                orig_length = len(read.seq)
 
                 if clip_3:
                     read.seq = read.seq[clip_5:-clip_3]
@@ -54,6 +56,8 @@ def bam_removeclipping(infile, outfile):
                     newtags.append(('ZA', clip_5))
                 if clip_3:
                     newtags.append(('ZB', clip_3))
+
+                newtags.append(('ZC', float(clip_5 + clip_3) / orig_length))
 
                 read.tags = newtags
 
