@@ -440,6 +440,7 @@ _criteria = {
     'includebed': IncludeBED,
     'whitelist': Whitelist,
     'blacklist': Blacklist,
+    'length': ReadMinLength,  # deprecated
     'minlen': ReadMinLength,
     'maxlen': ReadMaxLength
 }
