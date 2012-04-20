@@ -9,7 +9,8 @@ Note: this does not adjust tag values reflecting any filtering. (for example:
       filtering, the IH:i tag would still read IH:i:2).
 
 Currently, the available filters are:
-    -length minval             Remove reads that are smaller than {minval}
+    -minlen val                Remove reads that are smaller than {val}
+    -maxlen val                Remove reads that are larger than {val}
     -mapped                    Keep only mapped reads
     -mask bitmask              Remove reads that match the mask (base 10/hex)
 
@@ -308,7 +309,7 @@ class SecondaryFlag(object):
         pass
 
 
-class ReadLength(object):
+class ReadMinLength(object):
     def __init__(self, minval):
         self.minval = int(minval)
 
@@ -317,6 +318,20 @@ class ReadLength(object):
 
     def filter(self, bam, read):
         return len(read.seq) >= self.minval
+
+    def close(self):
+        pass
+
+
+class ReadMaxLength(object):
+    def __init__(self, val):
+        self.val = int(val)
+
+    def __repr__(self):
+        return "read length max: %s" % self.val
+
+    def filter(self, bam, read):
+        return len(read.seq) < self.val
 
     def close(self):
         pass
@@ -425,7 +440,8 @@ _criteria = {
     'includebed': IncludeBED,
     'whitelist': Whitelist,
     'blacklist': Blacklist,
-    'length': ReadLength
+    'minlen': ReadMinLength,
+    'maxlen': ReadMaxLength
 }
 
 
