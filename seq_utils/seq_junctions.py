@@ -4,8 +4,10 @@ Takes a RefIso gene model and a genomic FASTA file and produces a splice-
 junction library in FASTA format.
 '''
 
-import os,sys
+import os
+import sys
 import support.refiso
+
 
 def usage():
     print __doc__
@@ -14,13 +16,13 @@ Usage: sequtils junctions {opts} refiso.txt{.gz} ref.fasta
 
 Arguments
   refiso.txt      Gene model in RefIso format
-  ref.fasta       Reference genome in FASTA or RAGZ format 
+  ref.fasta       Reference genome in FASTA or RAGZ format
                   (samtools indexed ref.fasta.fai req'd)
 
 Options
   -frag size      Number of bases on either side of the junction to include
                   [default 46]
-  -min size       Minimum size of a junction            
+  -min size       Minimum size of a junction
                   [default 50]
 """
     sys.exit(1)
@@ -31,7 +33,7 @@ if __name__ == '__main__':
     frag_size = 46
     min_size = 50
     last = None
-    
+
     for arg in sys.argv[1:]:
         if last == '-frag':
             frag_size = int(arg)
@@ -39,7 +41,7 @@ if __name__ == '__main__':
         elif last == '-min':
             min_size = int(arg)
             last = None
-        elif arg in ['-frag','-min']:
+        elif arg in ['-frag', '-min']:
             last = arg
         elif arg == '-h':
             usage()
@@ -47,8 +49,8 @@ if __name__ == '__main__':
             model = arg
         elif fasta is None and os.path.exists(arg) and os.path.exists('%s.fai' % arg):
             fasta = arg
-    
+
     if not model or not fasta:
         usage()
 
-    support.refiso.refiso_junctions(model,fasta,frag_size,min_size)
+    support.refiso.refiso_junctions(model, fasta, frag_size, min_size)
