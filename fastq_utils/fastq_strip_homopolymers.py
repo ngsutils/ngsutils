@@ -38,7 +38,7 @@ def fastq_strip_homopolymer(fname, outname, gz=False):
 
         lastbase = None
         for base, q in zip(seq, qual):
-            if base != lastbase and base not in '.N4':
+            if base != lastbase or base in '.N4':
                 # if the call is a run of N's, still output all
                 outseq.append(base)
                 outqual.append(q)
