@@ -18,7 +18,7 @@ import gzip
 from fastq_utils import read_fastq
 
 
-def fastq_strip_homopolymer(fname, outname, gz=False):
+def fastq_strip_homopolymer(fname, outname, gz=False, suffix=None):
     if outname == '-':
         out = sys.stdout
     elif gz:
@@ -27,7 +27,10 @@ def fastq_strip_homopolymer(fname, outname, gz=False):
         out = open(outname, 'w')
 
     for name, seq, qual in read_fastq(fname):
-        out.write('@%s\n' % name)
+        if suffix:
+            out.write('@%s%s\n' % (name, suffix))
+        else:
+            out.write('@%s\n' % name)
         outseq = []
         outqual = []
 
@@ -52,7 +55,7 @@ def fastq_strip_homopolymer(fname, outname, gz=False):
 
 def usage():
     print __doc__
-    print '''Usage: sequtils strip_homopolymer {-z} infile.fastq outfile.fastq
+    print '''Usage: sequtils strip_homopolymer {opts} infile.fastq outfile.fastq
 
 Arguments:
     infile.fastq    Input FASTQ file (can be gzipped)
@@ -60,6 +63,7 @@ Arguments:
 
 Options:
     -z              Compress the output file with gzip (not stdout)
+    -suf val        Suffix for the read name (must include space for comment)
 '''
     sys.exit(1)
 
@@ -68,8 +72,15 @@ if __name__ == '__main__':
     fname = None
     outname = None
     gz = False
+    last = None
+    suf = None
     for arg in sys.argv[1:]:
-        if arg == '-z':
+        if last == '-suf':
+            suf = arg
+            last = None
+        elif arg in ['-suf']:
+            last = arg
+        elif arg == '-z':
             gz = True
         elif not fname:
             if not os.path.exists(arg):
@@ -82,4 +93,4 @@ if __name__ == '__main__':
     if not fname or not outname:
         usage()
 
-    fastq_strip_homopolymer(fname, outname, gz)
+    fastq_strip_homopolymer(fname, outname, gz, suf)

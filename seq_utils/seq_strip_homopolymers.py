@@ -24,6 +24,36 @@ import gzip
 from support.eta import ETA
 
 
+class FASTAWriter(object):
+    def __init__(self, fileobj=sys.stdout, wrap=50):
+        self.fileobj = fileobj
+        self.wrap = wrap
+
+        self._line_count = 0
+        self._first = True
+
+    def write_ref(self, ref):
+        if not self._first:
+            self.fileobj.write('\n')
+
+        self.fileobj.write('>%s\n' % ref)
+        self._first = False
+        self._line_count = 0
+
+    def write(self, seq):
+        for s in seq:
+            self.fileobj.write(s)
+            self._line_count += 1
+            if self._line_count >= self.wrap:
+                self.fileobj.write('\n')
+                self._line_count = 0
+
+    def close(self):
+        self.write('\n')
+        if self.fileobj != sys.stdout:
+            self.fileobj.close()
+
+
 class HPSIndex(object):
     'Class for reading the homopolymer stripped index file - format subject to change'
     def __init__(self, fname, mode='r'):
@@ -92,8 +122,8 @@ def read_fasta_bases(fname):
     eta.done()
 
 
-def seq_strip_homopolymer(fname, outname):
-    outfa = open('%s.fa' % outname, 'w')
+def seq_strip_homopolymer(fname, outname, suffix=None):
+    outwriter = FASTAWriter(open('%s.fa' % outname, 'w'))
     outidx = HPSIndex('%s.idx' % outname, 'w')
 
     lastref = None
@@ -105,9 +135,11 @@ def seq_strip_homopolymer(fname, outname):
 
     for ref, base in read_fasta_bases(fname):
         if ref != lastref:
-            if lastref:
-                outfa.write('\n')
-            outfa.write('>%s\n' % ref)
+            if suffix:
+                outwriter.write_ref('%s%s' % (ref, suffix))
+            else:
+                outwriter.write_ref(ref)
+
             outidx.write_ref(ref)
             lastref = ref
             lastbase = None
@@ -124,30 +156,39 @@ def seq_strip_homopolymer(fname, outname):
                 outidx.write(strip_pos, repeat_count, (genomic_pos - strip_pos))
             strip_pos += 1
             repeat_count = 0
-            outfa.write(base)
-            if strip_pos % 50 == 0:
-                outfa.write('\n')
+            outwriter.write(base)
         genomic_pos += 1
 
     # if this ends in a repeat...
     if repeat_count > 0:
         outidx.write(strip_pos, repeat_count, (genomic_pos - strip_pos))
 
-    outfa.close()
+    outwriter.close()
     outidx.close()
 
 
 def usage():
     print __doc__
-    print "Usage: sequtils strip_homopolymer infile.fa outfile_template"
+    print """Usage: sequtils strip_homopolymer {opts} infile.fa outfile_template
+
+Options:
+    -suf val   Suffix for reference names (include space for comment)
+"""
     sys.exit(1)
 
 
 if __name__ == '__main__':
     fname = None
     outname = None
+    suffix = None
+    last = None
     for arg in sys.argv[1:]:
-        if not fname:
+        if last == '-suf':
+            suffix = arg
+            last = None
+        elif arg in ['-suf']:
+            last = arg
+        elif not fname:
             if not os.path.exists(arg):
                 print "Missing file: %s" % arg
                 usage()
@@ -158,4 +199,4 @@ if __name__ == '__main__':
     if not fname or not outname:
         usage()
 
-    seq_strip_homopolymer(fname, outname)
+    seq_strip_homopolymer(fname, outname, suffix)

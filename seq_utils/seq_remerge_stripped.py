@@ -8,32 +8,7 @@ import os
 import sys
 
 from support.eta import ETA
-from seq_strip_homopolymers import HPSIndex
-
-
-class FASTAWriter(object):
-    def __init__(self, fileobj=sys.stdout, wrap=50):
-        self.fileobj = fileobj
-        self.wrap = wrap
-
-        self._line_count = 0
-        self._first = True
-
-    def write_ref(self, ref):
-        if not self._first:
-            self.fileobj.write('\n')
-
-        self.fileobj.write('>%s\n' % ref)
-        self._first = False
-        self._line_count = 0
-
-    def write(self, seq):
-        for s in seq:
-            self.fileobj.write(s)
-            self._line_count += 1
-            if self._line_count >= self.wrap:
-                self.fileobj.write('\n')
-                self._line_count = 0
+from seq_strip_homopolymers import HPSIndex, FASTAWriter
 
 
 def seq_remerge_stripped(faname, idxname, quiet=False):
@@ -53,7 +28,7 @@ def seq_remerge_stripped(faname, idxname, quiet=False):
             eta.print_status(extra=ref)
         line = line.strip()
         if line[0] == '>':
-            ref = line[1:]
+            ref = line[1:].split(' ')[0]  # remove comments...
             strip_pos = 0
             fawriter.write_ref(ref)
         else:
