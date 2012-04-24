@@ -19,6 +19,7 @@ pos\trepeat_count\ttotal_offset
 
 import os
 import sys
+import struct
 import gzip
 
 from support.eta import ETA
@@ -60,44 +61,48 @@ class HPSIndex(object):
         self.fname = fname
         self.mode = mode
 
+        self._cur_pos = 0
+
         if mode == 'r':
-            self.fileobj = gzip.open(fname)
+            self.fileobj = open(fname)
         elif mode == 'w':
-            self.fileobj = gzip.open(fname, 'w')
+            self.fileobj = open(fname, 'w')
+            self.fileobj.write(struct.pack('<I', 0xCCBB601C))
+
+        self.refs = []
+        self._ref_offsets = {}
+        self._ref_count = {}
 
         self._cur_ref = None
-
-    def __iter__(self):
-        if self.mode != 'r':
-            raise IndexError
-
-        self.fileobj.seek(0)
-        self._cur_ref = None
-        return self
-
-    def next(self):
-        for line in self.fileobj:
-            line = line.strip()
-            if line[0] == '>':
-                self._cur_ref = line[1:]
-            else:
-                cols = [int(x) for x in line.split('\t')]
-                return (self._cur_ref, cols[0], cols[1], cols[2])
-        raise StopIteration
+        self._cur_count = 0
 
     def write_ref(self, ref):
         if self.mode != 'w':
             raise ValueError
-        self.fileobj.write('>%s\n' % (ref))
 
-    def write(self, pos, count, offset):
+        if self._cur_ref:
+            self._ref_counts[self._cur_ref] = self._cur_count
+
+        self.refs.append(ref)
+        self._cur_ref = ref
+        self._cur_count = 0
+        self._offsets[ref] = self._cur_pos
+
+    def write(self, pos, count):
         if self.mode != 'w':
             raise ValueError
-        self.fileobj.write('%s\t%s\t%s\n' % (pos, count, offset))
+
+        self.fileobj.write(struct.pack('<IH', pos, count))
+        self._cur_count += 1
 
     def close(self):
-        if self.fileobj:
-            self.fileobj.close()
+        if self.mode == 'w':
+            s = ''
+            for ref in self.refs:
+                s += struct.pack('<HsII', len(ref), ref, self._ref_counts[ref], self._ref_offsets[ref])
+            self.fileobj.write(s)
+            self.fileobj.write('<I', len(s))
+        self.fileobj.close()
 
 
 def read_fasta_bases(fname):
