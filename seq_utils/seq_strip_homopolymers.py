@@ -122,9 +122,12 @@ def read_fasta_bases(fname):
     eta.done()
 
 
-def seq_strip_homopolymer(fname, outname, suffix=None):
-    outwriter = FASTAWriter(open('%s.fa' % outname, 'w'))
-    outidx = HPSIndex('%s.idx' % outname, 'w')
+def seq_strip_homopolymer(fname, outfa_name=None, outidx_name=None, suffix=None):
+    if outfa_name:
+        outwriter = FASTAWriter(open('%s.fa' % outfa_name, 'w'))
+
+    if outidx_name:
+        outidx = HPSIndex('%s.idx' % outidx_name, 'w')
 
     lastref = None
     lastbase = None
@@ -135,12 +138,15 @@ def seq_strip_homopolymer(fname, outname, suffix=None):
 
     for ref, base in read_fasta_bases(fname):
         if ref != lastref:
-            if suffix:
-                outwriter.write_ref('%s%s' % (ref, suffix))
-            else:
-                outwriter.write_ref(ref)
+            if outfa_name:
+                if suffix:
+                    outwriter.write_ref('%s%s' % (ref, suffix))
+                else:
+                    outwriter.write_ref(ref)
 
-            outidx.write_ref(ref)
+            if outidx_name:
+                outidx.write_ref(ref)
+
             lastref = ref
             lastbase = None
 
@@ -152,51 +158,63 @@ def seq_strip_homopolymer(fname, outname, suffix=None):
             repeat_count += 1
         else:
             lastbase = base
-            if repeat_count > 0:
+            if repeat_count > 0 and outidx_name:
                 outidx.write(strip_pos, repeat_count, (genomic_pos - strip_pos))
             strip_pos += 1
             repeat_count = 0
-            outwriter.write(base)
+            if outfa_name:
+                outwriter.write(base)
         genomic_pos += 1
 
     # if this ends in a repeat...
-    if repeat_count > 0:
+    if repeat_count > 0 and outidx_name:
         outidx.write(strip_pos, repeat_count, (genomic_pos - strip_pos))
 
-    outwriter.close()
-    outidx.close()
+    if outfa_name:
+        outwriter.close()
+    if outidx_name:
+        outidx.close()
 
 
 def usage():
     print __doc__
-    print """Usage: sequtils strip_homopolymer {opts} infile.fa outfile_template
+    print """Usage: sequtils strip_homopolymer {opts} infile.fa
 
 Options:
-    -suf val   Suffix for reference names (include space for comment)
+    ** You must select at least one of these **
+    -fa  fname   Output a FASTA file with the homopolymers removed
+    -idx fname   Output an index file with the location of the homopolymers
+
+    -suf val     Suffix for reference names (include space for comment)
 """
     sys.exit(1)
 
 
 if __name__ == '__main__':
     fname = None
-    outname = None
+    outfa = None
+    outidx = None
     suffix = None
     last = None
     for arg in sys.argv[1:]:
         if last == '-suf':
             suffix = arg
             last = None
-        elif arg in ['-suf']:
+        elif last == '-fa':
+            outfa = arg
+            last = None
+        elif last == '-idx':
+            outidx = arg
+            last = None
+        elif arg in ['-suf', '-fa', '-idx']:
             last = arg
         elif not fname:
             if not os.path.exists(arg):
                 print "Missing file: %s" % arg
                 usage()
             fname = arg
-        elif not outname:
-            outname = arg
 
-    if not fname or not outname:
+    if not fname or (not outfa and not outidx):
         usage()
 
-    seq_strip_homopolymer(fname, outname, suffix)
+    seq_strip_homopolymer(fname, outfa, outidx, suffix)
