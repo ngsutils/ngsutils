@@ -71,7 +71,7 @@ class HPSIndex(object):
 
         self.refs = []
         self._ref_offsets = {}
-        self._ref_count = {}
+        self._ref_counts = {}
 
         self._cur_ref = None
         self._cur_count = 0
@@ -86,22 +86,28 @@ class HPSIndex(object):
         self.refs.append(ref)
         self._cur_ref = ref
         self._cur_count = 0
-        self._offsets[ref] = self._cur_pos
+        self._ref_offsets[ref] = self._cur_pos
 
     def write(self, pos, count):
         if self.mode != 'w':
             raise ValueError
 
-        self.fileobj.write(struct.pack('<IH', pos, count))
+        self.fileobj.write(struct.pack('<II', pos, count))
         self._cur_count += 1
 
     def close(self):
         if self.mode == 'w':
             s = ''
             for ref in self.refs:
-                s += struct.pack('<HsII', len(ref), ref, self._ref_counts[ref], self._ref_offsets[ref])
+                count = 0
+                offset = 0
+                if ref in self._ref_counts:
+                    count = self._ref_counts[ref]
+                if ref in self._ref_offsets:
+                    offset = self._ref_offsets[ref]
+                s += struct.pack('<HsII', len(ref), ref, count, offset)
             self.fileobj.write(s)
-            self.fileobj.write('<I', len(s))
+            self.fileobj.write(struct.pack('<I', len(s)))
         self.fileobj.close()
 
 
@@ -129,16 +135,15 @@ def read_fasta_bases(fname):
 
 def seq_strip_homopolymer(fname, outfa_name=None, outidx_name=None, suffix=None):
     if outfa_name:
-        outwriter = FASTAWriter(open('%s.fa' % outfa_name, 'w'))
+        outwriter = FASTAWriter(open(outfa_name, 'w'))
 
     if outidx_name:
-        outidx = HPSIndex('%s.idx' % outidx_name, 'w')
+        outidx = HPSIndex(outidx_name, 'w')
 
     lastref = None
     lastbase = None
 
     strip_pos = 0
-    genomic_pos = 0
     repeat_count = 0
 
     for ref, base in read_fasta_bases(fname):
@@ -156,7 +161,6 @@ def seq_strip_homopolymer(fname, outfa_name=None, outidx_name=None, suffix=None)
             lastbase = None
 
             strip_pos = 0
-            genomic_pos = 0
             repeat_count = 0
 
         if base == lastbase:
@@ -164,16 +168,15 @@ def seq_strip_homopolymer(fname, outfa_name=None, outidx_name=None, suffix=None)
         else:
             lastbase = base
             if repeat_count > 0 and outidx_name:
-                outidx.write(strip_pos, repeat_count, (genomic_pos - strip_pos))
+                outidx.write(strip_pos, repeat_count)
             strip_pos += 1
             repeat_count = 0
             if outfa_name:
                 outwriter.write(base)
-        genomic_pos += 1
 
     # if this ends in a repeat...
     if repeat_count > 0 and outidx_name:
-        outidx.write(strip_pos, repeat_count, (genomic_pos - strip_pos))
+        outidx.write(strip_pos, repeat_count)
 
     if outfa_name:
         outwriter.close()
