@@ -81,7 +81,7 @@ class HPSIndex(object):
                 self.fileobj.seek(self._ref_offsets[ref], 0)
                 refcount = 0
                 ref_gen_offset = 0
-                while refcount < self.fileobj._ref_counts[ref]:
+                while refcount < self._ref_counts[ref]:
                     pos, byte1 = self.__read_bytes('<IH')
                     if byte1 & 0x8000:
                         byte2, = self.__read_bytes('<H')
