@@ -68,6 +68,7 @@ class HPSIndex(object):
         elif mode == 'w':
             self.fileobj = open(fname, 'w')
             self.fileobj.write(struct.pack('<I', 0xCCBB601C))
+            self._cur_pos += struct.calcsize('<I')
 
         self.refs = []
         self._ref_offsets = {}
@@ -94,8 +95,10 @@ class HPSIndex(object):
 
         if count < 32768:
             self.fileobj.write(struct.pack('<IH', pos, count | 0x8000))
+            self._cur_pos += struct.calcsize('<IH')
         elif count < 2147483648:
             self.fileobj.write(struct.pack('<II', pos, count))
+            self._cur_pos += struct.calcsize('<II')
         else:
             raise ValueError("Repeat-count is too high at position: %s (%s)" % (pos, count))
 
