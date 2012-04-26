@@ -19,5 +19,9 @@ fi
 
 . env/bin/activate
 
+if [ "$1" == "-q" ]; then
+    pip install -qr requirements.txt
+else
 echo "Installing required libraries"
-pip install -r requirements.txt
+    pip install -r requirements.txt
+fi
