@@ -128,7 +128,7 @@ class HPSIndex(object):
             self._cur_pos += struct.calcsize('<IHH')
             self.fileobj.write(struct.pack('<IHH', pos, low, high))
         else:
-            self.fileobj.write(struct.pack('<IH', pos, count | 0x8000))
+            self.fileobj.write(struct.pack('<IH', pos, count))
             self._cur_pos += struct.calcsize('<IH')
 
         self._cur_count += 1
