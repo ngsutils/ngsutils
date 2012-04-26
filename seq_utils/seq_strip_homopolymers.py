@@ -47,12 +47,15 @@ def read_fasta_bases(fname):
     eta.done()
 
 
-def seq_strip_homopolymer(fname, outfa_name=None, outidx_name=None, suffix=None):
+def seq_strip_homopolymer(fname, outfa_name=None, outidx_name=None, outtxt_name=None, suffix=None):
     if outfa_name:
         outwriter = FASTAWriter(open(outfa_name, 'w'))
 
     if outidx_name:
         outidx = HPSIndex(outidx_name, 'w')
+
+    if outtxt_name:
+        outtxt = open(outtxt_name, 'w')
 
     lastref = None
     lastbase = None
@@ -81,21 +84,30 @@ def seq_strip_homopolymer(fname, outfa_name=None, outidx_name=None, suffix=None)
             repeat_count += 1
         else:
             lastbase = base
-            if repeat_count > 0 and outidx_name:
-                outidx.write(strip_pos, repeat_count)
+            if repeat_count > 0:
+                if outidx_name:
+                    outidx.write(strip_pos, repeat_count)
+                if outtxt_name:
+                    outtxt.write('%s\t%s\t%s\n' % (ref, strip_pos, repeat_count))
+
             strip_pos += 1
             repeat_count = 0
             if outfa_name:
                 outwriter.write(base)
 
     # if this ends in a repeat...
-    if repeat_count > 0 and outidx_name:
-        outidx.write(strip_pos, repeat_count)
+    if repeat_count > 0:
+        if outidx_name:
+            outidx.write(strip_pos, repeat_count)
+        if outtxt_name:
+            outtxt.write('%s\t%s\t%s\n' % (ref, strip_pos, repeat_count))
 
     if outfa_name:
         outwriter.close()
     if outidx_name:
         outidx.close()
+    if outtxt_name:
+        outtxt.close()
 
 
 def usage():
@@ -105,7 +117,8 @@ def usage():
 Options:
     ** You must select at least one of these **
     -fa  fname   Output a FASTA file with the homopolymers removed
-    -idx fname   Output an index file with the location of the homopolymers
+    -idx fname   Output an index file (binary) with the location of the homopolymers
+    -txt fname   Output an index file (text) with the location of the homopolymers
 
     -suf val     Suffix for reference names (include space for comment)
 """
@@ -116,6 +129,7 @@ if __name__ == '__main__':
     fname = None
     outfa = None
     outidx = None
+    outtxt = None
     suffix = None
     last = None
     for arg in sys.argv[1:]:
@@ -128,7 +142,10 @@ if __name__ == '__main__':
         elif last == '-idx':
             outidx = arg
             last = None
-        elif arg in ['-suf', '-fa', '-idx']:
+        elif last == '-txt':
+            outtxt = arg
+            last = None
+        elif arg in ['-suf', '-fa', '-idx', '-txt']:
             last = arg
         elif not fname:
             if not os.path.exists(arg):
@@ -136,7 +153,7 @@ if __name__ == '__main__':
                 usage()
             fname = arg
 
-    if not fname or (not outfa and not outidx):
+    if not fname or (not outfa and not outidx and not outtxt):
         usage()
 
-    seq_strip_homopolymer(fname, outfa, outidx, suffix)
+    seq_strip_homopolymer(fname, outfa, outidx, outtxt, suffix)
