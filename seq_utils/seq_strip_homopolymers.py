@@ -19,105 +19,10 @@ pos\trepeat_count\ttotal_offset
 
 import os
 import sys
-import struct
 import gzip
 
 from support.eta import ETA
-
-
-class FASTAWriter(object):
-    def __init__(self, fileobj=sys.stdout, wrap=50):
-        self.fileobj = fileobj
-        self.wrap = wrap
-
-        self._line_count = 0
-        self._first = True
-
-    def write_ref(self, ref):
-        if not self._first:
-            self.fileobj.write('\n')
-
-        self.fileobj.write('>%s\n' % ref)
-        self._first = False
-        self._line_count = 0
-
-    def write(self, seq):
-        for s in seq:
-            self.fileobj.write(s)
-            self._line_count += 1
-            if self._line_count >= self.wrap:
-                self.fileobj.write('\n')
-                self._line_count = 0
-
-    def close(self):
-        self.write('\n')
-        if self.fileobj != sys.stdout:
-            self.fileobj.close()
-
-
-class HPSIndex(object):
-    'Class for reading the homopolymer stripped index file - format subject to change'
-    def __init__(self, fname, mode='r'):
-        self.fname = fname
-        self.mode = mode
-
-        self._cur_pos = 0
-
-        if mode == 'r':
-            self.fileobj = open(fname)
-        elif mode == 'w':
-            self.fileobj = open(fname, 'w')
-            self.fileobj.write(struct.pack('<I', 0xCCBB601C))
-            self._cur_pos += struct.calcsize('<I')
-
-        self.refs = []
-        self._ref_offsets = {}
-        self._ref_counts = {}
-
-        self._cur_ref = None
-        self._cur_count = 0
-
-    def write_ref(self, ref):
-        if self.mode != 'w':
-            raise ValueError
-
-        if self._cur_ref:
-            self._ref_counts[self._cur_ref] = self._cur_count
-
-        self.refs.append(ref)
-        self._cur_ref = ref
-        self._cur_count = 0
-        self._ref_offsets[ref] = self._cur_pos
-
-    def write(self, pos, count):
-        if self.mode != 'w':
-            raise ValueError
-
-        if count < 32768:
-            self.fileobj.write(struct.pack('<IH', pos, count | 0x8000))
-            self._cur_pos += struct.calcsize('<IH')
-        elif count < 2147483648:
-            self.fileobj.write(struct.pack('<II', pos, count))
-            self._cur_pos += struct.calcsize('<II')
-        else:
-            raise ValueError("Repeat-count is too high at position: %s (%s)" % (pos, count))
-
-        self._cur_count += 1
-
-    def close(self):
-        if self.mode == 'w':
-            s = ''
-            for ref in self.refs:
-                count = 0
-                offset = 0
-                if ref in self._ref_counts:
-                    count = self._ref_counts[ref]
-                if ref in self._ref_offsets:
-                    offset = self._ref_offsets[ref]
-                s += struct.pack('<HsII', len(ref), ref, count, offset)
-            self.fileobj.write(s)
-            self.fileobj.write(struct.pack('<I', len(s)))
-        self.fileobj.close()
+from support.homopolymers import FASTAWriter, HPSIndex
 
 
 def read_fasta_bases(fname):

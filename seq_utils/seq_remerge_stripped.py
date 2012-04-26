@@ -22,7 +22,7 @@ def seq_remerge_stripped(faname, idxname, quiet=False):
     ref = None
     lastbase = None
 
-    idx_ref, idx_pos, idx_count, idx_offset = idx.next()
+    idx_ref, idx_pos, idx_count = idx.next()
     for line in fa:
         if not quiet:
             eta.print_status(extra=ref)
@@ -36,7 +36,7 @@ def seq_remerge_stripped(faname, idxname, quiet=False):
                 if idx_ref == ref and idx_pos == strip_pos:
                     fawriter.write(lastbase * idx_count)
                     try:
-                        idx_ref, idx_pos, idx_count, idx_offset = idx.next()
+                        idx_ref, idx_pos, idx_count = idx.next()
                     except StopIteration:
                         idx_ref = None
 
