@@ -10,16 +10,7 @@ export PYTHONPATH=$PYTHONPATH:"$DIR"
 
 if [[ -e "$DIR"/.git && "$1" == "update" ]]; then
     cd "$DIR"
-    
-    if [ "$2" != "" ]; then
-        echo "Updating from $2 branch"
-        git checkout $2
-        git pull origin $2
-    else
-        echo "Updating from current branch"
-        git pull
-    fi
-
+    make update
     exit 0
 fi
 
