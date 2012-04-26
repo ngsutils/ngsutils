@@ -92,7 +92,13 @@ class HPSIndex(object):
         if self.mode != 'w':
             raise ValueError
 
-        self.fileobj.write(struct.pack('<II', pos, count))
+        if count < 32768:
+            self.fileobj.write(struct.pack('<IH', pos, count | 0x8000))
+        elif count < 2147483648:
+            self.fileobj.write(struct.pack('<II', pos, count))
+        else:
+            raise ValueError("Repeat-count is too high at position: %s (%s)" % (pos, count))
+
         self._cur_count += 1
 
     def close(self):
