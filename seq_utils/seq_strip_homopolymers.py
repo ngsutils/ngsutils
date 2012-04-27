@@ -30,7 +30,7 @@ def read_fasta_bases(fname):
     if fname[-3:] == '.gz':
         fobj = gzip.open(fname)
     else:
-        fobj = open(fname)
+        fobj = io.open(fname, 'r', buffering=4 * 1024 * 1024)
 
     eta = ETA(os.stat(fname).st_size, fileobj=fobj)
 
