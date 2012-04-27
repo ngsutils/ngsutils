@@ -3,7 +3,6 @@
 
 import sys
 import struct
-import bintrees
 
 
 class FASTAWriter(object):
@@ -76,22 +75,22 @@ class HPSIndex(object):
 
                 epi_count += hsize + isize + isize + reflen
 
-            for ref in self.refs:
-                self._forest[ref] = bintrees.FastRBTree()
-                self.fileobj.seek(self._ref_offsets[ref], 0)
-                refcount = 0
-                ref_gen_offset = 0
-                while refcount < self._ref_counts[ref]:
-                    pos, byte1 = self.__read_bytes('<IH')
-                    if byte1 & 0x8000:
-                        byte2, = self.__read_bytes('<H')
-                        repcount = (byte2 << 15) | (byte1 & 0x7FFF)
-                    else:
-                        repcount = byte1 & 0x7FFF
-                    self._forest[ref][pos] = (repcount, ref_gen_offset)
-                    print ref, repcount, ref_gen_offset
-                    refcount += 1
-                    ref_gen_offset += repcount
+            # for ref in self.refs:
+            #     self._forest[ref] = bintrees.FastRBTree()
+            #     self.fileobj.seek(self._ref_offsets[ref], 0)
+            #     refcount = 0
+            #     ref_gen_offset = 0
+            #     while refcount < self._ref_counts[ref]:
+            #         pos, byte1 = self.__read_bytes('<IH')
+            #         if byte1 & 0x8000:
+            #             byte2, = self.__read_bytes('<H')
+            #             repcount = (byte2 << 15) | (byte1 & 0x7FFF)
+            #         else:
+            #             repcount = byte1 & 0x7FFF
+            #         self._forest[ref][pos] = (repcount, ref_gen_offset)
+            #         print ref, pos, repcount, ref_gen_offset
+            #         refcount += 1
+            #         ref_gen_offset += repcount
 
         elif mode == 'w':
             self.fileobj = open(fname, 'w')
@@ -100,6 +99,7 @@ class HPSIndex(object):
 
         self._cur_ref = None
         self._cur_count = 0
+        self._cur_genome_offset = 0
 
     def __read_bytes(self, fmt):
         return struct.unpack(fmt, self.fileobj.read(struct.calcsize(fmt)))
@@ -120,18 +120,19 @@ class HPSIndex(object):
         if self.mode != 'w':
             raise ValueError
 
-        if count > 0x7FFFFFFF:
+        if count > 0xFFFFFFFF:
             raise ValueError("Repeat-count is too high at position: %s (%s)" % (pos, count))
-        elif count > 0x7FFF:
-            low = (count & 0x7FFF) | 0x8000  # low 15 bits, plus flag on bit 16
-            high = count >> 15
-            self._cur_pos += struct.calcsize('<IHH')
-            self.fileobj.write(struct.pack('<IHH', pos, low, high))
+        # elif count > 0x7FFF:
+        #     low = (count & 0x7FFF) | 0x8000  # low 15 bits, plus flag on bit 16
+        #     high = count >> 15
+        #     self._cur_pos += struct.calcsize('<IHH')
+        #     self.fileobj.write(struct.pack('<IHH', pos, low, high))
         else:
-            self.fileobj.write(struct.pack('<IH', pos, count))
-            self._cur_pos += struct.calcsize('<IH')
+            self.fileobj.write(struct.pack('<III', pos, count, self._cur_genome_offset))
+            self._cur_pos += struct.calcsize('<III')
 
         self._cur_count += 1
+        self._cur_genome_offset += count
 
     def close(self):
         if self.mode == 'w':
