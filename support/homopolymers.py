@@ -48,6 +48,7 @@ class HPSIndex(object):
         self.refs = []
         self._ref_offsets = {}
         self._ref_counts = {}
+        self._ref_max = {}
 
         if mode == 'r':
             self.fileobj = open(fname)
@@ -100,6 +101,7 @@ class HPSIndex(object):
         self._cur_ref = None
         self._cur_count = 0
         self._cur_genome_offset = 0
+        self._cur_genome_pos = 0
 
     def __read_bytes(self, fmt):
         return struct.unpack(fmt, self.fileobj.read(struct.calcsize(fmt)))
@@ -110,6 +112,7 @@ class HPSIndex(object):
 
         if self._cur_ref:
             self._ref_counts[self._cur_ref] = self._cur_count
+            self._ref_max[self._cur_ref] = self._cur_genome_pos
 
         self.refs.append(ref)
         self._cur_ref = ref
@@ -133,9 +136,13 @@ class HPSIndex(object):
 
         self._cur_count += 1
         self._cur_genome_offset += count
+        self._cur_genome_pos = pos
 
     def close(self):
         if self.mode == 'w':
+            if self._cur_ref:
+                self._ref_counts[self._cur_ref] = self._cur_count
+                self._ref_max[self._cur_ref] = self._cur_genome_pos
             s = ''
             for ref in self.refs:
                 count = 0
@@ -144,7 +151,9 @@ class HPSIndex(object):
                     count = self._ref_counts[ref]
                 if ref in self._ref_offsets:
                     offset = self._ref_offsets[ref]
-                s += struct.pack('<H%ssII' % len(ref), len(ref), ref, count, offset)
+                if ref in self._ref_max:
+                    refmax = self._ref_max[ref]
+                s += struct.pack('<H%ssIII' % len(ref), len(ref), ref, count, offset, refmax)
             self.fileobj.write(s)
             self.fileobj.write(struct.pack('<I', len(s)))
         self.fileobj.close()
