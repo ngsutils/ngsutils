@@ -3,6 +3,7 @@
 
 import sys
 import struct
+import io
 
 
 class FASTAWriter(object):
@@ -51,7 +52,7 @@ class HPSIndex(object):
         self._ref_max = {}
 
         if mode == 'r':
-            self.fileobj = open(fname)
+            self.fileobj = io.open(fname)
             isize = struct.calcsize('<I')
             hsize = struct.calcsize('<H')
 
@@ -94,7 +95,7 @@ class HPSIndex(object):
             #         ref_gen_offset += repcount
 
         elif mode == 'w':
-            self.fileobj = open(fname, 'w')
+            self.fileobj = io.open(fname, 'w', buffering=4 * 1024 * 1024)  # use 4MB buffer
             self.fileobj.write(struct.pack('<I', HPSIndex._magic))
             self._cur_pos += struct.calcsize('<I')
 
