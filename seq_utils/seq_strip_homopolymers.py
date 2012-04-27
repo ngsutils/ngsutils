@@ -30,13 +30,12 @@ def read_fasta_bases(fname):
     if fname[-3:] == '.gz':
         fobj = gzip.open(fname)
     else:
-        fobj = io.open(fname, 'r', buffering=4 * 1024 * 1024)
+        fobj = open(fname)
 
     eta = ETA(os.stat(fname).st_size, fileobj=fobj)
 
     ref = None
-    line = fobj.readline()
-    while line:
+    for line in fobj:
         eta.print_status(extra=ref)
         line = line.strip()
         if line[0] == '>':
@@ -44,7 +43,6 @@ def read_fasta_bases(fname):
         else:
             for base in line:
                 yield (ref, base.upper())
-        line = fobj.readline()
 
     fobj.close()
     eta.done()
