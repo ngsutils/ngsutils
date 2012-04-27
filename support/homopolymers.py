@@ -145,7 +145,7 @@ class HPSIndex(object):
             if self._cur_ref:
                 self._ref_counts[self._cur_ref] = self._cur_count
                 self._ref_max[self._cur_ref] = self._cur_genome_pos
-            count = 0
+            footer_count = 0
             for ref in self.refs:
                 count = 0
                 offset = 0
@@ -158,9 +158,9 @@ class HPSIndex(object):
                     refmax = self._ref_max[ref]
 
                 self.fileobj.write(struct.pack('<H%ssIII' % len(ref), len(ref), ref, count, offset, refmax))
-                count += struct.calcsize('<H%ssIII' % len(ref))
+                footer_count += struct.calcsize('<H%ssIII' % len(ref))
 
-            self.fileobj.write(struct.pack('<I', count))
+            self.fileobj.write(struct.pack('<I', footer_count))
         self.fileobj.close()
 
 if __name__ == '__main__':
