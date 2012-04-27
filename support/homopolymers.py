@@ -52,7 +52,7 @@ class HPSIndex(object):
         self._ref_max = {}
 
         if mode == 'r':
-            self.fileobj = io.open(fname)
+            self.fileobj = io.open(fname, 'rb')
             isize = struct.calcsize('<I')
             hsize = struct.calcsize('<H')
 
@@ -95,7 +95,7 @@ class HPSIndex(object):
             #         ref_gen_offset += repcount
 
         elif mode == 'w':
-            self.fileobj = io.open(fname, 'w', buffering=4 * 1024 * 1024)  # use 4MB buffer
+            self.fileobj = io.open(fname, 'wb', buffering=4 * 1024 * 1024)  # use 4MB buffer
             self.fileobj.write(struct.pack('<I', HPSIndex._magic))
             self._cur_pos += struct.calcsize('<I')
 
