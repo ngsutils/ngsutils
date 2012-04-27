@@ -35,7 +35,8 @@ def read_fasta_bases(fname):
     eta = ETA(os.stat(fname).st_size, fileobj=fobj)
 
     ref = None
-    for line in fobj:
+    line = fobj.readline()
+    while line:
         eta.print_status(extra=ref)
         line = line.strip()
         if line[0] == '>':
@@ -43,6 +44,7 @@ def read_fasta_bases(fname):
         else:
             for base in line:
                 yield (ref, base.upper())
+        line = fobj.readline()
 
     fobj.close()
     eta.done()
