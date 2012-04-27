@@ -67,15 +67,16 @@ class HPSIndex(object):
             while epi_count < epilog_len:
                 reflen, = self.__read_bytes('<H')
                 refname, = self.__read_bytes('<%ss' % reflen)
-                count, offset = self.__read_bytes('<II')
+                count, offset, refmax = self.__read_bytes('<III')
 
                 self.refs.append(refname)
                 self._ref_offsets[refname] = offset
                 self._ref_counts[refname] = count
+                self._ref_max[refname] = refmax
 
-                print 'ref: %s count: %s offset: %s' % (refname, count, offset)
+                print 'ref: %s count: %s offset: %s max: %s' % (refname, count, offset, refmax)
 
-                epi_count += hsize + isize + isize + reflen
+                epi_count += hsize + isize + isize + isize + reflen
 
             # for ref in self.refs:
             #     self._forest[ref] = bintrees.FastRBTree()
@@ -144,19 +145,22 @@ class HPSIndex(object):
             if self._cur_ref:
                 self._ref_counts[self._cur_ref] = self._cur_count
                 self._ref_max[self._cur_ref] = self._cur_genome_pos
-            s = ''
+            count = 0
             for ref in self.refs:
                 count = 0
                 offset = 0
+                refmax = 0
                 if ref in self._ref_counts:
                     count = self._ref_counts[ref]
                 if ref in self._ref_offsets:
                     offset = self._ref_offsets[ref]
                 if ref in self._ref_max:
                     refmax = self._ref_max[ref]
-                s += struct.pack('<H%ssIII' % len(ref), len(ref), ref, count, offset, refmax)
-            self.fileobj.write(s)
-            self.fileobj.write(struct.pack('<I', len(s)))
+
+                self.fileobj.write(struct.pack('<H%ssIII' % len(ref), len(ref), ref, count, offset, refmax))
+                count += struct.calcsize('<H%ssIII' % len(ref))
+
+            self.fileobj.write(struct.pack('<I', count))
         self.fileobj.close()
 
 if __name__ == '__main__':
