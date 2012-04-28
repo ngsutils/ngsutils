@@ -20,7 +20,6 @@ pos\trepeat_count\ttotal_offset
 import os
 import sys
 import gzip
-import io
 
 from support.eta import ETA
 from support.homopolymers import FASTAWriter, HPSIndex
@@ -50,13 +49,13 @@ def read_fasta_bases(fname):
 
 def seq_strip_homopolymer(fname, outfa_name=None, outidx_name=None, outtxt_name=None, suffix=None):
     if outfa_name:
-        outwriter = FASTAWriter(io.open(outfa_name, 'w', buffering=4 * 1024 * 1024))
+        outwriter = FASTAWriter(open(outfa_name, 'w', buffering=4 * 1024 * 1024))
 
     if outidx_name:
         outidx = HPSIndex(outidx_name, 'w')
 
     if outtxt_name:
-        outtxt = io.open(outtxt_name, 'w', buffering=4 * 1024 * 1024)
+        outtxt = open(outtxt_name, 'w', buffering=4 * 1024 * 1024)
 
     lastref = None
     lastbase = None
