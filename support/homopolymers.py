@@ -4,7 +4,6 @@
 import sys
 import struct
 import io
-import math
 
 
 class FASTAWriter(object):
@@ -76,26 +75,7 @@ class HPSIndex(object):
                 self._ref_counts[refname] = count
                 self._ref_max[refname] = refmax
 
-                print 'ref: %s count: %s offset: %s max: %s' % (refname, count, offset, refmax)
-
                 epi_count += hsize + isize + isize + isize + reflen
-
-            # for ref in self.refs:
-            #     self._forest[ref] = bintrees.FastRBTree()
-            #     self.fileobj.seek(self._ref_offsets[ref], 0)
-            #     refcount = 0
-            #     ref_gen_offset = 0
-            #     while refcount < self._ref_counts[ref]:
-            #         pos, byte1 = self.__read_bytes('<IH')
-            #         if byte1 & 0x8000:
-            #             byte2, = self.__read_bytes('<H')
-            #             repcount = (byte2 << 15) | (byte1 & 0x7FFF)
-            #         else:
-            #             repcount = byte1 & 0x7FFF
-            #         self._forest[ref][pos] = (repcount, ref_gen_offset)
-            #         print ref, pos, repcount, ref_gen_offset
-            #         refcount += 1
-            #         ref_gen_offset += repcount
 
         elif mode == 'w':
             self.fileobj = io.open(fname, 'wb', buffering=4 * 1024 * 1024)  # use 4MB buffer
@@ -112,29 +92,67 @@ class HPSIndex(object):
 
     def find(self, ref, start, end=None):
         if not end:
-            print "looking for %s:%s" % (ref, start)
-        else:
-            print "looking for %s:%s-%s" % (ref, start, end)
+            end = start
 
         record_guess = self._ref_counts[ref] * start / self._ref_max[ref]
         records = []
+
+        low = None
+        high = None
+
         while True:
             records.append(record_guess)
-            pos, count, genome_offset = self._read_record(record_guess)
-            print 'record: %s = (%s, %s, %s)' % (record_guess, pos, count, genome_offset)
+            if record_guess < 0:
+                return
+            pos, count, genome_offset = self._read_record(ref, record_guess)
+
             if pos == start:
                 break
             else:
-                diff = (pos - start)
-                record_guess = record_guess + (diff / self._ref_max[ref])
-                if record_guess in records:
-                    return
+                diff = (start - pos)
+                if diff > 0:
+                    low = record_guess
+                else:
+                    high = record_guess
 
-        yield pos, count, genome_offset
+                # naive method just bisect low/high until you hit the right one...
+                # takes into account diff b/w guess and record only to establish high/low
+
+                # print 'low: %s high: %s \t' % (low, high),
+                # if low is None or high is None:
+                #     record_guess = record_guess + (self._ref_counts[ref] * diff / self._ref_max[ref])
+                #     if record_guess == low:
+                #         record_guess = low + 1
+                #     elif record_guess == high:
+                #         record_guess = high - 1
+                # else:
+                #     record_guess = (high + low) / 2
+                # print '\tguess: %s' % record_guess
+
+                # more complicated method - takes into account the diff b/w guess and record
+
+                record_guess = record_guess + (self._ref_counts[ref] * diff / self._ref_max[ref])
+                if record_guess == low:
+                    record_guess += 1
+                elif record_guess == high:
+                    record_guess -= 1
+
+                if record_guess in records:
+                    record_guess = records[-1]
+                    break
+
+        if start <= pos <= end:
+            yield pos, count, genome_offset
+
+        while pos < end:
+            record_guess += 1
+            pos, count, genome_offset = self._read_record(ref, record_guess)
+            if start <= pos <= end:
+                yield pos, count, genome_offset
 
     def _read_record(self, ref, record):
         offset = self._ref_offsets[ref] + (record * HPSIndex.record_size)
-        self.fileobj.seek(0, offset)
+        self.fileobj.seek(offset, 0)
         return self.__read_bytes('<III')
 
     def write_ref(self, ref):
@@ -195,14 +213,15 @@ class HPSIndex(object):
 if __name__ == '__main__':
     idx = HPSIndex(sys.argv[1])
     if len(sys.argv) > 2:
-        print sys.argv[2]
-        chrom, startend = sys.argv[2].split(':')
-        if '-' in startend:
-            start, end = startend.split('-')
-        else:
-            start = startend
-            end = None
+        for arg in sys.argv[2:]:
+            print arg
+            chrom, startend = arg.split(':')
+            if '-' in startend:
+                start, end = [int(x) for x in startend.split('-')]
+            else:
+                start = int(startend)
+                end = None
 
-        for tup in idx.find(chrom, start, end):
-            print 'Found:',
-            print tup
+            for tup in idx.find(chrom, start, end):
+                print '**** Found:',
+                print tup
