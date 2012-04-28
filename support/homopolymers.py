@@ -4,6 +4,7 @@
 import sys
 import struct
 import io
+import math
 
 
 class FASTAWriter(object):
@@ -39,6 +40,7 @@ class FASTAWriter(object):
 class HPSIndex(object):
     'Class for reading the homopolymer stripped index file'
     _magic = 0xCCBB601C
+    record_size = struct.calcsize('<III')
 
     def __init__(self, fname, mode='r'):
         self.fname = fname
@@ -108,6 +110,33 @@ class HPSIndex(object):
     def __read_bytes(self, fmt):
         return struct.unpack(fmt, self.fileobj.read(struct.calcsize(fmt)))
 
+    def find(self, ref, start, end=None):
+        if not end:
+            print "looking for %s:%s" % (ref, start)
+        else:
+            print "looking for %s:%s-%s" % (ref, start, end)
+
+        record_guess = self._ref_counts[ref] * start / self._ref_max[ref]
+        records = []
+        while True:
+            records.append(record_guess)
+            pos, count, genome_offset = self._read_record(record_guess)
+            print 'record: %s = (%s, %s, %s)' % (record_guess, pos, count, genome_offset)
+            if pos == start:
+                break
+            else:
+                diff = (pos - start)
+                record_guess = record_guess + (diff / self._ref_max[ref])
+                if record_guess in records:
+                    return
+
+        yield pos, count, genome_offset
+
+    def _read_record(self, ref, record):
+        offset = self._ref_offsets[ref] + (record * HPSIndex.record_size)
+        self.fileobj.seek(0, offset)
+        return self.__read_bytes('<III')
+
     def write_ref(self, ref):
         if self.mode != 'w':
             raise ValueError
@@ -165,3 +194,15 @@ class HPSIndex(object):
 
 if __name__ == '__main__':
     idx = HPSIndex(sys.argv[1])
+    if len(sys.argv) > 2:
+        print sys.argv[2]
+        chrom, startend = sys.argv[2].split(':')
+        if '-' in startend:
+            start, end = startend.split('-')
+        else:
+            start = startend
+            end = None
+
+        for tup in idx.find(chrom, start, end):
+            print 'Found:',
+            print tup
