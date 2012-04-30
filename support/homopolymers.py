@@ -56,8 +56,6 @@ class HPSIndex(object):
         if mode == 'r':
             self.fileobj = io.open(fname, 'rb')
             isize = struct.calcsize('<I')
-            hsize = struct.calcsize('<H')
-            qsize = struct.calcsize('<Q')
 
             filemagic, = self.__read_bytes('<I')
             assert filemagic == HPSIndex._magic
@@ -77,7 +75,7 @@ class HPSIndex(object):
                 self._ref_counts[refname] = count
                 self._ref_max[refname] = refmax
 
-                epi_count += hsize + isize + isize + qsize + reflen
+                epi_count += struct.calcsize('<H%ssIQI' % reflen)
                 if self.verbose:
                     print '%s\t%s\t%s\t%s' % (refname, offset, count, refmax)
 
