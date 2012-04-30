@@ -41,9 +41,10 @@ class HPSIndex(object):
     _magic = 0xCCBB601C
     record_size = struct.calcsize('<III')
 
-    def __init__(self, fname, mode='r'):
+    def __init__(self, fname, mode='r', verbose=False):
         self.fname = fname
         self.mode = mode
+        self.verbose = verbose
 
         self._cur_pos = 0
         self._forest = {}  # Hash of RBTrees - one for each chrom
@@ -76,7 +77,8 @@ class HPSIndex(object):
                 self._ref_max[refname] = refmax
 
                 epi_count += hsize + isize + isize + isize + reflen
-                print refname
+                if self.verbose:
+                    print '%s\t%s\t%s\t%s' % (refname, offset, count, refmax)
 
         elif mode == 'w':
             self.fileobj = io.open(fname, 'wb', buffering=4 * 1024 * 1024)  # use 4MB buffer
@@ -103,13 +105,22 @@ class HPSIndex(object):
 
         while True:
             records.append(record_guess)
+            if self.verbose:
+                print 'guess: %s' % record_guess,
             if record_guess < 0:
                 return
             pos, count, genome_offset = self._read_record(ref, record_guess)
+            if self.verbose:
+                print 'pos: %s' % pos,
 
             if pos == start:
+                if self.verbose:
+                    print 'MATCH'
                 break
             else:
+                if self.verbose:
+                    print 'low: %s high: %s' % (low, high),
+
                 diff = (start - pos)
                 if diff > 0:
                     low = record_guess
@@ -133,13 +144,19 @@ class HPSIndex(object):
                 # more complicated method - takes into account the diff b/w guess and record
 
                 record_guess = record_guess + (self._ref_counts[ref] * diff / self._ref_max[ref])
+                if self.verbose:
+                    print 'guess: %s' % record_guess,
                 if record_guess == low:
                     record_guess += 1
                 elif record_guess == high:
                     record_guess -= 1
 
+                if self.verbose:
+                    print record_guess,
                 if record_guess in records:
                     record_guess = records[-1]
+                    if self.verbose:
+                        print 'checked!'
                     break
 
         if start <= pos <= end:
@@ -212,7 +229,7 @@ class HPSIndex(object):
         self.fileobj.close()
 
 if __name__ == '__main__':
-    idx = HPSIndex(sys.argv[1])
+    idx = HPSIndex(sys.argv[1], verbose=True)
     if len(sys.argv) > 2:
         for arg in sys.argv[2:]:
             print arg
