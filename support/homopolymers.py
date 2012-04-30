@@ -68,7 +68,7 @@ class HPSIndex(object):
             while epi_count < epilog_len:
                 reflen, = self.__read_bytes('<H')
                 refname, = self.__read_bytes('<%ss' % reflen)
-                count, offset, refmax = self.__read_bytes('<III')
+                count, offset, refmax = self.__read_bytes('<IQI')
 
                 self.refs.append(refname)
                 self._ref_offsets[refname] = offset
@@ -205,8 +205,8 @@ class HPSIndex(object):
                 if ref in self._ref_max:
                     refmax = self._ref_max[ref]
 
-                self.fileobj.write(struct.pack('<H%ssIII' % len(ref), len(ref), ref, count, offset, refmax))
-                footer_count += struct.calcsize('<H%ssIII' % len(ref))
+                self.fileobj.write(struct.pack('<H%ssIQI' % len(ref), len(ref), ref, count, offset, refmax))
+                footer_count += struct.calcsize('<H%ssIQI' % len(ref))
 
             self.fileobj.write(struct.pack('<I', footer_count))
         self.fileobj.close()
