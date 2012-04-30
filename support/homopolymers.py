@@ -57,7 +57,7 @@ class HPSIndex(object):
             self.fileobj = io.open(fname, 'rb')
             isize = struct.calcsize('<I')
             hsize = struct.calcsize('<H')
-            qsize = struct.calcsize('<H')
+            qsize = struct.calcsize('<Q')
 
             filemagic, = self.__read_bytes('<I')
             assert filemagic == HPSIndex._magic
