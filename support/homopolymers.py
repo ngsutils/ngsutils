@@ -76,6 +76,7 @@ class HPSIndex(object):
                 self._ref_max[refname] = refmax
 
                 epi_count += hsize + isize + isize + isize + reflen
+                print refname
 
         elif mode == 'w':
             self.fileobj = io.open(fname, 'wb', buffering=4 * 1024 * 1024)  # use 4MB buffer

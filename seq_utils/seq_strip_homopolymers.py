@@ -72,7 +72,10 @@ def seq_strip_homopolymer(fname, outfa_name=None, outidx_name=None, outtxt_name=
                     outwriter.write_ref(ref)
 
             if outidx_name:
-                outidx.write_ref(ref)
+                if suffix:
+                    outidx.write_ref('%s%s' % (ref, suffix))
+                else:
+                    outidx.write_ref(ref)
 
             lastref = ref
             lastbase = None
@@ -88,7 +91,10 @@ def seq_strip_homopolymer(fname, outfa_name=None, outidx_name=None, outtxt_name=
                 if outidx_name:
                     outidx.write(strip_pos, repeat_count)
                 if outtxt_name:
-                    outtxt.write('%s\t%s\t%s\n' % (ref, strip_pos, repeat_count))
+                    if suffix:
+                        outtxt.write('%s%s\t%s\t%s\n' % (ref, suffix, strip_pos, repeat_count))
+                    else:
+                        outtxt.write('%s\t%s\t%s\n' % (ref, strip_pos, repeat_count))
 
             strip_pos += 1
             repeat_count = 0
