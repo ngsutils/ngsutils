@@ -185,6 +185,7 @@ class HPSIndex(object):
         self.refs.append(ref)
         self._cur_ref = ref
         self._cur_count = 0
+        self._cur_genome_offset = 0
         self._ref_offsets[ref] = self._cur_pos
 
     def write(self, pos, count):
