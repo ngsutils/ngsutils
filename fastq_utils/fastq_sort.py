@@ -74,6 +74,7 @@ def fastq_sort(infile, outfile, sortby='name', compress=False, tmpdir=None, chun
     eta = ETA(count)
     i = 0
     while merge:
+        i += 1
         merge.sort()
         tup = merge[0]
         merge = merge[1:]
