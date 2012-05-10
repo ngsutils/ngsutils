@@ -3,7 +3,7 @@
 
 import sys
 import os
-import support
+import io
 from support.eta import ETA
 from fastq_utils import is_colorspace_fastq
 
@@ -28,16 +28,16 @@ def fastq_index(fname, depth=12):
     outname = '%s.idx' % fname
     out = open(outname, 'w')
 
-    with open(fname) as f:
+    with io.open(fname) as f:
         eta = ETA(os.stat(fname).st_size, fileobj=f)
 
         while f:
             try:
                 pos = f.tell()
-                f.next()  # name
-                seq = f.next().strip()
-                f.next()  # +
-                f.next()  # qual
+                f.readline()  # name
+                seq = f.readline().strip()
+                f.readline()  # +
+                f.readline()  # qual
 
                 if iscolor and seq[0] in 'ATCGatgc':
                     prefix = seq[1:depth + 1]
@@ -58,7 +58,7 @@ def fastq_index(fname, depth=12):
             except KeyboardInterrupt:
                 break
             except:
-                pass
+                break
 
         eta.done()
         out.close()
