@@ -93,6 +93,8 @@ class _GTFGene(object):
         self.source = source
 
         self._transcripts = {}
+        self._regions = []
+
         self.start = None
         self.end = None
         self.strand = None
@@ -132,6 +134,130 @@ class _GTFGene(object):
         else:
             # this is an unsupported feature - possibly add a debug message
             pass
+
+    @property
+    def regions(self):
+        if not self._regions:
+            starts = []
+            ends = []
+            tids = []
+
+            for tid in self._transcripts:
+                tids.append(tid)
+                for start, end in self._transcripts[tid].exons:
+                    starts.append(start)
+                    ends.append(end)
+
+            self._regions = calc_regions(self.start, self.end, tids, starts, ends)
+
+        i = 0
+        for start, end, const, names in self._regions:
+            i += 1
+            yield (i, start, end, const, names)
+
+
+def calc_regions(txStart, txEnd, kg_names, kg_starts, kg_ends):
+    '''
+        This takes a list of start/end positions (one set per isoform)
+
+        It splits these into regions by assigning each base in the
+        txStart-txEnd range a number.  The number is a bit-mask representing
+        each isoform that includes that base in a coding region.  Each
+        isoform has a number 2^N, so the bit-mask is just a number.
+
+        Next, it scans the map for regions with the same bit-mask.
+        When a different bitmask is found, the previous region (if not intron)
+        is added to the list of regions.
+
+        Returns a list of tuples:
+        (start,end,is_const,names) where names is a comma-separated string
+                                   of accns that make up the region
+
+    '''
+
+    map = [0, ] * (txEnd - txStart + 1)
+    mask = 1
+
+    mask_start_end = {}
+    mask_names = {}
+
+    for name, starts, ends in zip(kg_names, kg_starts, kg_ends):
+        mask_start = None
+        mask_end = None
+        mask_names[mask] = name
+        for start, end in zip(starts, ends):
+            if not mask_start:
+                mask_start = int(start)
+            mask_end = int(end)
+
+            for i in xrange(int(start) - txStart, int(end) - txStart + 1):
+                map[i] = map[i] | mask
+
+        mask_start_end[mask] = (mask_start, mask_end)
+        mask = mask * 2
+
+    last_val = 0
+    regions = []
+    region_start = 0
+
+    def _add_region(start, end, value):
+        rstart = start + txStart
+        rend = end + txStart
+        const = True
+        names = []
+
+        '''
+        This code only calls a region alt, if the transcript actually spans this region.
+
+        example - two transcripts:
+
+        1)        xxxxxx------xxxx------xxx---xxxx--xxxxxxxxx
+        2)           xxx------xxxx--xxx-------xxxx--xxxxxxxxxxxxx
+        const/alt cccccc------cccc--aaa-aaa---cccc--ccccccccccccc
+
+        I'm not sure if this is a good idea or not...
+
+        '''
+
+        for mask in mask_start_end:
+            mstart, mend = mask_start_end[mask]
+            if rstart >= mstart and rend <= mend:
+                if value & mask == 0:
+                    const = False
+                else:
+                    names.append(mask_names[mask])
+
+        regions.append((rstart, rend, const, ','.join(names)))
+
+        # Alternative code to call everything at ends...
+
+        # const = True
+        # names = []
+        # for mask in mast_start_end:
+        #     if value & mask == 0:
+        #         const = False
+        #     else:
+        #         names.append(mask_names[mask])
+        #
+        # regions.append((rstart,rend,const,','.join(names)))
+
+    for i in xrange(0, len(map)):
+        if map[i] == last_val:
+            continue
+
+        if last_val:
+            _add_region(region_start, i - 1, last_val)
+
+            region_start = i - 1
+        else:
+            region_start = i
+
+        last_val = map[i]
+
+    if last_val:
+        _add_region(region_start, i, last_val)  # extend by one...
+
+    return regions
 
 
 class _GTFTranscript(object):
