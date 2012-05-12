@@ -79,7 +79,7 @@ class _GTFGene(object):
     Stores info for a single gene_id
 
     A gene consists of one or more transcripts. It *must* have a gene_id, and chrom
-    It may also contain a gene_name, and an isoform_id.
+    It may also contain a gene_name and an isoform_id.
     """
 
     def __init__(self, gid, chrom, source, gene_id, gene_name=None, isoform_id=None, **extras):
@@ -105,8 +105,10 @@ class _GTFGene(object):
         if not transcript_id in self._transcripts:
             self._transcripts[transcript_id] = _GTFTranscript(transcript_id, strand)
 
+        t = self._transcripts[transcript_id]
+
         if feature == 'exon':
-            self._transcripts[transcript_id].exons.append((start, end))
+            t.exons.append((start, end))
 
             if self.start is None or start < self.start:
                 self.start = start
@@ -115,12 +117,17 @@ class _GTFGene(object):
             if self.strand is None:
                 self.strand = strand
 
+            if t.start is None or start < t.start:
+                t.start = start
+            if t.end is None or end > t.end:
+                t.end = end
+
         elif feature == 'CDS':
-            self._transcripts[transcript_id].cds.append((start, end))
+            t.cds.append((start, end))
         elif feature == 'start_codon':
-            self._transcripts[transcript_id].start_codon = (start, end)
+            t.start_codon = (start, end)
         elif feature == 'stop_codon':
-            self._transcripts[transcript_id].stop_codon = (start, end)
+            t.stop_codon = (start, end)
         else:
             # this is an unsupported feature - possibly add a debug message
             pass
@@ -134,3 +141,6 @@ class _GTFTranscript(object):
         self.cds = []
         self.start_codon = None
         self.stop_codon = None
+
+        self.start = None
+        self.end = None
