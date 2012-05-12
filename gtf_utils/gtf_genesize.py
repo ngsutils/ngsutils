@@ -1,0 +1,49 @@
+#!/usr/bin/env python
+'''
+Extracts the genomic and transcript sizes for genes in GTF format
+'''
+
+import sys
+import os
+from gtf_utils import GTF
+
+
+def usage():
+    sys.stderr.write(__doc__)
+    sys.stderr.write('''
+Usage: gtfutils genesize filename.gtf
+''')
+    sys.exit(1)
+
+
+def gtf_genesize(fname):
+    gtf = GTF(fname)
+
+    sys.stdout.write('#gene\tgenomic-size\ttranscript-size\n')
+    for gene in gtf.genes:
+        cols = [gene.gene_name]
+        cols.append((gene.end - gene.start) + 1)  # start is 1-based
+
+        maxsize = 0
+        for txs in gene.transcripts:
+            size = 0
+            for start, end in txs.exons:
+                size += (end - start) + 1  # start is 1-based
+            maxsize = max(size, maxsize)
+
+        cols.append(maxsize)
+        sys.stdout.write('%s\n' % '\t'.join([str(x) for x in cols]))
+
+
+if __name__ == '__main__':
+    fname = None
+    for arg in sys.argv[1:]:
+        if not fname and os.path.exists(arg):
+            fname = arg
+        else:
+            usage()
+
+    if not fname:
+        usage()
+
+    gtf_genesize(fname)
