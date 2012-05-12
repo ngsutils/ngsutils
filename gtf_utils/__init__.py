@@ -8,7 +8,8 @@ See: http://mblab.wustl.edu/GTF22.html
 
 import sys
 import os
-from support.ngs_utils import  gzip_opener, symbols
+from support.ngs_utils import  gzip_opener
+from support import symbols
 from support.eta import ETA
 
 
