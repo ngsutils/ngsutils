@@ -1,0 +1,22 @@
+#!/bin/bash
+usage(){
+    echo "Usage: hpolyutils COMMAND"
+    echo ""
+    echo "Commands"
+    echo "    fastastrip - Remove homopolymers from a FASTA file"
+    echo "    fastqstrip - Remove homopolymers from a FASTQ file"
+    echo "    restore    - Restore a striped FASTA file"
+    echo ""
+    echo "See 'hpolyutils help CMD' for more information about a specific command"
+    echo -n "ngsutils "
+    cat $DIR/VERSION
+    echo ""
+    exit -1
+}
+
+PREFIX="hpoly_"
+SUBDIR="hpoly_utils"
+REAL=`python -c 'import os,sys;print os.path.realpath(sys.argv[1])' "$0"`
+DIR=`dirname "$REAL"`
+
+source "$DIR"/common.sh

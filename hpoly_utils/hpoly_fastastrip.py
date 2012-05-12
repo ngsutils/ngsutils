@@ -47,7 +47,7 @@ def read_fasta_bases(fname):
     eta.done()
 
 
-def seq_strip_homopolymer(fname, outfa_name=None, outidx_name=None, outtxt_name=None, suffix=None):
+def hpoly_fastastrip(fname, outfa_name=None, outidx_name=None, outtxt_name=None, suffix=None):
     if outfa_name:
         outwriter = FASTAWriter(open(outfa_name, 'w', buffering=4 * 1024 * 1024))
 
@@ -118,7 +118,7 @@ def seq_strip_homopolymer(fname, outfa_name=None, outidx_name=None, outtxt_name=
 
 def usage():
     print __doc__
-    print """Usage: sequtils strip_homopolymer {opts} infile.fa
+    print """Usage: hpolyutils fastastrip {opts} infile.fa
 
 Options:
     ** You must select at least one of these **
@@ -162,4 +162,4 @@ if __name__ == '__main__':
     if not fname or (not outfa and not outidx and not outtxt):
         usage()
 
-    seq_strip_homopolymer(fname, outfa, outidx, outtxt, suffix)
+    hpoly_fastastrip(fname, outfa, outidx, outtxt, suffix)

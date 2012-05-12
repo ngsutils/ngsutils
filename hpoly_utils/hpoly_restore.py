@@ -8,10 +8,10 @@ import os
 import sys
 
 from support.eta import ETA
-from seq_strip_homopolymers import HPSIndex, FASTAWriter
+from hpoly_fastastrip import HPSIndex, FASTAWriter
 
 
-def seq_remerge_stripped(faname, idxname, quiet=False):
+def hpoly_restore(faname, idxname, quiet=False):
     fawriter = FASTAWriter()
     fa = open(faname)
     idx = HPSIndex(idxname)
@@ -77,4 +77,4 @@ if __name__ == '__main__':
     if not faname or not idxname:
         usage()
 
-    seq_remerge_stripped(faname, idxname, quiet=quiet)
+    hpoly_restore(faname, idxname, quiet=quiet)

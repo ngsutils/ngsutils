@@ -18,7 +18,7 @@ import gzip
 from fastq_utils import read_fastq
 
 
-def fastq_strip_homopolymer(fname, outname, gz=False, suffix=None):
+def hpoly_fastqstrip(fname, outname, gz=False, suffix=None):
     if outname == '-':
         out = sys.stdout
     elif gz:
@@ -55,7 +55,7 @@ def fastq_strip_homopolymer(fname, outname, gz=False, suffix=None):
 
 def usage():
     print __doc__
-    print '''Usage: sequtils strip_homopolymer {opts} infile.fastq outfile.fastq
+    print '''Usage: hpoly_utils fastqstrip {opts} infile.fastq outfile.fastq
 
 Arguments:
     infile.fastq    Input FASTQ file (can be gzipped)
@@ -93,4 +93,4 @@ if __name__ == '__main__':
     if not fname or not outname:
         usage()
 
-    fastq_strip_homopolymer(fname, outname, gz, suf)
+    hpoly_fastqstrip(fname, outname, gz, suf)
