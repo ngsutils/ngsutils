@@ -142,6 +142,8 @@ class _GTFGene(object):
 
     @property
     def regions(self):
+        # these are potentially memory-intensive, so they are calculated on the
+        # fly when needed.
         if not self._regions:
             all_starts = []
             all_ends = []
