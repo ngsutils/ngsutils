@@ -184,8 +184,6 @@ def calc_regions(txStart, txEnd, kg_names, kg_starts, kg_ends):
 
     '''
 
-    ## TODO: Test this!
-
     map = [0, ] * (txEnd - txStart + 1)
     mask = 1
 
@@ -218,8 +216,6 @@ def calc_regions(txStart, txEnd, kg_names, kg_starts, kg_ends):
         const = True
         names = []
 
-        ### TODO: Revert to call ends as well!
-
         '''
         This code only calls a region alt, if the transcript actually spans this region.
 
@@ -229,8 +225,17 @@ def calc_regions(txStart, txEnd, kg_names, kg_starts, kg_ends):
         2)           xxx------xxxx--xxx-------xxxx--xxxxxxxxxxxxx
         const/alt cccccc------cccc--aaa-aaa---cccc--ccccccccccccc
 
-        I'm not sure if this is a good idea or not...
+        I'm not sure if this is a good idea or not... What this *should* be is:
 
+        1)        xxxxxx------xxxx------xxx---xxxx----xxxxxxxxx
+        2)           xxx------xxxx--xxx-------xxxx----xxxxxxxxxxxxx
+        3)           xxx------xxxx--xxx-------xxxxxa
+        const/alt aaaccc------cccc--aaa-aaa---ccccaa--cccccccccaaaa
+
+        Where alt-5 and alt-3 are only dictated by transcripts that contain them...
+        There should be extra code to handle this situation...
+
+        ## TODO: Add alt-5/alt-3 code
         '''
 
         for mask in mask_start_end:
@@ -242,18 +247,6 @@ def calc_regions(txStart, txEnd, kg_names, kg_starts, kg_ends):
                     names.append(mask_names[mask])
 
         regions.append((rstart, rend, const, ','.join(names)))
-
-        # Alternative code to call everything at ends...
-
-        # const = True
-        # names = []
-        # for mask in mast_start_end:
-        #     if value & mask == 0:
-        #         const = False
-        #     else:
-        #         names.append(mask_names[mask])
-        #
-        # regions.append((rstart,rend,const,','.join(names)))
 
     for i in xrange(0, len(map)):
         if map[i] == last_val:
