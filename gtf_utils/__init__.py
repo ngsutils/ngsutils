@@ -1,8 +1,13 @@
 '''
-GTF Utility classes
+GTF gene models
 
 See: http://mblab.wustl.edu/GTF22.html
 
+GTF/GFF is a 1-based format, meaning that start sites start counting at 1. We
+read in those start sites and subtract one so that the internal representation
+is 0-based.
+
+All positions returned are 0-based
 '''
 
 
@@ -31,7 +36,7 @@ class GTF(object):
                         line = line[:-idx]
                     chrom, source, feature, start, end, score, strand, frame, attrs = line.rstrip().split('\t')
                     source = symbols[source]
-                    start = int(start)  # Note: 1-based
+                    start = int(start) - 1  # Note: 1-based
                     end = int(end)
                     attributes = {}
                     for key, val in [x.split(' ', 1) for x in [x.strip() for x in attrs.split(';')] if x]:
@@ -138,17 +143,21 @@ class _GTFGene(object):
     @property
     def regions(self):
         if not self._regions:
-            starts = []
-            ends = []
+            all_starts = []
+            all_ends = []
             tids = []
 
             for tid in self._transcripts:
                 tids.append(tid)
+                starts = []
+                ends = []
                 for start, end in self._transcripts[tid].exons:
                     starts.append(start)
                     ends.append(end)
+                all_starts.append(starts)
+                all_ends.append(ends)
 
-            self._regions = calc_regions(self.start, self.end, tids, starts, ends)
+            self._regions = calc_regions(self.start, self.end, tids, all_starts, all_ends)
 
         i = 0
         for start, end, const, names in self._regions:
@@ -175,6 +184,8 @@ def calc_regions(txStart, txEnd, kg_names, kg_starts, kg_ends):
 
     '''
 
+    ## TODO: Test this!
+
     map = [0, ] * (txEnd - txStart + 1)
     mask = 1
 
@@ -185,6 +196,7 @@ def calc_regions(txStart, txEnd, kg_names, kg_starts, kg_ends):
         mask_start = None
         mask_end = None
         mask_names[mask] = name
+
         for start, end in zip(starts, ends):
             if not mask_start:
                 mask_start = int(start)
@@ -205,6 +217,8 @@ def calc_regions(txStart, txEnd, kg_names, kg_starts, kg_ends):
         rend = end + txStart
         const = True
         names = []
+
+        ### TODO: Revert to call ends as well!
 
         '''
         This code only calls a region alt, if the transcript actually spans this region.

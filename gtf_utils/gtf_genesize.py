@@ -22,13 +22,13 @@ def gtf_genesize(fname):
     sys.stdout.write('#gene\tgenomic-size\ttranscript-size\n')
     for gene in gtf.genes:
         cols = [gene.gene_name]
-        cols.append((gene.end - gene.start) + 1)  # start is 1-based
+        cols.append((gene.end - gene.start))
 
         maxsize = 0
         for txs in gene.transcripts:
             size = 0
             for start, end in txs.exons:
-                size += (end - start) + 1  # start is 1-based
+                size += (end - start)
             maxsize = max(size, maxsize)
 
         cols.append(maxsize)

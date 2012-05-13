@@ -24,7 +24,7 @@ Usage: gtfutils tobed [-genes|-exons|-regions] filename.gtf{.gz}
 def gtf_genes_tobed(fname):
     gtf = GTF(fname)
     for gene in gtf.genes:
-        sys.stdout.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, gene.start - 1, gene.end, gene.gene_name, 0, gene.strand]]))
+        sys.stdout.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, gene.start, gene.end, gene.gene_name, 0, gene.strand]]))
 
 
 def gtf_exons_tobed(fname):
@@ -36,7 +36,7 @@ def gtf_exons_tobed(fname):
             exons.update(txscr.exons)
 
         for i, (start, end) in enumerate(sorted(exons)):
-            sys.stdout.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, start - 1, end, '%s.%s' % (gene.gene_name, i + 1), 0, gene.strand]]))
+            sys.stdout.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, start, end, '%s.%s' % (gene.gene_name, i + 1), 0, gene.strand]]))
 
 
 def gtf_regions_tobed(fname):
@@ -44,7 +44,7 @@ def gtf_regions_tobed(fname):
     gtf = GTF(fname)
     for gene in gtf.genes:
         for i, start, end, const, names in gene.regions:
-            sys.stdout.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, start - 1, end, '%s.%s' % (gene.gene_name, i), len(names), gene.strand]]))
+            sys.stdout.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, start, end, '%s.%s.%s' % (gene.gene_name, 'const' if const else 'alt', i), len(names), gene.strand]]))
 
 
 if __name__ == '__main__':
@@ -59,7 +59,7 @@ if __name__ == '__main__':
         elif arg == '-exons':
             exons = True
         elif arg == '-regions':
-            region = True
+            regions = True
         elif not filename and os.path.exists(arg):
             filename = arg
 
