@@ -63,10 +63,10 @@ if __name__ == '__main__':
         elif not filename and os.path.exists(arg):
             filename = arg
 
-    if not filename:
-        usage('Missing input file')
-    elif not genes and not exons and not regions:
+    if not genes and not exons and not regions:
         usage('You must select "-exons" or "-genes" or "-regions"')
+    elif not filename:
+        usage('Missing input file')
 
     if genes:
         gtf_genes_tobed(filename)
