@@ -1,14 +1,19 @@
 #!/usr/bin/env python
-'''Adds gene name and isoform annotations to a GTF file (refLink)
+'''Adds isoform annotations to a GTF file (isoforms)
 
-This adds isoform and gene name annotations based upon the refLink table from
-the UCSC Genome Browser. This assumes that the GTF transcript_id is the same
-as the mrnaAcc field in the refLink table. Any transcripts with the same
-locuslink/gene id will be treated as isoforms of each other.
+This adds isoform annotations based upon the KnownGene annotations from the
+UCSC Genome Browser. Isoforms are taken from the knownIsoform table. This
+table must be downloaded from the UCSC Genome Browser.
+
+The isoforms file should be in the following format:
+
+isoform_id {tab} transcript_id
+
+Where all transcripts that are isoforms of the same gene will have the same
+isoform_id value.
 
 This will add the following attributes:
-    gene_name
-    isoform_id (NCBI LocusLinkID/GeneID)
+    isoform_id (isoform cluster id)
 '''
 
 import sys
@@ -17,26 +22,28 @@ from support.eta import ETA
 from support.ngs_utils import  gzip_opener
 
 
-def gtf_addreflink(gtf, reflink):
-    link_values = {}
+def gtf_add_isoform(gtf, iso):
+    isoforms = {}
 
-    sys.stderr.write('Reading refLink...\n')
-    with gzip_opener(reflink) as f:
-        if reflink != '-':
-            eta = ETA(os.stat(reflink).st_size, fileobj=f)
+    sys.stderr.write('Reading isoforms...\n')
+    with gzip_opener(iso) as f:
+        if iso != '-':
+            eta = ETA(os.stat(iso).st_size, fileobj=f)
+
         for line in f:
+            if line[0] == '#':
+                continue
             cols = line.rstrip().split('\t')
-            link_values[cols[2]] = (cols[0], cols[6])
-            if reflink != '-':
+            isoforms[cols[1]] = cols[0]
+            if iso != '-':
                 eta.print_status()
-        if reflink != '-':
+        if iso != '-':
             eta.done()
 
-    sys.stderr.write('Reading GTF...\n')
+    sys.stderr.write('Reading/Writing GTF...\n')
     with gzip_opener(gtf) as f:
         if gtf != '-':
             eta = ETA(os.stat(gtf).st_size, fileobj=f)
-
         for line in f:
             try:
                 comment = None
@@ -58,9 +65,8 @@ def gtf_addreflink(gtf, reflink):
                 if attrs[-1] != ';':
                     attrs = '%s;' % attrs
 
-                if transcript_id in link_values:
-                    extra = 'gene_name "%s"; isoform_id "%s";' % link_values[transcript_id]
-                    attrs = '%s %s' % (attrs, extra)
+                if transcript_id in isoforms:
+                    attrs = '%s isoform_id "%s";' % (attrs, isoforms[transcript_id])
 
                 sys.stdout.write('\t'.join([chrom, source, feature, start, end, score, strand, frame, attrs]))
                 if comment:
@@ -83,23 +89,24 @@ def usage(msg=None):
         sys.stderr.write('%s\n' % msg)
     sys.stderr.write(__doc__)
     sys.stderr.write('''
-Usage: gtfutils add_reflink filename.gtf reflink.txt
+Usage: gtfutils add_kg filename.gtf knownIsoform.txt
 ''')
     sys.exit(1)
 
 if __name__ == '__main__':
     gtf = None
-    reflink = None
+    iso = None
 
     for arg in sys.argv[1:]:
         if not gtf and (os.path.exists(arg) or arg == '-'):
             gtf = arg
-        elif not reflink and (os.path.exists(arg) or arg == '-'):
-            reflink = arg
+        elif not iso and (os.path.exists(arg) or arg == '-'):
+            iso = arg
 
-    if not gtf or not reflink:
+    if not gtf or not iso:
         usage()
-    if gtf == '-' and reflink == '-':
-        usage('Both GTF and reflink files can not be from stdin')
+    if gtf == '-' and iso == '-':
+        usage('Both GTF and Isoform files can not be from stdin')
 
-    gtf_addreflink(gtf, reflink)
+
+    gtf_add_isoform(gtf, iso)
