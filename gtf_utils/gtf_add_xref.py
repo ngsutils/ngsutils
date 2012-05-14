@@ -1,14 +1,16 @@
 #!/usr/bin/env python
-'''Adds KnownGene annotations to a GTF file
+'''Adds gene name annotations to a GTF file (xref)
 
-This adds isoform and gene name annotations based upon the KnownGene
-annotations from the UCSC Genome Browser. Gene names will be taken from the
-kgXref table and isoforms from the knownIsoform table. These tables must be
-downloaded separately from the UCSC Genome Browser.
+This adds gene name annotations based upon the KnownGene annotations from the
+UCSC Genome Browser. Gene names will be taken from the kgXref table. This
+table must be downloaded separately from the UCSC Genome Browser.
+
+This assumes that the file will be in tab-delimited format and that there is
+one line for each transcript. You may specify which column represents the gene
+name. In the standard "kgXref.txt" file, this is column #5.
 
 This will add the following attributes:
     gene_name
-    isoform_id (isoform cluster id)
 '''
 
 import sys
@@ -17,31 +19,27 @@ from support.eta import ETA
 from support.ngs_utils import  gzip_opener
 
 
-def gtf_add_kg(gtf, xref, iso):
+def gtf_add_xref(gtf, xref, column=4):
     gene_names = {}
-    isoforms = {}
 
     sys.stderr.write('Reading xref...\n')
     with gzip_opener(xref) as f:
-        eta = ETA(os.stat(xref).st_size, fileobj=f)
+        if xref != '-':
+            eta = ETA(os.stat(xref).st_size, fileobj=f)
         for line in f:
+            if line[0] == '#':
+                continue
             cols = line.rstrip().split('\t')
-            gene_names[cols[0]] = cols[4]
-            eta.print_status()
-        eta.done()
+            gene_names[cols[0]] = cols[column]
+            if xref != '-':
+                eta.print_status()
+        if xref != '-':
+            eta.done()
 
-    sys.stderr.write('Reading isoforms...\n')
-    with gzip_opener(iso) as f:
-        eta = ETA(os.stat(iso).st_size, fileobj=f)
-        for line in f:
-            cols = line.rstrip().split('\t')
-            isoforms[cols[1]] = cols[0]
-            eta.print_status()
-        eta.done()
-
-    sys.stderr.write('Reading GTF...\n')
+    sys.stderr.write('Reading/writing GTF...\n')
     with gzip_opener(gtf) as f:
-        eta = ETA(os.stat(gtf).st_size, fileobj=f)
+        if gtf != '-':
+            eta = ETA(os.stat(gtf).st_size, fileobj=f)
         for line in f:
             try:
                 comment = None
@@ -63,32 +61,23 @@ def gtf_add_kg(gtf, xref, iso):
                 if attrs[-1] != ';':
                     attrs = '%s;' % attrs
 
-                extra = ''
-
                 if transcript_id in gene_names:
-                    extra = 'gene_name "%s";' % gene_names[transcript_id]
-
-                if transcript_id in isoforms:
-                    if extra:
-                        extra = '%s ' % extra
-
-                    extra = '%sisoform_id "%s";' % (extra, isoforms[transcript_id])
-
-                if extra:
-                    attrs = '%s %s' % (attrs, extra)
+                    attrs = '%s gene_name "%s";' % (attrs, gene_names[transcript_id])
 
                 sys.stdout.write('\t'.join([chrom, source, feature, start, end, score, strand, frame, attrs]))
                 if comment:
                     sys.stdout.write('\t%s' % comment)
                 sys.stdout.write('\n')
-                eta.print_status()
+                if gtf != '-':
+                    eta.print_status()
             except:
                 import traceback
                 sys.stderr.write('Error parsing line:\n%s\n' % line)
                 traceback.print_exc()
                 sys.exit(1)
 
-        eta.done()
+        if gtf != '-':
+            eta.done()
 
 
 def usage(msg=None):
@@ -96,24 +85,35 @@ def usage(msg=None):
         sys.stderr.write('%s\n' % msg)
     sys.stderr.write(__doc__)
     sys.stderr.write('''
-Usage: gtfutils add_kg filename.gtf kgXref.txt knownIsoform.txt
+Usage: gtfutils add_kg {-col num} filename.gtf kgXref.txt
+
+Options:
+  -col num    The gene name is stored in column {num} (1-based)
+              (default:5)
 ''')
     sys.exit(1)
 
 if __name__ == '__main__':
     gtf = None
     xref = None
-    iso = None
+    column = 4
+
+    last = None
 
     for arg in sys.argv[1:]:
-        if not gtf and os.path.exists(arg):
+        if last == '-col':
+            column = int(arg) - 1
+            last = None
+        elif not gtf and (os.path.exists(arg) or arg == '-'):
             gtf = arg
-        elif not xref and os.path.exists(arg):
+        elif not xref and (os.path.exists(arg) or arg == '-'):
             xref = arg
-        elif not iso and os.path.exists(arg):
-            iso = arg
+        elif arg in ['-col']:
+            last = arg
 
-    if not gtf or not xref or not iso:
+    if not gtf or not xref:
         usage()
+    if gtf == '-' and xref == '-':
+        usage('Both GTF and Xref files can not be from stdin')
 
-    gtf_add_kg(gtf, xref, iso)
+    gtf_add_xref(gtf, xref, column)
