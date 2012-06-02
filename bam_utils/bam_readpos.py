@@ -6,6 +6,9 @@ import sys,os
 from support.eta import ETA
 import pysam
 
+
+bam_cigar = ['M', 'I', 'D', 'N', 'S', 'H', 'P']
+
 def bam_read_names(fname,mapped=False,unmapped=False,whitelist=None):
     bamfile = pysam.Samfile(fname,"rb")
     eta = ETA(0,bamfile=bamfile)
