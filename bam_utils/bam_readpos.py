@@ -2,29 +2,36 @@
 '''
 Ouputs the names and positions of all reads in a BAM file.
 '''
-import sys,os
+import sys
+import os
 from support.eta import ETA
 import pysam
 
-
 bam_cigar = ['M', 'I', 'D', 'N', 'S', 'H', 'P']
 
-def bam_read_names(fname,mapped=False,unmapped=False,whitelist=None):
-    bamfile = pysam.Samfile(fname,"rb")
-    eta = ETA(0,bamfile=bamfile)
+
+def bam_read_names(fname, mapped=False, unmapped=False, whitelist=None):
+    bamfile = pysam.Samfile(fname, "rb")
+    eta = ETA(0, bamfile=bamfile)
 
     for read in bamfile:
-        eta.print_status(extra=read.qname,bam_pos=(read.rname,read.pos))
+        eta.print_status(extra=read.qname, bam_pos=(read.rname, read.pos))
         if whitelist and not read.qname in whitelist:
             continue
-        
+
         if mapped and not read.is_unmapped:
-            print '%s\t%s\t%s\t%s' % (read.qname, bamfile.getrname(read.rname), read.pos, ''.join(['%s%s' % (length,bam_cigar[op]) for op,length in read.cigar]))
+            print '%s\t%s\t%s\t%s' % (
+                read.qname,
+                bamfile.getrname(read.rname),
+                read.pos,
+                ''.join(['%s%s' % (length, bam_cigar[op]) for op, length in read.cigar])
+                )
         elif unmapped and read.is_unmapped:
             print '%s\t*\t0\t\n' % (read.qname)
-    
+
     eta.done()
     bamfile.close()
+
 
 def usage():
     print __doc__
@@ -45,7 +52,7 @@ if __name__ == "__main__":
     fname = None
     readfname = None
     last = None
-    
+
     for arg in sys.argv[1:]:
         if last == '-reads':
             if not os.path.exists(arg):
@@ -63,7 +70,7 @@ if __name__ == "__main__":
             mapped = True
         elif os.path.exists(arg):
             fname = arg
-            
+
     if not fname:
         usage()
         sys.exit(1)
@@ -74,7 +81,6 @@ if __name__ == "__main__":
             wl = [x.strip() for x in f]
 
     if not unmapped and not mapped:
-        bam_read_names(fname,True,True,wl)
+        bam_read_names(fname, True, True, wl)
     else:
-        bam_read_names(fname,mapped,unmapped,wl)
-
+        bam_read_names(fname, mapped, unmapped, wl)
