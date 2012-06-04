@@ -7,7 +7,7 @@ import os
 import sys
 import pysam
 from support.eta import ETA
-from support.refiso import RefIso
+from gtf_utils import GTF
 from bam_utils import read_calc_mismatches
 from support.ngs_utils import natural_sort
 
@@ -53,11 +53,11 @@ Options:
             If delimiter is given, the reference names are split by this
             delimiter and only the first token is summarized.
 
-    -model  refiso.txt
+    -gtf model.gtf
 
-            If a RefIso file is given, counts corresponding to exons, introns,
-            promoters, junctions, intergenic, and mitochondrial regions will
-            be calculated.
+            If a GTF gene model is given, counts corresponding to exons,
+            introns, promoters, junctions, intergenic, and mitochondrial
+            regions will be calculated.
 """
     sys.exit(1)
 
@@ -192,27 +192,27 @@ class FeatureBin(object):
 
 
 class RegionTagger(object):
-    def __init__(self, ref_file, chroms):
+    def __init__(self, gtf_file, chroms):
         self.regions = []
         self.counts = {}
 
-        sys.stderr.write('Loading gene model: %s\n' % ref_file)
-        refiso = RefIso(ref_file)
+        sys.stderr.write('Loading gene model: %s\n' % gtf_file)
+        gtf = GTF(gtf_file)
         exons = RangeMatch('exon')
         introns = RangeMatch('intron')
         promoters = RangeMatch('promoter')
 
-        for gene in refiso.genes:
+        for gene in gtf.genes:
             if not gene.chrom in chroms:
                 continue
             if gene.strand == '+':
-                promoters.add_range(gene.chrom, gene.strand, gene.tx_start - 2000, gene.tx_start)
+                promoters.add_range(gene.chrom, gene.strand, gene.start - 2000, gene.start)
             else:
-                promoters.add_range(gene.chrom, gene.strand, gene.tx_end, gene.tx_end + 2000)
+                promoters.add_range(gene.chrom, gene.strand, gene.end, gene.end + 2000)
 
             for transcript in gene.transcripts:
                 last_end = None
-                for start, end in zip(transcript.exon_starts, transcript.exon_ends):
+                for start, end in transcript.exons:
                     if last_end:
                         introns.add_range(gene.chrom, gene.strand, last_end, start)
                     exons.add_range(gene.chrom, gene.strand, start, end)
@@ -261,7 +261,7 @@ class RegionTagger(object):
             self.counts[tag] += 1
 
 
-def bam_stats(infile, ref_file=None, region=None, delim=None, tags=[]):
+def bam_stats(infile, gtf_file=None, region=None, delim=None, tags=[]):
     bamfile = pysam.Samfile(infile, "rb")
     eta = ETA(0, bamfile=bamfile)
 
@@ -272,8 +272,8 @@ def bam_stats(infile, ref_file=None, region=None, delim=None, tags=[]):
     start = None
     end = None
 
-    if ref_file:
-        regiontagger = RegionTagger(ref_file, bamfile.references)
+    if gtf_file:
+        regiontagger = RegionTagger(gtf_file, bamfile.references)
 
     if region:
         ref, startend = region.split(':')
@@ -354,7 +354,7 @@ def bam_stats(infile, ref_file=None, region=None, delim=None, tags=[]):
                 tagbin.add(read)
 
     except KeyboardInterrupt:
-        pass
+        sys.stderr.write('*** Interrupted - displaying stats up to this point! ***\n\n')
 
     eta.done()
 
@@ -429,7 +429,7 @@ def bam_stats(infile, ref_file=None, region=None, delim=None, tags=[]):
 
 if __name__ == '__main__':
     infile = None
-    refiso = None
+    gtf = None
     region = None
     delim = None
     tags = []
@@ -440,8 +440,8 @@ if __name__ == '__main__':
             usage()
         elif not infile and os.path.exists(arg):
             infile = arg
-        elif last == '-model':
-            refiso = arg
+        elif last == '-gtf':
+            gtf = arg
             last = None
         elif last == '-delim':
             delim = arg
@@ -449,7 +449,7 @@ if __name__ == '__main__':
         elif last == '-tags':
             tags = arg.split(',')
             last = None
-        elif arg in ['-model', '-delim', '-tags']:
+        elif arg in ['-gtf', '-delim', '-tags']:
             last = arg
         elif ':' in arg:
             region = arg
@@ -460,4 +460,4 @@ if __name__ == '__main__':
     if not infile:
         usage()
     else:
-        bam_stats(infile, refiso, region, delim, tags)
+        bam_stats(infile, gtf, region, delim, tags)
