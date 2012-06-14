@@ -209,7 +209,7 @@ class ExcludeBED(object):
                 for bin in xrange(startbin, endbin + 1):
                     if not (chrom, bin) in self.regions:
                         self.regions[(chrom, bin)] = []
-                self.regions.append((start, end, strand))
+                self.regions[(chrom, bin)].append((start, end, strand))
 
     def filter(self, bam, read):
         if not read.is_unmapped:
