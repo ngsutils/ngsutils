@@ -105,7 +105,7 @@ def fastq_stats(fname, verbose=False):
             continue
         mean, stdev, min_val, pct25, pct50, pct75, max_val = stats_counts(quals)
 
-        sys.stdout.write('%s\t' % (pos+1))
+        sys.stdout.write('%s\t' % (pos + 1))
         sys.stdout.write('\t'.join([str(x) for x in stats_counts(quals)]))
         sys.stdout.write('\n')
 
