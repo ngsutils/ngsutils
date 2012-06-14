@@ -487,7 +487,7 @@ def bam_filter(infile, outfile, criteria, failedfile=None, verbose=False):
     failed = 0
 
     for read in bamfile:
-        eta.print_status(extra="kept:%s, failed:%s" % (passed, failed), bam_pos=(read.rname, read.pos))
+        eta.print_status(extra="%s kept;%s failed" % (passed, failed), bam_pos=(read.rname, read.pos))
         p = True
 
         for criterion in criteria:
