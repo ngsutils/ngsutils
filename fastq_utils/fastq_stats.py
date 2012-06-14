@@ -91,7 +91,7 @@ def fastq_stats(fname, verbose=False):
             if count:
                 print "%s\t%s" % (len(lengths) - idx - 1, count)
 
-    mean, stdev, min_val, pct25, pct50, pct75, max_val = stats_counts(lengths)
+    mean, stdev, min_val, pct25, pct50, pct75, max_val = stats_counts(qualities)
 
     print ""
     print "Quality distribution"
