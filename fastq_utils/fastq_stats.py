@@ -70,7 +70,7 @@ def fastq_stats(fname, verbose=False):
 
             for idx, q in enumerate([ord(x) for x in qual]):
                 qualities[idx] += q
-                while len(posquals[idx] < (q - 32)):
+                while len(posquals[idx]) < (q - 32):
                     posquals[idx].append(0)
                 posquals[idx][q - 33] += 1
 
@@ -101,9 +101,11 @@ def fastq_stats(fname, verbose=False):
     print "pos\tmean\tstdev\tmin\t25pct\t50pct\t75pct\tmax"
 
     for pos, quals in enumerate(posquals):
+        if not quals:
+            continue
         mean, stdev, min_val, pct25, pct50, pct75, max_val = stats_counts(quals)
 
-        sys.stdout.write('%s\t' % pos)
+        sys.stdout.write('%s\t' % (pos+1))
         sys.stdout.write('\t'.join([str(x) for x in stats_counts(quals)]))
         sys.stdout.write('\n')
 
@@ -155,9 +157,9 @@ def stats_counts(counts):
         acc += count
         if not pct25 and acc / total > 0.25:
             pct25 = idx
-        elif not pct50 and acc / total > 0.5:
+        if not pct50 and acc / total > 0.5:
             pct50 = idx
-        elif not pct75 and acc / total > 0.75:
+        if not pct75 and acc / total > 0.75:
             pct75 = idx
 
     stdev = (sdacc / (total - 1)) ** 0.5
