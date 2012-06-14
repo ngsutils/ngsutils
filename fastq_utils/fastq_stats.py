@@ -117,6 +117,8 @@ def fastq_stats(fname, verbose=False):
         for i, q in enumerate(qualities):
             print '[%s] %s' % (i, (q / total[i]) - 33)
 
+    print ''
+
 
 def stats_counts(counts):
     acc = 0.0
