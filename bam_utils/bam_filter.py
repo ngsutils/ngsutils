@@ -188,7 +188,7 @@ class ExcludeRegion(object):
 
 class ExcludeBED(object):
     def __init__(self, fname):
-        self.regions = []
+        self.regions = {}  # store BED regions as keyed bins (chrom, bin)
         self.fname = fname
         with open(fname) as f:
             for line in f:
@@ -197,16 +197,33 @@ class ExcludeBED(object):
                 if line[0] == '#':
                     continue
                 cols = line.strip().split('\t')
-                self.regions.append((cols[0], int(cols[1]), int(cols[2])))
+
+                chrom = cols[0]
+                start = int(cols[1])
+                end = int(cols[2])
+                strand = cols[5]
+
+                startbin = start / 100000
+                endbin = end / 100000
+
+                for bin in xrange(startbin, endbin + 1):
+                    if not (chrom, bin) in self.regions:
+                        self.regions[(chrom, bin)] = []
+                self.regions.append((start, end, strand))
 
     def filter(self, bam, read):
         if not read.is_unmapped:
-            for chrom, start, end in self.regions:
-                if bam.getrname(read.rname) == chrom:
-                    if start <= read.pos <= end:
-                        return False
-                    if start <= read.aend <= end:
-                        return False
+            bin = read.pos / 100000
+            ref = bam.getrname(read.rname)
+            for start, end, strand in self.regions[(ref, bin)]:
+                if strand == '+' and read.is_reverse:
+                    continue
+                if strand == '-' and not read.is_reverse:
+                    continue
+                if start <= read.pos <= end:
+                    return False
+                if start <= read.aend <= end:
+                    return False
         return True
 
     def __repr__(self):
