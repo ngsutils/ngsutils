@@ -29,7 +29,8 @@ def fastq_stats(fname, verbose=False):
     qual_totals = fastq_qualtype(fname)
 
     print "Quality scale:\t%s" % qual_totals[-1][1]
-    print ' '.join(['(%s,%s)' % (q[1], q[0]) for q in qual_totals])
+    if verbose:
+        print ' '.join(['(%s,%s)' % (q[1], q[0]) for q in qual_totals])
 
     lengths = []
     qualities = []
@@ -73,20 +74,19 @@ def fastq_stats(fname, verbose=False):
     print "Number of reads:\t%s" % total_reads
     print ""
 
-    print "Lengths"
-    mean, total_count, min_val, pct25, pct50, pct75, max_val = stats_counts(lengths)
+    mean, stdev, min_val, pct25, pct50, pct75, max_val = stats_counts(lengths)
 
+    print "[Lengths]"
     print 'Mean:\t%s' % mean
-    print 'Total:\t%s' % total_count
-    print ''
+    print 'StdDev:\t%s' % stdev
     print 'Min:\t%s' % min_val
     print '25 percentile:\t%s' % pct25
     print 'Median:\t%s' % pct50
     print '75 percentile:\t%s' % pct75
     print 'Max:\t%s' % max_val
-    print ''
 
     if verbose:
+        print ''
         for idx, count in enumerate(lengths[::-1]):
             if count:
                 print "%s\t%s" % (len(lengths) - idx - 1, count)
@@ -130,8 +130,10 @@ def stats_counts(counts):
 
     mean = acc / total
     acc = 0.0
+    sdacc = 0.0
 
     for idx, count in enumerate(counts):
+        sdacc += ((idx - mean) ** 2)
         acc += count
         if not pct25 and acc / total > 0.25:
             pct25 = idx
@@ -140,7 +142,8 @@ def stats_counts(counts):
         elif not pct75 and acc / total > 0.75:
             pct75 = idx
 
-    return (mean, total, min_val, pct25, pct50, pct75, max_val)
+    stdev = (sdacc / (total - 1)) ** 0.5
+    return (mean, stdev, min_val, pct25, pct50, pct75, max_val)
 
 
 def usage():
