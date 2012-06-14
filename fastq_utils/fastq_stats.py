@@ -76,7 +76,7 @@ def fastq_stats(fname, verbose=False):
 
     mean, stdev, min_val, pct25, pct50, pct75, max_val = stats_counts(lengths)
 
-    print "[Lengths]"
+    print "Length distribution"
     print 'Mean:\t%s' % mean
     print 'StdDev:\t%s' % stdev
     print 'Min:\t%s' % min_val
@@ -91,6 +91,17 @@ def fastq_stats(fname, verbose=False):
             if count:
                 print "%s\t%s" % (len(lengths) - idx - 1, count)
 
+    mean, stdev, min_val, pct25, pct50, pct75, max_val = stats_counts(lengths)
+
+    print ""
+    print "Quality distribution"
+    print 'Mean:\t%s' % mean
+    print 'StdDev:\t%s' % stdev
+    print 'Min:\t%s' % min_val
+    print '25 percentile:\t%s' % pct25
+    print 'Median:\t%s' % pct50
+    print '75 percentile:\t%s' % pct75
+    print 'Max:\t%s' % max_val
     print ""
     print "Quality by position"
 
