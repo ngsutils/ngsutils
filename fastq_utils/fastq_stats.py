@@ -33,6 +33,7 @@ def fastq_stats(fname, verbose=False):
         print ' '.join(['(%s,%s)' % (q[1], q[0]) for q in qual_totals])
 
     lengths = []
+    posquals = []
     qualities = []
     total = []
     total_reads = 0
@@ -63,11 +64,16 @@ def fastq_stats(fname, verbose=False):
             while len(qual) > len(lengths) - 1:
                 lengths.append(0)
                 qualities.append(0)
+                posquals.append([])
 
             lengths[len(qual)] += 1
 
             for idx, q in enumerate([ord(x) for x in qual]):
                 qualities[idx] += q
+                while len(posquals[idx] < (q - 32)):
+                    posquals[idx].append(0)
+                posquals[idx][q - 33] += 1
+
     except KeyboardInterrupt:
         pass
 
@@ -91,17 +97,16 @@ def fastq_stats(fname, verbose=False):
             if count:
                 print "%s\t%s" % (len(lengths) - idx - 1, count)
 
-    mean, stdev, min_val, pct25, pct50, pct75, max_val = stats_counts(qualities)
-
-    print ""
     print "Quality distribution"
-    print 'Mean:\t%s' % mean
-    print 'StdDev:\t%s' % stdev
-    print 'Min:\t%s' % min_val
-    print '25 percentile:\t%s' % pct25
-    print 'Median:\t%s' % pct50
-    print '75 percentile:\t%s' % pct75
-    print 'Max:\t%s' % max_val
+    print "pos\tmean\tstdev\tmin\t25pct\t50pct\t75pct\tmax"
+
+    for pos, quals in enumerate(posquals):
+        mean, stdev, min_val, pct25, pct50, pct75, max_val = stats_counts(quals)
+
+        sys.stdout.write('%s\t' % pos)
+        sys.stdout.write('\t'.join([str(x) for x in stats_counts(quals)]))
+        sys.stdout.write('\n')
+
     print ""
     print "Quality by position"
 
