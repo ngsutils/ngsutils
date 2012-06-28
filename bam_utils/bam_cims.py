@@ -6,6 +6,10 @@ of protein-RNA interaction.
 
 Output is either a BED file or a FASTA format file containing these hotspots.
 Only unique regions are returned across all files.
+
+See: Zhang and Darnell, Nature Biotechnology (2011)
+     doi:10.1038/nbt.1873
+     pmid:21633356
 """
 
 import os,sys,math
