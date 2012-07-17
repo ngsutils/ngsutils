@@ -209,7 +209,7 @@ class ExcludeBED(object):
                 for bin in xrange(startbin, endbin + 1):
                     if not (chrom, bin) in self.regions:
                         self.regions[(chrom, bin)] = []
-                self.regions.append((start, end, strand))
+                self.regions[(chrom, bin)].append((start, end, strand))
 
     def filter(self, bam, read):
         if not read.is_unmapped:
@@ -487,7 +487,7 @@ def bam_filter(infile, outfile, criteria, failedfile=None, verbose=False):
     failed = 0
 
     for read in bamfile:
-        eta.print_status(extra="kept:%s, failed:%s" % (passed, failed), bam_pos=(read.rname, read.pos))
+        eta.print_status(extra="%s kept;%s failed" % (passed, failed), bam_pos=(read.rname, read.pos))
         p = True
 
         for criterion in criteria:

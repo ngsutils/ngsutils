@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 '''
-Takes a BAM file and produces a BedGraph file.  This can optionally 
+Takes a BAM file and produces a bedGraph file.  This can optionally
 normalize the counts by a given factor.
 
  See: http://genome.ucsc.edu/goldenPath/help/bedgraph.html

@@ -2,10 +2,10 @@ ngsutils - Utility programs for analysis of next-gen sequencing data
 ===
 Usage
 ---
-Run the `bamutils`, `bedutils`, `fastqutils`, or `sequtils` scripts. These are the main driver scripts 
+Run the `bamutils`, `bedutils`, `fastqutils`, or `gtfutils` scripts. These are the main driver scripts 
 that setup the appropriate environment (loading pysam) and run the requested command.
 
-For ease of use, it is recommended that you add `bamutils`, `bedutils`, `fastqutils`, and `sequtils` to your $PATH.
+For ease of use, it is recommended that you add `bamutils`, `bedutils`, `fastqutils`, and `gtfutils` to your $PATH.
 
 Running `bamutils` without any arguments will return a list of commands available.  Running `bamutils command`
 will give you the parameters required for that command (or `bedutils`, etc...)
@@ -18,7 +18,7 @@ General usage format:
 
 `fastqutils command {options} filename`  
 
-`sequtils command {options} filename`  
+`gtfutils command {options} filename`  
 
 bamutils
 ---
@@ -96,7 +96,7 @@ Conversions
 * tofasta      - Converts FASTQ to FASTA
 
 
-sequtils
+gtfutils
 ---
 
 Scripts for assembling the gene model used in `bedutils` and `bamutils` scripts. The gene model is similar to the UCSC refFlat or KnownGene
@@ -105,15 +105,20 @@ But for others, it is a required step to ensure annotated isoforms are on the sa
 **RefIso**. RefIso files can be compiled from UCSC refFlat or KnownGene files. If needed, these can be automatically downloaded for each 
 organism. It is possible that this format will be deprecated in the future.
 
-Building RefIso
+GTF extra annotations
 
-* kg           - Given a number of BED files, calculate the number of samples that overlap regions in a reference BED file
-* refflat      - Sorts a BED file (in place)
+* add_isoform  - Appends isoform annotation from UCSC isoforms file"
+* add_reflink  - Appends isoform/name annotation from RefSeq/refLink"
+* add_xref     - Appends name annotation from UCSC Xref file"
 
 General
 
-* genesize     - Extract the sizes of genes from the RefIso model (genomic and transcript lengths)
-* junctions    - Create a library of potential splice-junctions based upon the RefIso model
+* genesize     - Extract the sizes of genes from the GTF model (genomic and transcript lengths)
+* junctions    - Create a library of potential splice-junctions based upon the GTF model
+
+Conversions
+
+* tobed        - Converts a GFF/GTF model to BED format"
 
 
 Installing

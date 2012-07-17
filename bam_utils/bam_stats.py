@@ -6,116 +6,10 @@ Calculate a number of summary statistics for a BAM file
 import os
 import sys
 import pysam
-from support.eta import ETA
-from support.refiso import RefIso
 from bam_utils import read_calc_mismatches
+from support.eta import ETA
 from support.ngs_utils import natural_sort
-
-
-def usage():
-    print __doc__
-    print """
-Usage: bamutils stats in.bam {options} {region}
-
-If a region is given, only reads that map to that region will be counted.
-Regions should be be in the format: 'ref:start-end' or 'ref:start' using
-1-based start coordinates.
-
-Options:
-    -tags   tag_name{:sort_order},tag_name{:sort_order},...
-
-            For each tag that is given, the values for that tag will be
-            tallied for all reads. Then a list of the counts will be presented
-            along with the mean and maximum values. The optional sort order
-            should be either '+' or '-' (defaults to +).
-
-            There are also special case tags that can be used as well:
-                MAPQ     - use the mapq score
-                LENGTH   - use the length of the read
-                MISMATCH - use the mismatch score (# mismatches) + (# indels)
-                           where indels count for 1 regardless of length
-
-                           Note: this requires the 'NM' tag (edit distance)
-                           to be present
-
-            Common tags:
-                AS    Alignment score
-                IH    Number of alignments
-                NM    Edit distance (each indel counts as many as its length)
-
-            For example, to tally the "IH" tag (number of alignments) and the
-            read length:
-                -tags IH,LENGTH
-
-
-    -delim  char
-
-            If delimiter is given, the reference names are split by this
-            delimiter and only the first token is summarized.
-
-    -model  refiso.txt
-
-            If a RefIso file is given, counts corresponding to exons, introns,
-            promoters, junctions, intergenic, and mitochondrial regions will
-            be calculated.
-"""
-    sys.exit(1)
-
-flag_descriptions = {
-0x1: 'Multiple fragments',
-0x2: 'All fragments aligned',
-0x4: 'Unmapped',
-0x8: 'Next unmapped',
-0x10: 'Reverse complimented',
-0x20: 'Next reverse complimented',
-0x40: 'First fragment',
-0x80: 'Last fragment',
-0x100: 'Secondary alignment',
-0x200: 'QC Fail',
-0x400: 'PCR/Optical duplicate'
-}
-
-
-class RangeMatch(object):
-    '''
-    Simple genomic ranges.  You can define chrom:start-end ranges, then ask if a
-    particular genomic coordinate maps to any of those ranges.  This is less-
-    efficient than an R-Tree, but easier to code.
-    '''
-    def __init__(self, name):
-        self.ranges = {}
-        self.name = name
-
-    def add_range(self, chrom, strand, start, end):
-        if not chrom in self.ranges:
-            self.ranges[chrom] = {}
-
-        bin = start / 100000
-        if not bin in self.ranges[chrom]:
-            self.ranges[chrom][bin] = []
-        self.ranges[chrom][bin].insert(0, (start, end, strand))
-
-        if (end / 100000) != bin:
-            for bin in xrange(bin + 1, (end / 100000) + 1):
-                if not bin in self.ranges[chrom]:
-                    self.ranges[chrom][bin] = []
-                self.ranges[chrom][bin].insert(0, (start, end, strand))
-
-    def get_tag(self, chrom, strand, pos, ignore_strand=False):
-        if not chrom in self.ranges:
-            return None
-        bin = pos / 100000
-        rev_match = False
-        if not bin in self.ranges[chrom]:
-            return None
-        for start, end, r_strand in self.ranges[chrom][bin]:
-            if pos >= start and pos <= end:
-                if ignore_strand or strand == r_strand:
-                    return self.name
-                rev_match = True
-        if rev_match:
-            return "%s-rev" % self.name
-        return None
+from support.regions import RegionTagger
 
 
 class FeatureBin(object):
@@ -191,77 +85,71 @@ class FeatureBin(object):
             self._max = val
 
 
-class RegionTagger(object):
-    def __init__(self, ref_file, chroms):
-        self.regions = []
-        self.counts = {}
+def usage():
+    print __doc__
+    print """
+Usage: bamutils stats in.bam {options} {region}
 
-        sys.stderr.write('Loading gene model: %s\n' % ref_file)
-        refiso = RefIso(ref_file)
-        exons = RangeMatch('exon')
-        introns = RangeMatch('intron')
-        promoters = RangeMatch('promoter')
+If a region is given, only reads that map to that region will be counted.
+Regions should be be in the format: 'ref:start-end' or 'ref:start' using
+1-based start coordinates.
 
-        for gene in refiso.genes:
-            if not gene.chrom in chroms:
-                continue
-            if gene.strand == '+':
-                promoters.add_range(gene.chrom, gene.strand, gene.tx_start - 2000, gene.tx_start)
-            else:
-                promoters.add_range(gene.chrom, gene.strand, gene.tx_end, gene.tx_end + 2000)
+Options:
+    -tags   tag_name{:sort_order},tag_name{:sort_order},...
 
-            for transcript in gene.transcripts:
-                last_end = None
-                for start, end in zip(transcript.exon_starts, transcript.exon_ends):
-                    if last_end:
-                        introns.add_range(gene.chrom, gene.strand, last_end, start)
-                    exons.add_range(gene.chrom, gene.strand, start, end)
-                    last_end = end
+            For each tag that is given, the values for that tag will be
+            tallied for all reads. Then a list of the counts will be presented
+            along with the mean and maximum values. The optional sort order
+            should be either '+' or '-' (defaults to +).
 
-        self.regions.append(exons)
-        self.regions.append(introns)
-        self.regions.append(promoters)
+            There are also special case tags that can be used as well:
+                MAPQ     - use the mapq score
+                LENGTH   - use the length of the read
+                MISMATCH - use the mismatch score (# mismatches) + (# indels)
+                           where indels count for 1 regardless of length
 
-        self.counts['exon'] = 0
-        self.counts['intron'] = 0
-        self.counts['promoter'] = 0
-        self.counts['exon-rev'] = 0
-        self.counts['intron-rev'] = 0
-        self.counts['promoter-rev'] = 0
-        self.counts['junction'] = 0
-        self.counts['intergenic'] = 0
-        self.counts['mitochondrial'] = 0
+                           Note: this requires the 'NM' tag (edit distance)
+                           to be present
 
-    def add_read(self, read, chrom):
-        if read.is_unmapped:
-            return
+            Common tags:
+                AS    Alignment score
+                IH    Number of alignments
+                NM    Edit distance (each indel counts as many as its length)
 
-        tag = None
-        strand = '-' if read.is_reverse else '+'
-
-        if chrom == 'chrM':
-            tag = 'mitochondrial'
-
-        if not tag:
-            for op, length in read.cigar:
-                if op == 3:
-                    tag = 'junction'
-                    break
-
-        if not tag:
-            for region in self.regions:
-                tag = region.get_tag(chrom, strand, read.pos)
-                if tag:
-                    break
-
-        if not tag:
-            tag = 'intergenic'
-
-        if tag:
-            self.counts[tag] += 1
+            For example, to tally the "IH" tag (number of alignments) and the
+            read length:
+                -tags IH,LENGTH
 
 
-def bam_stats(infile, ref_file=None, region=None, delim=None, tags=[]):
+    -delim  char
+
+            If delimiter is given, the reference names are split by this
+            delimiter and only the first token is summarized.
+
+    -gtf model.gtf
+
+            If a GTF gene model is given, counts corresponding to exons,
+            introns, promoters, junctions, intergenic, and mitochondrial
+            regions will be calculated.
+"""
+    sys.exit(1)
+
+flag_descriptions = {
+0x1: 'Multiple fragments',
+0x2: 'All fragments aligned',
+0x4: 'Unmapped',
+0x8: 'Next unmapped',
+0x10: 'Reverse complimented',
+0x20: 'Next reverse complimented',
+0x40: 'First fragment',
+0x80: 'Last fragment',
+0x100: 'Secondary alignment',
+0x200: 'QC Fail',
+0x400: 'PCR/Optical duplicate'
+}
+
+
+def bam_stats(infile, gtf_file=None, region=None, delim=None, tags=[]):
     bamfile = pysam.Samfile(infile, "rb")
     eta = ETA(0, bamfile=bamfile)
 
@@ -272,8 +160,8 @@ def bam_stats(infile, ref_file=None, region=None, delim=None, tags=[]):
     start = None
     end = None
 
-    if ref_file:
-        regiontagger = RegionTagger(ref_file, bamfile.references)
+    if gtf_file:
+        regiontagger = RegionTagger(gtf_file, bamfile.references)
 
     if region:
         ref, startend = region.split(':')
@@ -354,7 +242,7 @@ def bam_stats(infile, ref_file=None, region=None, delim=None, tags=[]):
                 tagbin.add(read)
 
     except KeyboardInterrupt:
-        pass
+        sys.stderr.write('*** Interrupted - displaying stats up to this point! ***\n\n')
 
     eta.done()
 
@@ -429,7 +317,7 @@ def bam_stats(infile, ref_file=None, region=None, delim=None, tags=[]):
 
 if __name__ == '__main__':
     infile = None
-    refiso = None
+    gtf = None
     region = None
     delim = None
     tags = []
@@ -440,8 +328,8 @@ if __name__ == '__main__':
             usage()
         elif not infile and os.path.exists(arg):
             infile = arg
-        elif last == '-model':
-            refiso = arg
+        elif last == '-gtf':
+            gtf = arg
             last = None
         elif last == '-delim':
             delim = arg
@@ -449,7 +337,7 @@ if __name__ == '__main__':
         elif last == '-tags':
             tags = arg.split(',')
             last = None
-        elif arg in ['-model', '-delim', '-tags']:
+        elif arg in ['-gtf', '-delim', '-tags']:
             last = arg
         elif ':' in arg:
             region = arg
@@ -460,4 +348,4 @@ if __name__ == '__main__':
     if not infile:
         usage()
     else:
-        bam_stats(infile, refiso, region, delim, tags)
+        bam_stats(infile, gtf, region, delim, tags)
