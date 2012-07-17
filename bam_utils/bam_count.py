@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+## category RNA-seq
+## desc Calculates counts/RPKM for genes/BED regions/repeats
 '''
 Counts the number of reads in genes or regions
 
@@ -201,6 +203,8 @@ if __name__ == '__main__':
             rpkm = True
         elif arg == '-uniq':
             uniq_only = True
+        elif arg == '-h':
+            usage()
         elif not bamfile:
             if not os.path.exists(arg):
                 usage('Missing or non-existant bamfile: %s' % arg)

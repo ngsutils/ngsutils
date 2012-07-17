@@ -1,5 +1,9 @@
 #!/usr/bin/env python
+## category DNA-seq
+## desc Base caller
 """
+Base caller
+
 Given a BAM file and a genomic reference, for each position covered in the
 BAM file, show the reference base, and the number of A/T/C/G's and InDels.
 
@@ -53,7 +57,7 @@ Usage: bamutils basecall {opts} in.bam {chrom:start-end}
 
 Options:
 -ref   fname   Include reference basecalls from this file
--qual  val     Minimum quality level to use in calculations
+-qual  val     Minimum base-quality level to use in calculations
                (numeric, Sanger scale) (default 0)
 
 -count val     Report only bases with this minimum number of read-coverage

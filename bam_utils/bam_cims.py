@@ -1,7 +1,11 @@
 #!/usr/bin/env python
+## category RNA-seq
+## desc Finds regions of unusual deletions (CLIP-seq)
 """
-Given a set of BAM files, we search for areas where there are an unusual 
-amount of deletions.  For CLIP-Seq, this can be an indicator of the location 
+Finds regions of unusual deletions (CLIP-seq)
+
+Given a set of BAM files, we search for areas where there are an unusual
+amount of deletions.  For CLIP-Seq, this can be an indicator of the location
 of protein-RNA interaction.
 
 Output is either a BED file or a FASTA format file containing these hotspots.
@@ -12,9 +16,11 @@ See: Zhang and Darnell, Nature Biotechnology (2011)
      pmid:21633356
 """
 
-import os,sys,math
+import os
+import sys
 from support.eta import ETA
 import pysam
+
 
 def usage():
     print __doc__
@@ -27,31 +33,34 @@ Options:
 
     -flanking N      The number of flanking bases on either side to report
                      (FASTA output only) [default: 12]
-                     
-    -cutoff N        Cut-off % for deletions - if the % of reads that 
-                     include a deletion at a position is higher than this 
+
+    -cutoff N        Cut-off % for deletions - if the % of reads that
+                     include a deletion at a position is higher than this
                      number, the fragment is reported (0->1.0)
                      [default: 0.1]
-                     
+
     -ns              Don't take the strand of the read into account
-    
+
     -window N        The maximum length of a deletion window
                      [default: 20]
 """
     sys.exit(1)
 
+
 class BEDEmitter(object):
     def __init__(self):
         self.num = 1
         pass
-    def emit(self,chrom,start,end,strand):
+
+    def emit(self, chrom, start, end, strand):
         if not strand:
             strand = '+'
-        sys.stdout.write('%s\t%s\t%s\tregion_%s\t%s\t%s\n' % (chrom,start,end,self.num,0,strand))
+        sys.stdout.write('%s\t%s\t%s\tregion_%s\t%s\t%s\n' % (chrom, start, end, self.num, 0, strand))
         self.num += 1
-    
+
     def close(self):
         pass
+
 
 class FASTAEmitter(object):
     def __init__(self, ref_fname, flanking=12):
@@ -64,9 +73,9 @@ class FASTAEmitter(object):
     def close(self):
         self.ref.close()
 
-    def emit(self,chrom,start,end,strand):
-        seq = self.ref.fetch(chrom,start-self.flanking,end+self.flanking)
-        seq = '%s%s%s' % (seq[:self.flanking].upper(),seq[self.flanking:end-start+self.flanking].lower(),seq[-self.flanking:].upper())
+    def emit(self, chrom, start, end, strand):
+        seq = self.ref.fetch(chrom, start - self.flanking, end + self.flanking)
+        seq = '%s%s%s' % (seq[:self.flanking].upper(), seq[self.flanking:end - start + self.flanking].lower(), seq[-self.flanking:].upper())
 
         if strand == '-':
             rc = []
@@ -87,18 +96,18 @@ class FASTAEmitter(object):
                     rc.append('g')
                 elif base == 'g':
                     rc.append('c')
-            seq=''.join(rc)
+            seq = ''.join(rc)
 
-        sys.stdout.write('>%s:%s%s%s\n%s\n' % (chrom,start-self.flanking,strand,end+self.flanking,seq))
+        sys.stdout.write('>%s:%s%s%s\n%s\n' % (chrom, start - self.flanking, strand, end + self.flanking, seq))
 
 
 class RegionManager(object):
-    def __init__(self, emitter, strand = '', max_window = 20):
+    def __init__(self, emitter, strand='', max_window=20):
         self.emitter = emitter
 
         self.strand = strand
         self.max_window = max_window
-    
+
         self.last_chrom = None
         self.start = 0
         self.end = 0
@@ -107,101 +116,100 @@ class RegionManager(object):
 
     def emit(self):
         if self.last_chrom:
-            self.emitter.emit(self.last_chrom,self.start,self.end,self.strand)
+            self.emitter.emit(self.last_chrom, self.start, self.end, self.strand)
 
-    def reset(self,new_chrom,new_pos):
+    def reset(self, new_chrom, new_pos):
         self.last_chrom = new_chrom
         self.start = new_pos
         self.end = new_pos
         self.del_reads = set()
         self.total_reads = set()
-        
-    def add(self,chrom, pos, strand,del_reads,total_reads):
+
+    def add(self, chrom, pos, strand, del_reads, total_reads):
         if self.strand and strand != self.strand:
             # ignore this if the strand doesn't match
             return
-            
+
         if chrom != self.last_chrom:
             self.emit()
-            self.reset(chrom,pos)
+            self.reset(chrom, pos)
         elif pos - self.start >= self.max_window:
             self.emit()
-            self.reset(chrom,pos)
+            self.reset(chrom, pos)
 
         self.end = pos
         self.del_reads |= del_reads
         self.total_reads |= total_reads
-    
+
     def close(self):
         self.emit()
 
-def is_read_del_at_pos(read,pos,ppos=0):
+
+def is_read_del_at_pos(read, pos, ppos=0):
     last_op = None
     idx = 0
-    for op,length in read.cigar:
-        if op in [0,1]:
+    for op, length in read.cigar:
+        if op in [0, 1]:
             idx += length
-        
+
         if pos < idx:
             if op == 2 and last_op != 3:
                 return True
         last_op = op
-        
+
     return False
 
+
 #TODO: Check this...
-def is_read_match_at_pos(read,pos):
+def is_read_match_at_pos(read, pos):
     idx = 0
-    for op,length in read.cigar:
-        if op in [0,1]:
+    for op, length in read.cigar:
+        if op in [0, 1]:
             idx += length
-        
+
         if pos < idx:
             if op == 2 or op == 0:
                 return True
-        
+
     return False
 
-def bam_cims_finder(bam_fnames,output='bed',ref_fname=None,flanking=12,cutoff=0.1,stranded=True,window_size=20):
-    regions = []
+
+def bam_cims_finder(bam_fnames, output='bed', ref_fname=None, flanking=12, cutoff=0.1, stranded=True, window_size=20):
+
     for bam_fname in bam_fnames:
         sys.stderr.write('%s\n' % bam_fname)
-        bam = pysam.Samfile(bam_fname,"rb")
-        
-        
+        bam = pysam.Samfile(bam_fname, "rb")
+
         if output == 'fasta':
-            emitter = FASTAEmitter(ref_fname,flanking)
+            emitter = FASTAEmitter(ref_fname, flanking)
         else:
             emitter = BEDEmitter()
 
-        region_pcts = []
-        region_num = 1
-    
         if stranded:
-            strands = ['+','-']
+            strands = ['+', '-']
         else:
             strands = ['']
-    
+
         for strand in strands:
-            manager = RegionManager(emitter,strand,window_size)
-            eta = ETA(0,bamfile=bam)
+            manager = RegionManager(emitter, strand, window_size)
+            eta = ETA(0, bamfile=bam)
             for pileup in bam.pileup(mask=1540):
                 chrom = bam.getrname(pileup.tid)
-                eta.print_status(extra='%s:%s' % (chrom,pileup.pos),bam_pos=(pileup.tid,pileup.pos))
-                
+                eta.print_status(extra='%s:%s' % (chrom, pileup.pos), bam_pos=(pileup.tid, pileup.pos))
+
                 deletions = 0.0
                 total = 0.0
-                
+
                 del_reads = set()
                 total_reads = set()
-                
+
                 for pileupread in pileup.pileups:
                     if not strand or (strand == '+' and not pileupread.alignment.is_reverse) or (strand == '-' and pileupread.alignment.is_reverse):
-                        if is_read_match_at_pos(pileupread.alignment,pileupread.qpos):
+                        if is_read_match_at_pos(pileupread.alignment, pileupread.qpos):
                             total += 1
                             total_reads.add(pileupread.alignment.qname)
-                        
-                        if is_read_del_at_pos(pileupread.alignment,pileupread.qpos):
+
+                        if is_read_del_at_pos(pileupread.alignment, pileupread.qpos):
                             deletions += 1
                             del_reads.add(pileupread.alignment.qname)
                             # print ""
@@ -213,11 +221,11 @@ def bam_cims_finder(bam_fnames,output='bed',ref_fname=None,flanking=12,cutoff=0.
                             # print pileupread.qpos
 
                 if total > 0:
-                    pct = deletions/total
-                    
+                    pct = deletions / total
+
                     if pct > cutoff:
-                        manager.add(chrom,pileup.pos,strand,del_reads,total_reads)
-                
+                        manager.add(chrom, pileup.pos, strand, del_reads, total_reads)
+
             manager.close()
             eta.done()
         bam.close()
@@ -231,7 +239,7 @@ if __name__ == '__main__':
     flanking = 12
     stranded = True
     window = 20
-    
+
     last = None
     for arg in sys.argv[1:]:
         if last == '-flanking':
@@ -249,7 +257,7 @@ if __name__ == '__main__':
             last = None
         elif arg == '-h':
             usage()
-        elif arg in ['-flanking','-fasta','-cutoff','-window']:
+        elif arg in ['-flanking', '-fasta', '-cutoff', '-window']:
             last = arg
         elif arg == '-ns':
             stranded = False
@@ -262,5 +270,4 @@ if __name__ == '__main__':
     if not bams:
         usage()
     else:
-        bam_cims_finder(bams,output,ref,flanking,cutoff,stranded,window)
-        
+        bam_cims_finder(bams, output, ref, flanking, cutoff, stranded, window)

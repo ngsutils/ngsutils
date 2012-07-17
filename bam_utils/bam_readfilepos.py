@@ -1,20 +1,25 @@
 #!/usr/bin/env python
+## category Misc
+## desc Finds the position of a read in a BAM file
 '''
 Finds the realtive position of a read or reference:position in a BAM file.
-This is returned as a line number out of the total number of lines in the 
+This is returned as a line number out of the total number of lines in the
 file.
+
+This is useful for estimating the amount of time required for certain types
+of processing.
 '''
 
-
-
-import sys,os
+import sys
+import os
 import pysam
 
-def bam_readpos(fname,readname=None,ref=None,pos=None):
-    bamfile = pysam.Samfile(fname,"rb")
+
+def bam_readpos(fname, readname=None, ref=None, pos=None):
+    bamfile = pysam.Samfile(fname, "rb")
     count = 0
     i = 0
-    
+
     for read in bamfile:
         if readname and read.qname == readname:
             i = count
@@ -22,14 +27,14 @@ def bam_readpos(fname,readname=None,ref=None,pos=None):
             if not i and read.pos >= pos:
                 i = count
         count += 1
-        
+
     bamfile.close()
 
     if readname:
-        print "%s position: %s of %s (%.2f%%)" % (readname,i,count,float(i)*100/count)
+        print "%s position: %s of %s (%.2f%%)" % (readname, i, count, float(i) * 100 / count)
     else:
-        print "%s:%s position: %s of %s (%.2f%%)" % (ref,pos,i,count,float(i)*100/count)
-        
+        print "%s:%s position: %s of %s (%.2f%%)" % (ref, pos, i, count, float(i) * 100 / count)
+
 
 def usage():
     print __doc__
@@ -42,7 +47,7 @@ if __name__ == "__main__":
     ref = None
     pos = None
     fname = None
-    
+
     last = None
     for arg in sys.argv[1:]:
         if last == '-read':
@@ -52,15 +57,15 @@ if __name__ == "__main__":
             ref = arg.split(':')[0]
             pos = int(arg.split(':')[1])
             last = None
-        elif arg in ['-pos','-read']:
+        elif arg in ['-pos', '-read']:
             last = arg
         elif os.path.exists(arg):
             fname = arg
-    
+
     if readname and fname:
-        bam_readpos(fname,read=readname)
+        bam_readpos(fname, read=readname)
     elif ref and pos and fname:
-        bam_readpos(fname,ref=ref,pos=pos)
+        bam_readpos(fname, ref=ref, pos=pos)
     else:
         usage()
         sys.exit(1)

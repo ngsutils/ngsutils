@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+## category Conversion
+## desc BED to BedGraph
 '''
 Takes a BED file with overlapping regions and produces a BedGraph file.  This
 can optionally normalize the counts by a given factor.
@@ -98,6 +100,8 @@ if __name__ == "__main__":
 
     last = None
     for arg in sys.argv[1:]:
+        if arg == '-h':
+            usage()
         if last == '-norm':
             norm = float(arg)
             last = None

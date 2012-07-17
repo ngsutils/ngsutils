@@ -1,24 +1,28 @@
 #!/usr/bin/env python
+## category Conversion
+## desc Convert BAM reads back to FASTQ sequences
 '''
-Takes a SAM/BAM file and exports a FASTQ file
+Convert BAM reads back to FASTQ sequences (mapped or unmapped)
 '''
 
-import sys,os
+import sys
+import os
 from support.eta import ETA
 import pysam
 
-def bam_tofastq(sam_fname,colorspace=False,only_mapped=False,only_unmapped=False):
+
+def bam_tofastq(sam_fname, colorspace=False, only_mapped=False, only_unmapped=False):
     if only_mapped == False and only_unmapped == False:
         return
-        
+
     if sam_fname[-4:].lower() == '.bam':
-        sam = pysam.Samfile(sam_fname,'rb')
+        sam = pysam.Samfile(sam_fname, 'rb')
     else:
-        sam = pysam.Samfile(sam_fname,'r')
-        
-    eta = ETA(0,bamfile=sam)
+        sam = pysam.Samfile(sam_fname, 'r')
+
+    eta = ETA(0, bamfile=sam)
     for read in sam:
-        eta.print_status(extra=read.qname,bam_pos=(read.rname,read.pos))
+        eta.print_status(extra=read.qname, bam_pos=(read.rname, read.pos))
         if only_mapped and read.is_unmapped:
             continue
         if only_unmapped and not read.is_unmapped:
@@ -31,25 +35,26 @@ def bam_tofastq(sam_fname,colorspace=False,only_mapped=False,only_unmapped=False
             seq = read.seq
             qual = read.qual
 
-        sys.stdout.write('@%s\n%s\n+\n%s\n' % (read.qname,seq,qual))
+        sys.stdout.write('@%s\n%s\n+\n%s\n' % (read.qname, seq, qual))
 
     eta.done()
+
 
 def usage():
     print __doc__
     print "Usage: bamutils tofastq [-cs] {-mapped} {-unmapped} file.[sam|bam]"
     sys.exit(1)
-    
+
 
 if __name__ == '__main__':
     if len(sys.argv) == 1:
         usage()
-    
+
     cs = False
     samf = None
     mapped = False
     unmapped = False
-    
+
     for arg in sys.argv[1:]:
         if arg == '-cs':
             cs = True
@@ -61,9 +66,9 @@ if __name__ == '__main__':
             samf = arg
     if not samf:
         usage()
-    
+
     if not unmapped and not mapped:
         mapped = True
         unmapped = True
-    
-    bam_tofastq(samf,cs,mapped,unmapped)
+
+    bam_tofastq(samf, cs, mapped, unmapped)

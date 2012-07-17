@@ -24,7 +24,7 @@ usage(){
     echo "    stats         - Calculates simple stats for a BAM file"
     echo "    tag           - Update read names with a suffix (for merging)"
     echo ""
-    echo "  Conversions"
+    echo "  Conversion"
     echo "    tobed          - Convert BAM reads to BED regions"
     echo "    tobedgraph     - Convert BAM coverage to bedGraph"
     echo "    tofasta        - Convert BAM reads to FASTA sequences"

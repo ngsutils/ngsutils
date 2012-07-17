@@ -1,28 +1,34 @@
 #!/usr/bin/env python
+## category General
+## desc Combine multiple BAM files together (taking best-matches)
 """
-Given a number of BAM files, this script will merge them together, taking 
+Combine multiple BAM files together (taking best-matches)
+
+Given a number of BAM files, this script will merge them together, taking
 only the best matches.  There can be any number of files, but the BAM header
-will be taken from the first one.  The input files should be sorted by read 
+will be taken from the first one.  The input files should be sorted by read
 name, or at least have reads in the same order.
 
 The first input file should have a record for every read in the other files.
-However, the secondary files *may* have missing lines, so long as they are in 
+However, the secondary files *may* have missing lines, so long as they are in
 the same order as the first file.
 
-The value of the attribute/tag given will be used to determine which reads 
-should be kept and which should be discarded. The tag should be a numberic 
+The value of the attribute/tag given will be used to determine which reads
+should be kept and which should be discarded. The tag should be a numberic
 (int/float) type. This defaults to 'AS'.
 
 Additionally, each file can have more than one record for each read, but they
 should all have the same value for the tag used in determining which reads to
-keep. For example, if the AS tag is used (default), then each read in a file 
+keep. For example, if the AS tag is used (default), then each read in a file
 should have the same AS value. Reads in different files will have different
 values.
 
 """
 
-import os,sys,gzip
+import os
+import sys
 import pysam
+
 
 def usage():
     print __doc__
@@ -30,11 +36,12 @@ def usage():
 Usage: bamutils merge {opts} out.bam in1.bam in2.bam ...
 
 Options
-  -tag VAL    Tag to use to determine from which file reads will be taken 
+  -tag VAL    Tag to use to determine from which file reads will be taken
               (must be type :i or :f) [default: AS]
   -discard    Discard reads that aren't mapped in any file.
 """
     sys.exit(1)
+
 
 def bam_reads_batch(bam):
     reads = []
@@ -45,11 +52,12 @@ def bam_reads_batch(bam):
             reads = []
         last = read.qname
         reads.append(read)
-    
+
     if reads:
         yield reads
 
-def bam_merge(fname, infiles, tag = 'AS', discard = False):
+
+def bam_merge(fname, infiles, tag='AS', discard=False):
     bams = []
     last_reads = []
     bamgens = []
@@ -57,17 +65,17 @@ def bam_merge(fname, infiles, tag = 'AS', discard = False):
     unmapped = 0
 
     for infile in infiles:
-        bam=pysam.Samfile(infile,"rb")
+        bam = pysam.Samfile(infile, "rb")
         last_reads.append(None)
         bams.append(bam)
         counts.append(0)
         bamgens.append(bam_reads_batch(bam))
-        
-    outfile = pysam.Samfile('%s.tmp' % fname,"wb",template=bams[0])
-    
+
+    outfile = pysam.Samfile('%s.tmp' % fname, "wb", template=bams[0])
+
     while True:
         found = False
-        for i,bamgen in enumerate(bamgens):
+        for i, bamgen in enumerate(bamgens):
             if last_reads[i] == None:
                 try:
                     last_reads[i] = bamgen.next()
@@ -79,16 +87,16 @@ def bam_merge(fname, infiles, tag = 'AS', discard = False):
                 found = True
         if not found:
             break
-        
+
         best_val = None
         best_reads = None
         best_source = 0
-        
+
         first_group = last_reads[0]
         for i in xrange(len(last_reads)):
             if not last_reads[i]:
                 continue
-                
+
             match = False
             for read in last_reads[i]:
                 if read.qname == first_group[0].qname:
@@ -101,8 +109,8 @@ def bam_merge(fname, infiles, tag = 'AS', discard = False):
                             best_source = i
                             break
             if match:
-                last_reads[i]=None
-    
+                last_reads[i] = None
+
         if best_reads:
 #            print infiles[best_source],best_reads[0].qname
             counts[best_source] += 1
@@ -110,19 +118,19 @@ def bam_merge(fname, infiles, tag = 'AS', discard = False):
                 outfile.write(read)
         else:
             unmapped += 1
-            
+
             if not discard:
                 outfile.write(first_group[0])
 
-    for fn,cnt in zip(infiles,counts):
-        print "%s\t%s" % (fn,cnt)
+    for fn, cnt in zip(infiles, counts):
+        print "%s\t%s" % (fn, cnt)
     print "unmapped\t%s" % unmapped
 
     outfile.close()
     for bam in bams:
         bam.close()
-    
-    os.rename('%s.tmp' % fname,fname)
+
+    os.rename('%s.tmp' % fname, fname)
 
 if __name__ == '__main__':
     infiles = []
@@ -149,5 +157,4 @@ if __name__ == '__main__':
     if not infiles or not outfile:
         usage()
     else:
-        bam_merge(outfile,infiles,tag,discard)
-        
+        bam_merge(outfile, infiles, tag, discard)

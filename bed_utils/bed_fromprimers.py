@@ -1,5 +1,9 @@
 #!/usr/bin/env python
+## category Conversion
+## desc Converts a list of PCR primer pairs to BED regions
 '''
+Converts a list of PCR primer pairs to BED regions
+
 Given a genomic FASTA file and a list of primers,  this will generate a new
 FASTA file for the targeted region.  This targeted FASTA file can then be
 used for targeted resequencing.

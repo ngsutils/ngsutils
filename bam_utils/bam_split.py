@@ -1,20 +1,26 @@
 #!/usr/bin/env python
+## category General
+## desc Splits a BAM file into smaller pieces
 """
-Given a BAM file, this script will split it into smaller BAM files with a 
+Splits a BAM file into smaller pieces
+
+Given a BAM file, this script will split it into smaller BAM files with a
 limit on the number of reads included.
 """
 
-import os,sys,gzip
+import os
+import sys
 from support.eta import ETA
 import pysam
+
 
 def usage():
     print __doc__
     print """
 Usage: bamutils split {-n num} in.bam out_template_name
 
-out_template_name will be the template for the smaller BAM files.  They will 
-be named "out_template_name.N.bam" where out_template_name is the given 
+out_template_name will be the template for the smaller BAM files.  They will
+be named "out_template_name.N.bam" where out_template_name is the given
 argument and N is the file number.
 
 Options:
@@ -23,13 +29,14 @@ Options:
 """
     sys.exit(1)
 
-def bam_split(infile,out_template,read_count = 1000000):
-    bamfile = pysam.Samfile(infile,"rb")
+
+def bam_split(infile, out_template, read_count=1000000):
+    bamfile = pysam.Samfile(infile, "rb")
     outfile = None
-    
+
     file_count = 0
-    
-    eta = ETA(0,bamfile=bamfile)
+
+    eta = ETA(0, bamfile=bamfile)
     count = 0
     fname = ""
     for read in bamfile.fetch():
@@ -38,10 +45,10 @@ def bam_split(infile,out_template,read_count = 1000000):
                 outfile.close()
             file_count += 1
             count = 0
-            fname = '%s.%s.bam' % (out_template,file_count)
-            outfile = pysam.Samfile(fname,"wb",template=bamfile)
-            
-        eta.print_status(extra=os.path.basename(fname),bam_pos=(read.rname,read.pos))
+            fname = '%s.%s.bam' % (out_template, file_count)
+            outfile = pysam.Samfile(fname, "wb", template=bamfile)
+
+        eta.print_status(extra=os.path.basename(fname), bam_pos=(read.rname, read.pos))
         outfile.write(read)
         count += 1
 
@@ -54,7 +61,7 @@ def bam_split(infile,out_template,read_count = 1000000):
 if __name__ == '__main__':
     infile = None
     outfile = None
-    num=1000000
+    num = 1000000
     last = None
 
     for arg in sys.argv[1:]:
@@ -63,7 +70,7 @@ if __name__ == '__main__':
             last = None
         elif arg == '-h':
                 usage()
-        elif arg in ['-n',]:
+        elif arg in ['-n']:
             last = arg
         elif not infile:
             infile = arg
@@ -73,5 +80,4 @@ if __name__ == '__main__':
     if not infile or not outfile:
         usage()
     else:
-        bam_split(infile,outfile,num)
-        
+        bam_split(infile, outfile, num)

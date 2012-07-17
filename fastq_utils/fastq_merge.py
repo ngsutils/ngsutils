@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+## category General
+## desc Merges paired FASTQ files into one file
 '''
 Merges two (or more) paired end FASTQ files together for combined mapping.
 The files need to have the paired reads in the same order. They will be

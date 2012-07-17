@@ -1,6 +1,8 @@
 #!/usr/bin/env python
+## category General
+## desc Adds a prefix or suffix to the read names in a FASTQ file
 '''
-Adds a suffix to the read names for all reads in the file
+Adds a prefix or suffix to the read names for all reads in the file
 
 Writes output to stdout
 '''

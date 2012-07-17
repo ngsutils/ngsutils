@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+## category General
+## desc Merges overlapping BED regions
 '''
 Reduces BED regions to overlap them. The BED file *must* be sorted in order
 to merge them.
@@ -151,6 +153,8 @@ if __name__ == '__main__':
     clip = False
 
     for arg in sys.argv[1:]:
+        if arg == '-h':
+            usage(0)
         if last == '-extend':
             if ',' in arg:
                 extend = [int(x) for x in arg.split(',')]

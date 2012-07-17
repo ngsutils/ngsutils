@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+## category General
+## desc Remove 5' and 3' linker sequences (S/W aligned)
 '''
 Removes linkers from 5' and 3' ends by performing local
 s/w alignments with the linker sequences

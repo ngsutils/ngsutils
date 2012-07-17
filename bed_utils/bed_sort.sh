@@ -1,4 +1,6 @@
 #!/bin/bash
+## category General
+## desc Sorts a BED file (in place)
 #
 # bed_sort.sh - Sorts BED files by chrom and start pos
 #

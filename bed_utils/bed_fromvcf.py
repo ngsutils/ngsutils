@@ -1,6 +1,8 @@
 #!/usr/bin/env python
+## category Conversion
+## desc Converts a file in VCF format to BED6
 '''
-Converts a file in VCF format to BED6.
+Converts a file in VCF format to BED6
 '''
 import sys
 import os

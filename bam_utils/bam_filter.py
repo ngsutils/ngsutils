@@ -1,5 +1,9 @@
 #!/usr/bin/env python
+## category General
+## desc Removes reads from a BAM file based on criteria
 """
+Removes reads from a BAM file based on criteria
+
 Given a BAM file, this script will only allow reads that meet filtering
 criteria to be written to output. The output is another BAM file with the
 reads not matching the criteria removed.

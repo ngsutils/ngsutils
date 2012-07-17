@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+## category General
+## desc Export reads, mapped positions, and other tags
 '''
 Outputs information about reads in a BAM file.
 

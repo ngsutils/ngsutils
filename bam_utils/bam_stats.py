@@ -1,6 +1,8 @@
 #!/usr/bin/env python
+## category General
+## desc Calculates simple stats for a BAM file
 """
-Calculate a number of summary statistics for a BAM file
+Calculates simple stats for a BAM file
 """
 
 import os

@@ -1,6 +1,8 @@
 #!/usr/bin/env python
+## category General
+## desc Extends BED regions (3')
 '''
-Extends BED regions
+Extends BED regions (3' only)
 '''
 
 import os

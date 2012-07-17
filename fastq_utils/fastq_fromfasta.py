@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+## category Conversion
+## desc Converts (cs)FASTA/qual files to FASTQ format
 """
 Merges a (cs)fasta file and a qual file into a FASTQ file (on stdout)
 

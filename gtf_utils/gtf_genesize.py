@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+## category General
+## desc Extract genomic/transcript sizes for genes
 '''
 Extracts the genomic and transcript sizes for genes in GTF format
 '''
@@ -9,10 +11,10 @@ from gtf_utils import GTF
 
 
 def usage():
-    sys.stderr.write(__doc__)
-    sys.stderr.write('''
+    print __doc__
+    print '''\
 Usage: gtfutils genesize filename.gtf
-''')
+'''
     sys.exit(1)
 
 
@@ -38,6 +40,8 @@ def gtf_genesize(fname):
 if __name__ == '__main__':
     fname = None
     for arg in sys.argv[1:]:
+        if arg == '-h':
+            usage()
         if not fname and os.path.exists(arg):
             fname = arg
         else:

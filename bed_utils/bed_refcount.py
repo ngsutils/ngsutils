@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+## category General
+## desc Given a number of BED files, calculate the number of samples that overlap regions in a reference BED file
 '''
 Given a BED file containing genomic regions of interest (reference) and a set
 of other BED files (tabix-indexed), calculate how many samples also
@@ -189,6 +191,8 @@ if __name__ == '__main__':
     last = None
 
     for arg in sys.argv[1:]:
+        if arg == '-h':
+            usage()
         if last == '-group':
             group_files.append([])
             group_names.append(arg)

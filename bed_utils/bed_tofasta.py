@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+## category Conversion
+## desc Extract BED regions from a reference FASTA file
+'''
+Extract BED regions from a reference FASTA file
+'''
 
 import sys
 import os
@@ -70,6 +75,7 @@ def revcomp(seq):
 
 
 def usage():
+    print __doc__
     print """\
 Usage: bedutils tofasta {-min size} {-ns} bedfile ref.fasta
 

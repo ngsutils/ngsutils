@@ -1,5 +1,9 @@
 #!/usr/bin/env python
+## category General
+## desc Converts region mapping to genomic mapping
 """
+Converts region mapping to genomic mapping
+
 This takes a BAM file that has been mapped to a genomic region and converts
 the mapping to genomic coordinates.  This can be used to convert reads mapped
 against a junction library or targeted resequencing back to genomic

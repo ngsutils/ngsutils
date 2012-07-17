@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+## category General
+## desc Appends name annotation from UCSC Xref file
 '''Adds gene name annotations to a GTF file (xref)
 
 This adds gene name annotations based upon the KnownGene annotations from the
@@ -82,15 +84,15 @@ def gtf_add_xref(gtf, xref, column=4):
 
 def usage(msg=None):
     if msg:
-        sys.stderr.write('%s\n' % msg)
-    sys.stderr.write(__doc__)
-    sys.stderr.write('''
+        print msg
+    print __doc__
+    print '''\
 Usage: gtfutils add_xref {-col num} filename.gtf kgXref.txt
 
 Options:
   -col num    The gene name is stored in column {num} (1-based)
               (default:5)
-''')
+'''
     sys.exit(1)
 
 if __name__ == '__main__':

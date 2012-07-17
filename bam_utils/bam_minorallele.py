@@ -1,8 +1,10 @@
 #!/usr/bin/env python
+## category DNA-seq
+## desc Find potential minor allele frequency (experimental)
 """
 Calculates a minor allele frequency in (pooled) genomic sequencing.
 
-Given a BAM file and a genomic reference, for each position covered in the 
+Given a BAM file and a genomic reference, for each position covered in the
 BAM file, show the reference base, the potential minor allele, and probable
 background.
 
@@ -10,13 +12,18 @@ This assumes that if a SNP exists, there is likely only one possible variation.
 So, this calculation will fail if more than one minor allele is present.  This
 also ignores indels.
 
-If rpy2 is installed and -alleles is given, this will also calculate a 95% 
-confidence interval
+If R is installed and -alleles is given, this will also calculate a 95%
+confidence interval. If rpy2 is installed, that bridge will be used to call R,
+otherwise a process is forked for each allele.
 """
 
-import os,sys,math,subprocess
+import os
+import sys
+import math
+import subprocess
 from support.eta import ETA
 import pysam
+
 
 class Blackhole(object):
     def write(self, string):
@@ -25,26 +32,26 @@ class Blackhole(object):
 __sink = Blackhole()
 
 try:
-    __rsrc = os.path.join(os.path.dirname(__file__),'minorallele_cpci.R')
+    __rsrc = os.path.join(os.path.dirname(__file__), 'minorallele_cpci.R')
     import rpy2.robjects as robjects
     rscript = True
     with open(__rsrc) as f:
         robjects.r(f.read())
 except Exception:
     robjects = None
-    rscript = os.path.join(os.path.dirname(__file__),'minorallele_cpci.rsh')
+    rscript = os.path.join(os.path.dirname(__file__), 'minorallele_cpci.rsh')
     if not os.path.exists(rscript):
         sys.stderr.write('Missing R script: %s\n' % rscript)
         sys.exit(-1)
-        
+
     stdout = sys.stdout
     sys.stdout = __sink
-    retval = subprocess.Popen([rscript],stdout=subprocess.PIPE).wait()
+    retval = subprocess.Popen([rscript], stdout=subprocess.PIPE).wait()
     sys.stdout = stdout
     if retval != 0:
         sys.stderr.write('Error calling R script: %s\n' % rscript)
         rscript = None
-    
+
 
 def usage():
     print __doc__
@@ -64,44 +71,40 @@ Options:
   -ci-low  val   Only report bases where the 95% CI low is greater than {val}
                  (default: show all)
   -alleles val   The number of alleles included in this sample
-                 If given, a Clopper-Pearson style confidence interval will 
+                 If given, a Clopper-Pearson style confidence interval will
                  be calculated. (requires rpy2 or R)
 """
     if robjects:
         print "rpy2 detected!"
     else:
         print "rpy2 not detected! Consider installing rpy2 for faster processing!"
-    
+
     sys.exit(1)
 
-def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0,name = None, min_ci_low = None):
-    bam = pysam.Samfile(bam_fname,"rb")
+
+def bam_minorallele(bam_fname, ref_fname, min_qual=0, min_count=0, num_alleles=0, name=None, min_ci_low=None):
+    bam = pysam.Samfile(bam_fname, "rb")
     ref = pysam.Fastafile(ref_fname)
-    eta = ETA(0,bamfile=bam)
-    
+    eta = ETA(0, bamfile=bam)
+
     if not name:
         name = os.path.basename(bam_fname)
 
-    sample_id = None
     if num_alleles:
         print "# %s" % num_alleles
-        
+
     sys.stdout.write('\t'.join("chrom pos refbase altbase total refcount altcount background refback altback".split()))
     if num_alleles and rscript:
         sys.stdout.write("\tci_low\tci_high\tallele_lowt\tallele_high")
     sys.stdout.write('\n')
-        
-    
-    printed = False
+
     for pileup in bam.pileup(mask=1540):
         chrom = bam.getrname(pileup.tid)
-        eta.print_status(extra='%s:%s' % (chrom,pileup.pos),bam_pos=(pileup.tid,pileup.pos))
-        
-        counts = {'A':0,'C':0,'G':0,'T':0}
-        inserts = 0
-        deletions = 0
+        eta.print_status(extra='%s:%s' % (chrom, pileup.pos), bam_pos=(pileup.tid, pileup.pos))
+
+        counts = {'A': 0, 'C': 0, 'G': 0, 'T': 0}
         total = 0
-        
+
         for pileupread in pileup.pileups:
             if not pileupread.is_del:
                 if min_qual:
@@ -110,44 +113,44 @@ def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0
                 if pileupread.indel == 0:
                     base = pileupread.alignment.seq[pileupread.qpos].upper()
                     if base != 'N':
-                        counts[base]+=1
+                        counts[base] += 1
                         total += 1
-        
+
         if total > min_count:
-            refbase = ref.fetch(chrom,pileup.pos,pileup.pos+1).upper()
+            refbase = ref.fetch(chrom, pileup.pos, pileup.pos + 1).upper()
             if not refbase in counts:
                 continue
-            
+
             refcount = counts[refbase]
-            
+
             # sort non-ref counts.  first is alt, next is background
-            
+
             scounts = []
             for c in counts:
                 if c != refbase:
-                    scounts.append((counts[c],c))
-                    
+                    scounts.append((counts[c], c))
+
             scounts.sort()
             scounts.reverse()
-            
+
             altbase = scounts[0][1]
             altcount = scounts[0][0]
             background = scounts[1][0]
-            
-            refback = refcount-background
-            altback = altcount-background
-            
-            if (altback+refback) == 0:
+
+            refback = refcount - background
+            altback = altcount - background
+
+            if (altback + refback) == 0:
                 altfreq = 0
             else:
                 altfreq = float(altback) / (altback + refback)
 
-            cols = [chrom, pileup.pos+1, refbase, altbase, total, refcount, altcount, background, refback, altback, altfreq]
+            cols = [chrom, pileup.pos + 1, refbase, altbase, total, refcount, altcount, background, refback, altback, altfreq]
             if num_alleles and rscript:
-                ci_low,ci_high = calc_cp_ci(refback+altback,altback,num_alleles)
+                ci_low, ci_high = calc_cp_ci(refback + altback, altback, num_alleles)
                 allele_low = ci_low * num_alleles
                 allele_high = ci_high * num_alleles
-                
+
                 cols.append(ci_low)
                 cols.append(ci_high)
                 cols.append(allele_low)
@@ -161,37 +164,40 @@ def bam_minorallele(bam_fname,ref_fname,min_qual=0, min_count=0, num_alleles = 0
     bam.close()
     ref.close()
 
-__ci_cache={}
-def calc_cp_ci(N,count,num_alleles):
-    if (N,count,num_alleles) in __ci_cache:
-        return __ci_cache[(N,count,num_alleles)]
 
-    vals = (float('nan'),float('nan'))
+__ci_cache = {}
+
+
+def calc_cp_ci(N, count, num_alleles):
+    if (N, count, num_alleles) in __ci_cache:
+        return __ci_cache[(N, count, num_alleles)]
+
+    vals = (float('nan'), float('nan'))
 
     if robjects:
         stdout = sys.stdout
         sys.stdout = __sink
         stderr = sys.stderr
         sys.stderr = __sink
-        vals = robjects.r['CP.CI'](N,count,num_alleles)
+        vals = robjects.r['CP.CI'](N, count, num_alleles)
         sys.stdout = stdout
         sys.stderr = stderr
     else:
-        vals = [float(x) for x in subprocess.Popen([str(x) for x in [rscript,N,count,num_alleles]],stdout=subprocess.PIPE).communicate()[0].split()]
+        vals = [float(x) for x in subprocess.Popen([str(x) for x in [rscript, N, count, num_alleles]], stdout=subprocess.PIPE).communicate()[0].split()]
 
-    __ci_cache[(N,count,num_alleles)] = vals
+    __ci_cache[(N, count, num_alleles)] = vals
     return vals
 
 if __name__ == '__main__':
     bam = None
     ref = None
-    
+
     min_qual = 0
     min_count = 0
     min_ci = None
     num_alleles = 0
     name = None
-    
+
     last = None
     for arg in sys.argv[1:]:
         if last == '-qual':
@@ -211,7 +217,7 @@ if __name__ == '__main__':
             last = None
         elif arg == '-h':
             usage()
-        elif arg in ['-qual','-count','-alleles','-name','-ci-low']:
+        elif arg in ['-qual', '-count', '-alleles', '-name', '-ci-low']:
             last = arg
         elif not bam and os.path.exists(arg) and os.path.exists('%s.bai' % arg):
             bam = arg
@@ -228,4 +234,4 @@ if __name__ == '__main__':
     if not bam or not ref:
         usage()
 
-    bam_minorallele(bam,ref,min_qual,min_count,num_alleles,name,min_ci)
+    bam_minorallele(bam, ref, min_qual, min_count, num_alleles, name, min_ci)

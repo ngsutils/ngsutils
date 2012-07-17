@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+## category General
+## desc Appends isoform annotation from UCSC isoforms file
 '''Adds isoform annotations to a GTF file (isoforms)
 
 This adds isoform annotations based upon the KnownGene annotations from the
@@ -86,11 +88,9 @@ def gtf_add_isoform(gtf, iso):
 
 def usage(msg=None):
     if msg:
-        sys.stderr.write('%s\n' % msg)
-    sys.stderr.write(__doc__)
-    sys.stderr.write('''
-Usage: gtfutils add_isoform filename.gtf knownIsoform.txt
-''')
+        print msg
+    print __doc__
+    print 'Usage: gtfutils add_isoform filename.gtf knownIsoform.txt'
     sys.exit(1)
 
 if __name__ == '__main__':
@@ -98,6 +98,8 @@ if __name__ == '__main__':
     iso = None
 
     for arg in sys.argv[1:]:
+        if arg == '-h':
+            usage()
         if not gtf and (os.path.exists(arg) or arg == '-'):
             gtf = arg
         elif not iso and (os.path.exists(arg) or arg == '-'):

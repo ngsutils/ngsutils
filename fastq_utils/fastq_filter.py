@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+## category General
+## desc Filter out reads using a number of metrics
 '''
 Filter reads in a FASTQ file. The filtering criteria can be applied as a
 batch, allowing you to use more than one criterion at a time.

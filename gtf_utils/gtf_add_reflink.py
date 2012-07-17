@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+## category General
+## desc Appends isoform/name annotation from RefSeq/refLink
 '''Adds gene name and isoform annotations to a GTF file (refLink)
 
 This adds isoform and gene name annotations based upon the refLink table from
@@ -80,11 +82,9 @@ def gtf_addreflink(gtf, reflink):
 
 def usage(msg=None):
     if msg:
-        sys.stderr.write('%s\n' % msg)
-    sys.stderr.write(__doc__)
-    sys.stderr.write('''
-Usage: gtfutils add_reflink filename.gtf reflink.txt
-''')
+        print msg
+    print __doc__
+    print 'Usage: gtfutils add_reflink filename.gtf reflink.txt'
     sys.exit(1)
 
 if __name__ == '__main__':

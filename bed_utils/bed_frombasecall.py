@@ -1,6 +1,8 @@
 #!/usr/bin/env python
+## category Conversion
+## desc Converts a file in basecall format to BED3 format
 '''
-Converts a file in basecall format to BED3 format.
+Converts a file in basecall format to BED3 format
 '''
 import sys
 import os

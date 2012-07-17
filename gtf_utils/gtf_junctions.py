@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+## category General
+## desc Build a junction library from FASTA and GFF/GTF model
 '''
 Takes a GTF gene model and a genome FASTA file and produces a splice-
 junction library in FASTA format.
@@ -84,9 +86,9 @@ def gtf_junctions(gtf_fname, refname, fragment_size, min_size, max_exons=5):
 
 def usage(msg=None):
     if msg:
-        sys.stderr.write('%s\n\n' % msg)
-    sys.stderr.write(__doc__)
-    sys.stderr.write("""
+        print msg
+    print __doc__
+    print '''\
 Usage: sequtils junctions {opts} genes.gtf{.gz} genome.fasta
 
 Arguments
@@ -99,7 +101,7 @@ Options
                   [default 46]
   -min size       Minimum size of a junction
                   [default 50]
-""")
+'''
     sys.exit(1)
 
 if __name__ == '__main__':

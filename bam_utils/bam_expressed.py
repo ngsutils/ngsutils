@@ -1,7 +1,13 @@
 #!/usr/bin/env python
+## category General
+## desc Finds regions expressed in a BAM file
 '''
-Scans a BAM file, looking for regions of mapped reads. Reads in a BAM file,
-and outputs regions of expression in BED format.
+Finds regions expressed in a BAM file
+
+This will scan a BAM file, looking for regions of mapped reads. The found
+regions are output in BED format. These regions are found in a model-free
+manner, so they may represent novel or known transcripts. This is also helpful
+for peak-finding in ChIP-seq experiments.
 '''
 import sys
 import os

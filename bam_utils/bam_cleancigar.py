@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+## category Misc
+## desc Fixes BAM files where the CIGAR alignment has a zero length element
 '''
 Fixes BAM files where the CIGAR alignment has a zero length element
 '''

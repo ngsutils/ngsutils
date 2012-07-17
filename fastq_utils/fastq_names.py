@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+## category General
+## desc Write out the read names
 '''
 Writes out the read names present in the FASTQ file.
 '''

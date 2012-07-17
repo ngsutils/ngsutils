@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+## category General
+## desc Postprocesses a BAM file to remove all clipping from reads and alignments
 '''
 Postprocesses a BAM file to remove all clipping from reads and alignments.
 

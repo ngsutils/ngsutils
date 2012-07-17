@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+## category Misc
+## desc Checks a BAM file for corruption
 '''
 Checks a BAM file for corruption
 '''

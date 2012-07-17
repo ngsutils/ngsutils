@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+## category General
+## desc Calculate summary statistics for a FASTQ file
 '''
 Calculates summary statistics for a FASTQ file.
 

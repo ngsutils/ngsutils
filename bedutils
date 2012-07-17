@@ -11,7 +11,7 @@ usage(){
     echo "    sort         - Sorts a BED file (in place)"
     echo "    stats        - Calculates simple stats for a BED file"
     echo ""
-    echo "  Conversions"
+    echo "  Conversion"
     echo "    fromprimers  - Converts a list of PCR primer pairs to BED regions"
     echo "    tobedgraph   - BED to BedGraph"
     echo "    tofasta      - Extract BED regions from a reference FASTA file"

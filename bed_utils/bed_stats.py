@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+## category General
+## desc Calculates simple stats for a BED file
 """
 Calculate a number of summary statistics / distribution for a BED file
 """

@@ -1,5 +1,8 @@
 #!/usr/bin/env python
-'''Convert a GFF/GTF file to BED format
+## category Conversion
+## desc Convert a GFF/GTF file to BED format
+'''
+Convert a GFF/GTF file to BED format
 
 This will convert whole genes, individual exons, or expressed regions.
 Expressed regions are distinct sections of exons that take into account
@@ -14,11 +17,9 @@ from gtf_utils import GTF
 
 def usage(msg=None):
     if msg:
-        sys.stderr.write('%s\n\n' % msg)
-    sys.stderr.write(__doc__)
-    sys.stderr.write('''
-Usage: gtfutils tobed [-genes|-exons|-regions] filename.gtf{.gz}
-''')
+        print '%s\n' % msg
+    print __doc__
+    print 'Usage: gtfutils tobed [-genes|-exons|-regions] filename.gtf{.gz}'
 
 
 def gtf_genes_tobed(fname):
@@ -54,6 +55,8 @@ if __name__ == '__main__':
     filename = None
 
     for arg in sys.argv[1:]:
+        if arg == '-h':
+            usage()
         if arg == '-genes':
             genes = True
         elif arg == '-exons':
