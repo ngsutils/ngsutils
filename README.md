@@ -129,7 +129,7 @@ mandatory are *pysam* and *cython*. Cython requires that the Python headers be p
 achieved by installing 'python-devel' or similar.
 
 If you need read-only access use:
-`git clone git://github.iu.edu/mbreese/ngsutils.git`
+`git clone git://github.com/ngsutils/ngsutils.git`
 
 Requires
 
