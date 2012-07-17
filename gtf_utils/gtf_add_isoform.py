@@ -89,7 +89,7 @@ def usage(msg=None):
         sys.stderr.write('%s\n' % msg)
     sys.stderr.write(__doc__)
     sys.stderr.write('''
-Usage: gtfutils add_kg filename.gtf knownIsoform.txt
+Usage: gtfutils add_isoform filename.gtf knownIsoform.txt
 ''')
     sys.exit(1)
 
@@ -107,6 +107,5 @@ if __name__ == '__main__':
         usage()
     if gtf == '-' and iso == '-':
         usage('Both GTF and Isoform files can not be from stdin')
-
 
     gtf_add_isoform(gtf, iso)

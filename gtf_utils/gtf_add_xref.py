@@ -85,7 +85,7 @@ def usage(msg=None):
         sys.stderr.write('%s\n' % msg)
     sys.stderr.write(__doc__)
     sys.stderr.write('''
-Usage: gtfutils add_kg {-col num} filename.gtf kgXref.txt
+Usage: gtfutils add_xref {-col num} filename.gtf kgXref.txt
 
 Options:
   -col num    The gene name is stored in column {num} (1-based)

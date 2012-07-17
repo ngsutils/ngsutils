@@ -26,6 +26,7 @@ class GTF(object):
         self._gene_order = []
         warned = False
 
+        sys.stderr.write('Reading GTF file...\n')
         with gzip_opener(filename) as f:
             eta = ETA(os.stat(filename).st_size, fileobj=f)
             for line in f:
@@ -51,7 +52,7 @@ class GTF(object):
                     else:
                         gid = attributes['gene_id']
                         if not warned:
-                            sys.stderr.write('GTF file missing isoform annotation! Each transcript will be treated separately.')
+                            sys.stderr.write('GTF file missing isoform annotation! Each transcript will be treated separately.\n')
                             warned = True
 
                     eta.print_status(extra=gid)
@@ -90,6 +91,11 @@ class _GTFGene(object):
 
     A gene consists of one or more transcripts. It *must* have a gene_id, and chrom
     It may also contain a gene_name and an isoform_id.
+
+    The gid is the 'gene_id' from the GTF file *unless* there is an isoform_id
+    attribute. If 'isoform_id' is present, this is used for the gid.
+
+
     """
 
     def __init__(self, gid, chrom, source, gene_id, gene_name=None, isoform_id=None, **extras):
