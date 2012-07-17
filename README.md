@@ -1,4 +1,4 @@
-ngsutils - Utility programs for analysis of next-gen sequencing data
+ngsutils - Tools for next-gen sequencing analysis
 ===
 Usage
 ---
