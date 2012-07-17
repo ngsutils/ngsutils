@@ -24,6 +24,7 @@ class GTF(object):
         self._pos = 0
         self._sources = []
         self._gene_order = []
+        warned = False
 
         with gzip_opener(filename) as f:
             eta = ETA(os.stat(filename).st_size, fileobj=f)
@@ -49,6 +50,9 @@ class GTF(object):
                         gid = attributes['isoform_id']
                     else:
                         gid = attributes['gene_id']
+                        if not warned:
+                            sys.stderr.write('GTF file missing isoform annotation! Each transcript will be treated separately.')
+                            warned = True
 
                     eta.print_status(extra=gid)
                 except:
