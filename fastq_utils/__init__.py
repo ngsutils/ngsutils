@@ -7,6 +7,8 @@ from support.eta import ETA
 
 def read_fastq(fname, quiet=False, eta_callback=None):
     with support.ngs_utils.gzip_opener(fname) as f:
+        if fname == '-':
+            quiet = True
         if not quiet:
             eta = ETA(os.stat(fname).st_size, fileobj=f)
         while f:

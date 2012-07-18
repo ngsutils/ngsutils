@@ -54,7 +54,7 @@ if __name__ == '__main__':
             last = None
         elif arg in ['-pre', '-suf']:
             last = arg
-        elif not fname and os.path.exists(arg):
+        elif not fname and (os.path.exists(arg) or arg == '-'):
             fname = arg
 
     if not (prefix or suffix) or not fname:
