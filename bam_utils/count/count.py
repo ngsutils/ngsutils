@@ -1,4 +1,4 @@
-import math
+import support.stats
 import sys
 import pysam
 
@@ -297,7 +297,7 @@ def calc_coverage(bam, chrom, strand, starts, ends, whitelist, blacklist):
 
             coverage.append(count)
 
-    mean, stdev = mean_stdev(coverage)
+    mean, stdev = support.stats.mean_stdev(coverage)
     coverage.sort()
 
     if len(coverage) % 2 == 1:
@@ -307,20 +307,6 @@ def calc_coverage(bam, chrom, strand, starts, ends, whitelist, blacklist):
         b = coverage[(len(coverage) / 2)]
         median = (a + b) / 2
     return mean, stdev, median
-
-
-def mean_stdev(l):
-    acc = 0
-    for el in l:
-        acc += el
-
-    mean = float(acc) / len(l)
-    acc = 0
-    for el in l:
-        acc += (el - mean) ** 2
-
-    stdev = math.sqrt(float(acc) / (len(l) - 1))
-    return (mean, stdev)
 
 
 def _find_mapped_count_median(counts):
