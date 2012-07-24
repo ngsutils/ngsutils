@@ -154,7 +154,7 @@ if __name__ == '__main__':
 
     for arg in sys.argv[1:]:
         if arg == '-h':
-            usage(0)
+            usage()
         if last == '-extend':
             if ',' in arg:
                 extend = [int(x) for x in arg.split(',')]
