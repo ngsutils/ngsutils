@@ -99,7 +99,7 @@ Options:
 
 -hettest       Add a column to assign a p-value to assess the heterozygosity
                of each base. (Based on Fisher's exact test for a theoretical
-               homozygous call) (requires scipy)
+               homozygous call) (requires scipy, experimental)
 
 -showgaps      Report gaps/splice-junctions in RNA-seq data
 
