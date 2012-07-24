@@ -2,6 +2,7 @@
 various statistical tests and methods...
 '''
 
+import sys
 import math
 
 # RPy version of fisher test - call out to R
@@ -46,6 +47,9 @@ def fisher_test(a, b, c, d):
                (a+b)!(c+d)!(a+c)!(b+d)!
        p   =   -----------------------
                    n!a!b!c!d!
+
+    Note: This is a very simple calculation and will only work on small counts.
+    For larger counts, use scipy.stats.fisher_exact
     '''
     n = a + b + c + d
     ab = math.factorial(a + b)
@@ -57,7 +61,13 @@ def fisher_test(a, b, c, d):
     bf = math.factorial(b)
     cf = math.factorial(c)
     df = math.factorial(d)
-    p = float(ab * cd * ac * bd) / (nf * af * bf * cf * df)
+    try:
+        p = float(ab * cd * ac * bd) / (nf * af * bf * cf * df)
+    except Exception, e:
+        sys.stderr.write('Error calculating p-value: a,b,c,d -> (%s, %s, %s, %s)\n' % (a, b, c, d))
+        sys.stderr.write(str(e))
+        sys.stderr.write('\n')
+        return 1.0
 
     return p
 

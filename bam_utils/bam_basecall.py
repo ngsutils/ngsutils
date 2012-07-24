@@ -20,6 +20,7 @@ reference base
 Consensus call
 Minor call
 Average mappings (number of mappings each read covering this base has)
+(optional heterozygosity p-value)
 Entropy
 # A calls
 # C calls
@@ -28,6 +29,25 @@ Entropy
 # deletions
 # gaps
 # inserts
+
+If -hettest is applied, a Fisher test is performed to see if the base calls
+likely indicate a heterozygous call. The Fisher table is setup like this:
+
+                                 Major call     |    Minor call
+                            -----------------------------------------
+Theoretical homozygous call   total-background  |  background count
+Actual calls                  actual top call   |  actual 2nd call
+
+So if the call breakdown was A:10, C:2, G:1, T:0, A is the top call, C is the
+2nd (minor) call, G is the background level, and T is ignored. The Fisher
+table then looks like this:
+
+                 major  | minor
+                ----------------
+Theoretical     13 - 1  |   1
+Actual            10    |   2
+
+And the p-value is: 0.373 (not significant)
 
 If -showstrand is applied, a minor strand percentage is also calculated.p This
 is calculated as:
@@ -50,6 +70,13 @@ from support.eta import ETA
 import pysam
 
 
+try:
+    import scipy.stats
+    SCIPY_PRESENT = True
+except:
+    SCIPY_PRESENT = False
+
+
 def usage():
     print __doc__
     print """
@@ -69,7 +96,13 @@ Options:
 -minorpct pct  Require a minor call to be within [pct] percent of the
                consensus call. Calculated as #minor / #consensus.
                (0.0 -> 1.0, default 0.01)
+
+-hettest       Add a column to assign a p-value to assess the heterozygosity
+               of each base. (Based on Fisher's exact test for a theoretical
+               homozygous call) (requires scipy)
+
 -showgaps      Report gaps/splice-junctions in RNA-seq data
+
 -showstrand    Show the minor-strand percentages for each call
                (0-0.5 only shows the minor strand %)
 """
@@ -310,13 +343,36 @@ def _calculate_consensus_minor(minorpct, a, c, g, t):
     return ('/'.join(consensuscalls), '')
 
 
-def bam_basecall(bam_fname, ref_fname, min_qual=0, min_count=0, chrom=None, start=None, end=None, mask=1540, quiet=False, showgaps=False, showstrand=False, minorpct=0.01, profiler=None):
+def _calculate_heterozygosity(a, c, g, t):
+    total = a + c + g + t
+    calls = [a, c, g, t]
+    calls.sort()
+    major = calls[-1]
+    minor = calls[-2]
+    background = calls[-3]
+
+    if minor == 0:
+        return 1.0  # There is no minor call, so not heterozygous!
+
+    theoretical_major = total - background
+    theoretical_minor = background
+
+    oddsratio, pval = scipy.stats.fisher_exact([[theoretical_major, theoretical_minor], [major, minor]], 'less')
+
+    #pval = support.stats.fisher_test(theoretical_major, theoretical_minor, major, minor)
+    return pval
+
+
+def bam_basecall(bam_fname, ref_fname, min_qual=0, min_count=0, chrom=None, start=None, end=None, mask=1540, quiet=False, showgaps=False, showstrand=False, minorpct=0.01, hettest=False, profiler=None):
     if ref_fname:
         ref = pysam.Fastafile(ref_fname)
     else:
         ref = None
 
-    sys.stdout.write('chrom\tpos\tref\tcount\tconsensus call\tminor call\tave mappings\tentropy\tA\tC\tG\tT\tN\tDeletions\tGaps\tInsertions\tInserts')
+    sys.stdout.write('chrom\tpos\tref\tcount\tconsensus call\tminor call\tave mappings')
+    if hettest:
+        sys.stdout.write('\theterozygousity')
+    sys.stdout.write('\tentropy\tA\tC\tG\tT\tN\tDeletions\tGaps\tInsertions\tInserts')
 
     if showstrand:
         sys.stdout.write('\t+ strand %\tA minor %\tC minor %\tG minor %\tT minor %\tN minor %\tDeletion minor %\tInsertion minor %')
@@ -385,6 +441,12 @@ def bam_basecall(bam_fname, ref_fname, min_qual=0, min_count=0, chrom=None, star
                  consensuscall,
                  minorcall,
                  ave_mapping,
+                 ]
+
+        if hettest:
+            cols.append(_calculate_heterozygosity(basepos.a, basepos.c, basepos.g, basepos.t))
+
+        cols.extend([
                  entropy,
                  basepos.a,
                  basepos.c,
@@ -394,7 +456,7 @@ def bam_basecall(bam_fname, ref_fname, min_qual=0, min_count=0, chrom=None, star
                  basepos.deletions,
                  basepos.gaps,
                  incount,
-                 ','.join(insert_str_ar)]
+                 ','.join(insert_str_ar)])
 
         if showstrand:
             cols.append(plus_count / total_count)
@@ -435,6 +497,7 @@ if __name__ == '__main__':
     quiet = False
     showgaps = False
     showstrand = False
+    hettest = False
     minorpct = 0.01
 
     profile = None
@@ -472,6 +535,11 @@ if __name__ == '__main__':
                 showgaps = True
             elif arg == '-q':
                 quiet = True
+            elif arg == '-hettest':
+                if not SCIPY_PRESENT:
+                    print "-hettest requires scipy to be installed"
+                    usage()
+                hettest = True
             elif arg in ['-qual', '-count', '-mask', '-ref', '-minorpct', '-profile']:
                 last = arg
             elif not bam and os.path.exists(arg):
@@ -508,8 +576,8 @@ if __name__ == '__main__':
             import cProfile
 
             def func():
-                bam_basecall(bam, ref, min_qual, min_count, chrom, start, end, mask, quiet, showgaps, showstrand, minorpct, TimedProfiler())
+                bam_basecall(bam, ref, min_qual, min_count, chrom, start, end, mask, quiet, showgaps, showstrand, minorpct, hettest, TimedProfiler())
             sys.stderr.write('Profiling...\n')
             cProfile.run('func()', profile)
         else:
-                bam_basecall(bam, ref, min_qual, min_count, chrom, start, end, mask, quiet, showgaps, showstrand, minorpct, None)
+                bam_basecall(bam, ref, min_qual, min_count, chrom, start, end, mask, quiet, showgaps, showstrand, minorpct, hettest, None)
