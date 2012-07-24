@@ -255,7 +255,7 @@ class Mismatch(object):
         return True
 
     def __repr__(self):
-        return '%s mismatch%s' % (self.num, '' if self.num == 1 else 'es')
+        return '>%s mismatch%s' % (self.num, '' if self.num == 1 else 'es')
 
     def close(self):
         pass
@@ -282,7 +282,7 @@ class MismatchRef(object):
         return True
 
     def __repr__(self):
-        return '%s mismatch%s in %s' % (self.num, '' if self.num == 1 else 'es', os.path.basename(self.refname))
+        return '>%s mismatch%s in %s' % (self.num, '' if self.num == 1 else 'es', os.path.basename(self.refname))
 
     def close(self):
         self.ref.close()
