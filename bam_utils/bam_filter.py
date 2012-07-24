@@ -219,6 +219,10 @@ class ExcludeBED(object):
         if not read.is_unmapped:
             bin = read.pos / 100000
             ref = bam.getrname(read.rname)
+
+            if not (ref, bin) in self.regions:
+                return True
+
             for start, end, strand in self.regions[(ref, bin)]:
                 if strand == '+' and read.is_reverse:
                     continue
