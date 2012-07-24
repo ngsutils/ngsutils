@@ -10,6 +10,7 @@ import sys
 
 from support.eta import ETA
 from support.regions import RegionTagger
+import support.ngs_utils
 
 
 def usage():
@@ -107,11 +108,7 @@ def bed_stats(infile, gtf_file=None):
     print ""
     print "Reference distribution"
     print "ref\tcount"
-    refnames = []
-    for refname in refs:
-        refnames.append(refname)
-    refnames.sort()
-    for refname in refnames:
+    for refname in support.ngs_utils.natural_sort([x for x in refs]):
         print "%s\t%s" % (refname, format_number(refs[refname]))
 
     if regiontagger:
