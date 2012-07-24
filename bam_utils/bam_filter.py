@@ -59,6 +59,8 @@ Common tags to filter by:
 
     MAPQ    Mapping quality (defined as part of SAM spec)
 
+    The tag type (:i, :f, :Z) is optional.
+
 """
 
 import os
@@ -376,15 +378,29 @@ class QCFailFlag(object):
 class _TagCompare(object):
     def __init__(self, tag, value):
         self.args = '%s %s' % (tag, value)
-        self.tag = tag
 
-        try:
-            self.value = int(value)
-        except:
-            try:
+        if ':' in tag:
+            self.tag = tag.split(':')[0]
+            tagtype = tag.split(':')[1]
+            if tagtype == 'i':
+                self.value = int(value)
+            elif tagtype == 'f':
                 self.value = float(value)
-            except:
+            elif tagtype == 'H':
+                self.value = int(value)  # not sure about this
+            else:
                 self.value = value
+        else:
+            self.tag = tag
+
+            # guess at type...
+            try:
+                self.value = int(value)
+            except:
+                try:
+                    self.value = float(value)
+                except:
+                    self.value = value
 
     def get_value(self, read):
         if self.tag == 'MAPQ':
