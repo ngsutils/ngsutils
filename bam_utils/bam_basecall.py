@@ -68,6 +68,7 @@ import collections
 import datetime
 from support.eta import ETA
 import pysam
+from support.ngs_utils import memoize
 
 
 try:
@@ -105,12 +106,16 @@ Options:
 
 -showstrand    Show the minor-strand percentages for each call
                (0-0.5 only shows the minor strand %)
+
+-bed fname     Only output positions that are present in this BED file
+               (*must* be sorted and reduced with the -nostrand option)
 """
     sys.exit(1)
 
 __genomic_freq = {'A': 0.3, 'C': 0.2, 'G': 0.2, 'T': 0.3}
 
 
+@memoize
 def calc_entropy(a, c, t, g):
     counts = {'A': a, 'C': c, 'G': g, 'T': t}
 
@@ -140,27 +145,60 @@ BasePosition = collections.namedtuple('BasePosition', 'tid pos total a c g t n d
 
 
 class BamBaseCaller(object):
-    def __init__(self, bam_fname, min_qual=0, min_count=0, chrom=None, start=0, end=0, mask=1540, quiet=False):
+    def __init__(self, bam_fname, min_qual=0, min_count=0, regions=None, mask=1540, quiet=False):
         self.bam = pysam.Samfile(bam_fname, 'rb')
         self.min_qual = min_qual
         self.min_count = 0
 
-        self.chrom = chrom
-        self.start = start
-        self.end = end
+        self.regions = regions
+        self.cur_chrom = None
+        self.cur_start = None
+        self.cur_end = None
 
         self.mask = mask
         self.quiet = quiet
 
         def _gen1():
-            for p in self.bam.fetch(chrom, start, end):
-                yield p
+            if not self.quiet:
+                eta = ETA(self.regions.total)
+            else:
+                eta = None
+
+            count = 0
+            for chrom, start, end in self.regions.regions:
+                if chrom in self.bam.references:
+                    self.cur_chrom = chrom
+                    self.cur_start = start
+                    self.cur_end = end
+
+                    laststart = 0
+                    for read in self.bam.fetch(chrom, start, end):
+                        if read.pos != laststart:
+                            count += 1
+                            laststart = read.pos
+
+                        if eta:
+                            eta.print_status(count, extra='%s/%s %s:%s' % (count, self.regions.total, self.bam.references[read.tid], read.pos))
+
+                        yield read
+            if eta:
+                eta.done()
 
         def _gen2():
-            for p in self.bam:
-                yield p
+            if not self.quiet:
+                eta = ETA(0, bamfile=self.bam)
+            else:
+                eta = None
 
-        if chrom and start and end:
+            for read in self.bam:
+                if eta:
+                    eta.print_status(extra='%s:%s (%s) %s:%s-%s' % (self.bam.references[read.tid], read.pos, len(self.buffer), self.cur_chrom, self.cur_start, self.cur_end), bam_pos=(read.tid, read.pos))
+                yield read
+
+            if eta:
+                eta.done()
+
+        if regions:
             self._gen = _gen1
         else:
             self._gen = _gen2
@@ -172,6 +210,11 @@ class BamBaseCaller(object):
         self.bam.close()
 
     def _calc_pos(self, tid, pos, records):
+        if self.cur_start and pos < self.cur_start:
+            return None
+        if self.cur_end and self.cur_end < pos:
+            return None
+
         counts = {'A': 0, 'C': 0, 'G': 0, 'T': 0, 'N': 0, 'ins': 0, 'del': 0}
         plus_counts = {'A': 0, 'C': 0, 'G': 0, 'T': 0, 'N': 0, 'ins': 0, 'del': 0}
 
@@ -229,36 +272,32 @@ class BamBaseCaller(object):
     def fetch(self):
         self.current_tid = None
         self.buffer = collections.deque()
-        if not self.quiet:
-            eta = ETA(0, bamfile=self.bam)
-        else:
-            eta = None
 
         for read in self._gen():
-            if eta:
-                eta.print_status(extra='%s:%s (%s)' % (self.bam.references[read.tid], read.pos, len(self.buffer)), bam_pos=(read.tid, read.pos))
-
             if self.current_tid != read.tid:  # new chromosome
                 while self.buffer:
                     tid, pos, records = self.buffer.popleft()
-                    yield self._calc_pos(tid, pos, records)
+                    y = self._calc_pos(tid, pos, records)
+                    if y:
+                        yield y
 
                 self.current_tid = read.tid
 
             # handle all positions that are 5' of the current one
             while self.buffer and read.pos > self.buffer[0].pos:
                 tid, pos, records = self.buffer.popleft()
-                yield self._calc_pos(tid, pos, records)
+                y = self._calc_pos(tid, pos, records)
+                if y:
+                    yield y
 
             self._push_read(read)
 
         # flush buffer for the end
         while self.buffer:
             tid, pos, records = self.buffer.popleft()
-            yield self._calc_pos(tid, pos, records)
-
-        if eta:
-            eta.done()
+            y = self._calc_pos(tid, pos, records)
+            if y:
+                yield y
 
     def _push_read(self, read):
         if not self.buffer:
@@ -268,17 +307,22 @@ class BamBaseCaller(object):
             self.buffer.append(MappingPos(read.tid, self.buffer[-1].pos + 1, []))
 
         buf_idx = 0
-        while self.buffer[0].pos < read.pos:
+        while self.buffer[buf_idx].pos < read.pos:
             buf_idx += 1
 
         read_idx = 0
         for op, length in read.cigar:
-            if op == 0:
+            if op == 0:  # M
                 for i in xrange(length):
-                    self.buffer[buf_idx].records.append(MappingRecord(read_idx, op, read.seq[read_idx], read.qual[read_idx], read))
+                    try:
+                        self.buffer[buf_idx].records.append(MappingRecord(read_idx, op, read.seq[read_idx], read.qual[read_idx], read))
+                    except Exception, e:
+                        sys.stderr.write('\n%s\nIf there is a BED file, is it sorted and reduced?\n' % e)
+                        sys.exit(1)
                     buf_idx += 1
                     read_idx += 1
-            elif op == 1:
+
+            elif op == 1:  # I
                 inseq = ''
                 inqual = 0
                 for i in xrange(length):
@@ -290,13 +334,13 @@ class BamBaseCaller(object):
 
                 self.buffer[buf_idx].records.append(MappingRecord(read_idx, op, inseq, inqual, read))
 
-            elif op == 2:
+            elif op == 2:  # D
                 mr = MappingRecord(read_idx, op, None, None, read)
                 for i in xrange(length):
                     self.buffer[buf_idx].records.append(mr)
                     buf_idx += 1
 
-            elif op == 3:
+            elif op == 3:  # N
                 mr = MappingRecord(read_idx, op, None, None, read)
                 for i in xrange(length):
                     self.buffer[buf_idx].records.append(mr)
@@ -343,6 +387,7 @@ def _calculate_consensus_minor(minorpct, a, c, g, t):
     return ('/'.join(consensuscalls), '')
 
 
+@memoize
 def _calculate_heterozygosity(a, c, g, t):
     total = a + c + g + t
     calls = [a, c, g, t]
@@ -354,16 +399,15 @@ def _calculate_heterozygosity(a, c, g, t):
     if minor == 0:
         return 1.0  # There is no minor call, so not heterozygous!
 
+    # Fisher test
     theoretical_major = total - background
     theoretical_minor = background
 
-    oddsratio, pval = scipy.stats.fisher_exact([[theoretical_major, theoretical_minor], [major, minor]], 'less')
-
-    #pval = support.stats.fisher_test(theoretical_major, theoretical_minor, major, minor)
+    oddsratio, pval = scipy.stats.fisher_exact([[theoretical_major, theoretical_minor], [major, minor]])
     return pval
 
 
-def bam_basecall(bam_fname, ref_fname, min_qual=0, min_count=0, chrom=None, start=None, end=None, mask=1540, quiet=False, showgaps=False, showstrand=False, minorpct=0.01, hettest=False, profiler=None):
+def bam_basecall(bam_fname, ref_fname, min_qual=0, min_count=0, regions=None, mask=1540, quiet=False, showgaps=False, showstrand=False, minorpct=0.01, hettest=False, profiler=None):
     if ref_fname:
         ref = pysam.Fastafile(ref_fname)
     else:
@@ -379,13 +423,10 @@ def bam_basecall(bam_fname, ref_fname, min_qual=0, min_count=0, chrom=None, star
 
     sys.stdout.write('\n')
 
-    bbc = BamBaseCaller(bam_fname, min_qual, min_count, chrom, start, end, mask, quiet)
+    bbc = BamBaseCaller(bam_fname, min_qual, min_count, regions, mask, quiet)
     for basepos in bbc.fetch():
         if profiler and profiler.abort():
             break
-        if start and end:
-            if basepos.pos < start or basepos.pos >= end:
-                continue
 
         big_total = basepos.total + basepos.deletions + len(basepos.insertions)
 
@@ -475,6 +516,52 @@ def bam_basecall(bam_fname, ref_fname, min_qual=0, min_count=0, chrom=None, star
         ref.close()
 
 
+class SingleRegion(object):
+    def __init__(self, arg):
+        self.chrom, startend = arg.split(':')
+        if '-' in startend:
+            self.start, self.end = [int(x) for x in startend.split('-')]
+        else:
+            self.start = int(startend)
+            self.end = start
+        self.start = self.start - 1
+
+    @property
+    def total(self):
+        return end - start
+
+    @property
+    def regions(self):
+        yield (chrom, start, end)
+
+
+class BEDRegions(object):
+    def __init__(self, fname):
+        self.fname = fname
+        self.__total = 0
+
+    @property
+    def total(self):
+        if not self.__total:
+            self.__total = 0
+            with open(self.fname) as f:
+                for line in f:
+                    if line[0] == '#':
+                        continue
+                    chrom, start, end, name, score, strand = line.strip().split('\t')
+                    self.__total += (int(end) - int(start))
+        return self.__total
+
+    @property
+    def regions(self):
+        with open(self.fname) as f:
+            for line in f:
+                if line[0] == '#':
+                    continue
+                chrom, start, end, name, score, strand = line.strip().split('\t')
+                yield (chrom, int(start), int(end))
+
+
 class TimedProfiler(object):
     def __init__(self, secs_to_run=3600):  # default is to run for one hour
         self.expire_ts = datetime.datetime.now() + datetime.timedelta(seconds=secs_to_run)
@@ -499,6 +586,7 @@ if __name__ == '__main__':
     showstrand = False
     hettest = False
     minorpct = 0.01
+    regions = None
 
     profile = None
 
@@ -517,6 +605,13 @@ if __name__ == '__main__':
                 last = None
             elif last == '-count':
                 min_count = int(arg)
+                last = None
+            elif last == '-bed':
+                if os.path.exists(arg):
+                    regions = BEDRegions(arg)
+                else:
+                    print "BED file: %s not found!" % arg
+                    usage()
                 last = None
             elif last == '-mask':
                 mask = int(arg)
@@ -540,7 +635,7 @@ if __name__ == '__main__':
                     print "-hettest requires scipy to be installed"
                     usage()
                 hettest = True
-            elif arg in ['-qual', '-count', '-mask', '-ref', '-minorpct', '-profile']:
+            elif arg in ['-qual', '-count', '-mask', '-ref', '-minorpct', '-profile', '-bed']:
                 last = arg
             elif not bam and os.path.exists(arg):
                 if os.path.exists('%s.bai' % arg):
@@ -554,14 +649,8 @@ if __name__ == '__main__':
                 else:
                     print "Missing FAI index on %s" % arg
                     usage()
-            elif not chrom:
-                chrom, startend = arg.split(':')
-                if '-' in startend:
-                    start, end = [int(x) for x in startend.split('-')]
-                else:
-                    start = int(startend)
-                    end = start
-                start = start - 1
+            elif not regions:
+                regions = SingleRegion(arg)
             else:
                 print "Unknown option or missing index: %s" % arg
                 usage()
@@ -576,8 +665,8 @@ if __name__ == '__main__':
             import cProfile
 
             def func():
-                bam_basecall(bam, ref, min_qual, min_count, chrom, start, end, mask, quiet, showgaps, showstrand, minorpct, hettest, TimedProfiler())
+                bam_basecall(bam, ref, min_qual, min_count, regions, mask, quiet, showgaps, showstrand, minorpct, hettest, TimedProfiler())
             sys.stderr.write('Profiling...\n')
             cProfile.run('func()', profile)
         else:
-                bam_basecall(bam, ref, min_qual, min_count, chrom, start, end, mask, quiet, showgaps, showstrand, minorpct, hettest, None)
+                bam_basecall(bam, ref, min_qual, min_count, regions, mask, quiet, showgaps, showstrand, minorpct, hettest, None)

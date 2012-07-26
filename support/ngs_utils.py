@@ -8,6 +8,7 @@ import sys
 import os
 import gzip
 import re
+import collections
 
 
 def natural_sort(ar):
@@ -173,3 +174,23 @@ def parse_args(argv, defaults=None, expected_argc=0):
     while len(args) < expected_argc:
         args.append(None)
     return opts, args
+
+
+class memoize(object):
+    'Simple memoizing decorator to cache results'
+    def __init__(self, func):
+        self.func = func
+        self.cache = {}
+
+    def __call__(self, *args):
+        if not isinstance(args, collections.Hashable):
+            # uncacheable. a list, for instance.
+            # better to not cache than blow up.
+            return self.func(*args)
+
+        if args in self.cache:
+            return self.cache[args]
+        else:
+            value = self.func(*args)
+            self.cache[args] = value
+            return value
