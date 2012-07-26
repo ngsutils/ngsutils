@@ -6,6 +6,7 @@ usage(){
     echo "    add_isoform - Appends isoform annotation from UCSC isoforms file"
     echo "    add_reflink - Appends isoform/name annotation from RefSeq/refLink"
     echo "    add_xref    - Appends name annotation from UCSC Xref file"
+    echo "    remove_dup  - Removes duplicate transcript annotations (RefSeq)"
     echo ""
     echo "    genesize    - Extract genomic/transcript sizes for genes"
     echo "    junctions   - Build a junction library from FASTA and GFF/GTF model"

@@ -52,7 +52,7 @@ class GTF(object):
                     else:
                         gid = attributes['gene_id']
                         if not warned:
-                            sys.stderr.write('GTF file missing isoform annotation! Each transcript will be treated separately.\n')
+                            sys.stderr.write('\nGTF file missing isoform annotation! Each transcript will be treated separately. (%s)\n' % gid)
                             warned = True
 
                     eta.print_status(extra=gid)
