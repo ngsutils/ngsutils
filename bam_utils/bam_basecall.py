@@ -30,24 +30,13 @@ Entropy
 # gaps
 # inserts
 
-If -hettest is applied, a Fisher test is performed to see if the base calls
-likely indicate a heterozygous call. The Fisher table is setup like this:
+If -hettest is applied, an alternative allele percentage is calculated.
+            minor - background
+     --------------------------------
+  (major - background) + (minor - background)
 
-                                 Major call     |    Minor call
-                            -----------------------------------------
-Theoretical homozygous call   total-background  |  background count
-Actual calls                  actual top call   |  actual 2nd call
-
-So if the call breakdown was A:10, C:2, G:1, T:0, A is the top call, C is the
-2nd (minor) call, G is the background level, and T is ignored. The Fisher
-table then looks like this:
-
-                 major  | minor
-                ----------------
-Theoretical     13 - 1  |   1
-Actual            10    |   2
-
-And the p-value is: 0.373 (not significant)
+This is in lieu of using a more robust model, such as a Baysian model like
+what was used in Li, et al 2009, Genome Res.
 
 If -showstrand is applied, a minor strand percentage is also calculated.p This
 is calculated as:
@@ -68,7 +57,6 @@ import collections
 import datetime
 from support.eta import ETA
 import pysam
-from support.ngs_utils import memoize
 
 
 try:
@@ -115,7 +103,6 @@ Options:
 __genomic_freq = {'A': 0.3, 'C': 0.2, 'G': 0.2, 'T': 0.3}
 
 
-@memoize
 def calc_entropy(a, c, t, g):
     counts = {'A': a, 'C': c, 'G': g, 'T': t}
 
@@ -390,7 +377,6 @@ def _calculate_consensus_minor(minorpct, a, c, g, t):
     return ('/'.join(consensuscalls), '')
 
 
-@memoize
 def _calculate_heterozygosity(a, c, g, t):
     total = a + c + g + t
     calls = [a, c, g, t]
@@ -399,15 +385,10 @@ def _calculate_heterozygosity(a, c, g, t):
     minor = calls[-2]
     background = calls[-3]
 
-    if minor == 0:
-        return 1.0  # There is no minor call, so not heterozygous!
+    if minor-background <= 0:
+        return 0.0  # There is no minor call, so not heterozygous!
 
-    # Fisher test
-    theoretical_major = total - background
-    theoretical_minor = background
-
-    oddsratio, pval = scipy.stats.fisher_exact([[theoretical_major, theoretical_minor], [major, minor]])
-    return pval
+    return float(minor - background) / (major - background + minor - background)
 
 
 def bam_basecall(bam_fname, ref_fname, min_qual=0, min_count=0, regions=None, mask=1540, quiet=False, showgaps=False, showstrand=False, minorpct=0.01, hettest=False, profiler=None):
