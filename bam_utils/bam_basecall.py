@@ -59,13 +59,6 @@ from support.eta import ETA
 import pysam
 
 
-try:
-    import scipy.stats
-    SCIPY_PRESENT = True
-except:
-    SCIPY_PRESENT = False
-
-
 def usage():
     print __doc__
     print """
@@ -86,9 +79,7 @@ Options:
                consensus call. Calculated as #minor / #consensus.
                (0.0 -> 1.0, default 0.01)
 
--hettest       Add a column to assign a p-value to assess the heterozygosity
-               of each base. (Based on Fisher's exact test for a theoretical
-               homozygous call) (requires scipy, experimental)
+-hettest       Calculate alternative allele frequency
 
 -showgaps      Report gaps/splice-junctions in RNA-seq data
 
@@ -378,14 +369,13 @@ def _calculate_consensus_minor(minorpct, a, c, g, t):
 
 
 def _calculate_heterozygosity(a, c, g, t):
-    total = a + c + g + t
     calls = [a, c, g, t]
     calls.sort()
     major = calls[-1]
     minor = calls[-2]
     background = calls[-3]
 
-    if minor-background <= 0:
+    if minor - background <= 0:
         return 0.0  # There is no minor call, so not heterozygous!
 
     return float(minor - background) / (major - background + minor - background)
@@ -399,7 +389,7 @@ def bam_basecall(bam_fname, ref_fname, min_qual=0, min_count=0, regions=None, ma
 
     sys.stdout.write('chrom\tpos\tref\tcount\tconsensus call\tminor call\tave mappings')
     if hettest:
-        sys.stdout.write('\theterozygousity')
+        sys.stdout.write('\talt. allele freq')
     sys.stdout.write('\tentropy\tA\tC\tG\tT\tN\tDeletions\tGaps\tInsertions\tInserts')
 
     if showstrand:
@@ -615,9 +605,6 @@ if __name__ == '__main__':
             elif arg == '-q':
                 quiet = True
             elif arg == '-hettest':
-                if not SCIPY_PRESENT:
-                    print "-hettest requires scipy to be installed"
-                    usage()
                 hettest = True
             elif arg in ['-qual', '-count', '-mask', '-ref', '-minorpct', '-profile', '-bed']:
                 last = arg
