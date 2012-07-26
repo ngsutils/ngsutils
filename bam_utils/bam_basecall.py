@@ -318,6 +318,9 @@ class BamBaseCaller(object):
                         self.buffer[buf_idx].records.append(MappingRecord(read_idx, op, read.seq[read_idx], read.qual[read_idx], read))
                     except Exception, e:
                         sys.stderr.write('\n%s\nIf there is a BED file, is it sorted and reduced?\n' % e)
+                        sys.stderr.write('read: %s (%s:%s-%s)\n' % (read.qname, self.bam.references[read.tid], read.pos, read.apos))
+                        if self.cur_chrom:
+                            sys.stderr.write('current range: %s:%s-%s\n' % (self.cur_chrom, self.cur_start, self.cur_end))
                         sys.exit(1)
                     buf_idx += 1
                     read_idx += 1
