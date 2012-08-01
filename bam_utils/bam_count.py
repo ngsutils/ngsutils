@@ -133,7 +133,7 @@ Possible values for [-norm]:
     mapped      Use the number of reads that map in the model (genes/regions)
     median      Use the median value
                 (genes/regions without reads excluded)
-    quantile    Use the number of reads in the lower 75%% of all genes/regions
+    quantile    Use the number of reads in the lower 75% of all genes/regions
                 (genes/regions without reads excluded)
 
 Possible values for [-multiple]:
