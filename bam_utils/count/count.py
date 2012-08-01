@@ -82,7 +82,7 @@ class Model(object):
             norm_val_orig = _find_mapped_count(bam, whitelist, blacklist)
         elif norm == 'mapped':
             norm_val_orig = single_count + len(multireads)
-        elif norm == 'quartile':
+        elif norm == 'quantile':
             norm_val_orig = _find_mapped_count_pcts([x[0] for x in region_counts])
         elif norm == 'median':
             norm_val_orig = _find_mapped_count_median([x[0] for x in region_counts])
