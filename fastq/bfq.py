@@ -1,6 +1,7 @@
 #!/usr/bin/python
 ## category General
-## desc Converts to/from BFQ (binary-compressed FASTQ format) (experimental)
+## desc Converts to/from BFQ (binary-compressed FASTQ format)
+## experimental
 '''
 Converts to/from BFQ (binary-compressed FASTQ format)
 

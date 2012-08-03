@@ -67,7 +67,7 @@ import os
 import sys
 import pysam
 from support.eta import ETA
-from bam_utils import read_calc_mismatches, read_calc_mismatches_ref
+from bam import read_calc_mismatches, read_calc_mismatches_ref
 
 
 def usage():

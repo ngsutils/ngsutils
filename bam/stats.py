@@ -8,7 +8,7 @@ Calculates simple stats for a BAM file
 import os
 import sys
 import pysam
-from bam_utils import read_calc_mismatches
+from bam import read_calc_mismatches
 from support.eta import ETA
 from support.ngs_utils import natural_sort
 from support.regions import RegionTagger

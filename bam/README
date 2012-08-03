@@ -1,0 +1,30 @@
+Commands
+  DNA-seq
+    basecall      - Base caller
+    minorallele   - Find potential minor allele frequency (experimental)
+
+  RNA-seq
+    cims          - Finds regions of unusual deletions (CLIP-seq)
+    count         - Calculates counts/RPKM for genes/BED regions/repeats
+
+  General
+    convertregion - Converts region mapping to genomic mapping
+    export        - Export reads, mapped positions, and other tags
+    expressed     - Finds regions expressed in a BAM file
+    extract       - Extracts reads based on regions in a BED file
+    filter        - Removes reads from a BAM file based on criteria
+    merge         - Combine multiple BAM files together (taking best-matches)
+    split         - Splits a BAM file into smaller pieces
+    stats         - Calculates simple stats for a BAM file
+    tag           - Update read names with a suffix (for merging)
+
+  Conversion
+    tobed         - Convert BAM reads to BED regions
+    tobedgraph    - Convert BAM coverage to bedGraph (for visualization)
+    tofasta       - Convert BAM reads to FASTA sequences
+    tofastq       - Convert BAM reads back to FASTQ sequences
+
+  Misc
+    check         - Checks a BAM file for corruption
+    cleancigar    - Fixes BAM files where the CIGAR alignment has a zero length element
+    readfilepos   - Finds the position of a read in a BAM file

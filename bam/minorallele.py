@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 ## category DNA-seq
-## desc Find potential minor allele frequency (experimental)
+## desc Find potential minor allele frequency
+## experimental
 """
 Calculates a minor allele frequency in (pooled) genomic sequencing.
 
@@ -32,14 +33,14 @@ class Blackhole(object):
 __sink = Blackhole()
 
 try:
-    __rsrc = os.path.join(os.path.dirname(__file__), 'minorallele_cpci.R')
+    __rsrc = os.path.join(os.path.dirname(__file__), 'support', 'minorallele_cpci.R')
     import rpy2.robjects as robjects
     rscript = True
     with open(__rsrc) as f:
         robjects.r(f.read())
 except Exception:
     robjects = None
-    rscript = os.path.join(os.path.dirname(__file__), 'minorallele_cpci.rsh')
+    rscript = os.path.join(os.path.dirname(__file__), 'support', 'minorallele_cpci.rsh')
     if not os.path.exists(rscript):
         sys.stderr.write('Missing R script: %s\n' % rscript)
         sys.exit(-1)

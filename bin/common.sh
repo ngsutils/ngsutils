@@ -1,9 +1,26 @@
+#!/bin/bash
+
+SUB=$(basename $0 | sed -e 's/utils//')
+REAL=`python -c 'import os,sys;print os.path.realpath(sys.argv[1])' "$0"`
+DIR=`dirname "$REAL"`/..
+
+function usage() {
+    echo "Usage: $(basename $0) COMMAND"
+    echo ""
+    cat $DIR/$SUB/README
+    echo ""
+    echo "Run '$(basename $0) help CMD' for more information about a specific command"
+    echo -n "ngsutils "
+    cat $DIR/VERSION
+
+    exit 1
+}
+
 if [ "$1" == "" ]; then
     usage
 fi
 
-REAL=`python -c 'import os,sys;print os.path.realpath(sys.argv[1])' "$0"`
-DIR=`dirname "$REAL"`
+
 
 . "$DIR"/env/bin/activate
 export PYTHONPATH=$PYTHONPATH:"$DIR"
