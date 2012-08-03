@@ -11,7 +11,7 @@ import os
 import sys
 import gzip
 
-from fastq_utils import read_fastq, is_paired_fastq
+from fastq import read_fastq, is_paired_fastq
 
 
 def fastq_split(fname, outbase, chunks, ignore_pairs=False, gz=False, count_fname=None):

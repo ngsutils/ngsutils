@@ -8,7 +8,7 @@ Writes out the read names present in the FASTQ file.
 import os
 import sys
 
-from fastq_utils import read_fastq
+from fastq import read_fastq
 
 
 def usage():

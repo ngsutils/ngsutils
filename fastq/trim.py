@@ -9,7 +9,7 @@ s/w alignments with the linker sequences
 import os
 import sys
 
-from fastq_utils import read_fastq, is_colorspace_fastq
+from fastq import read_fastq, is_colorspace_fastq
 import support.localalign
 
 

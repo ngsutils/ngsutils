@@ -8,7 +8,7 @@ Truncates each read seq/qual values to be a maximum length
 import os
 import sys
 
-from fastq_utils import read_fastq, is_colorspace_fastq
+from fastq import read_fastq, is_colorspace_fastq
 
 
 def fastq_truncate(fname, max_len):

@@ -7,7 +7,7 @@ Extracts the genomic and transcript sizes for genes in GTF format
 
 import sys
 import os
-from gtf_utils import GTF
+from gtf import GTF
 
 
 def usage():

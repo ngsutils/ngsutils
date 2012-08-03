@@ -12,7 +12,7 @@ what encoding is used for the quality values (Sanger or Illumina).
 import os
 import sys
 
-from fastq_utils import read_fastq, is_colorspace_fastq, is_paired_fastq, fastq_qualtype
+from fastq import read_fastq, is_colorspace_fastq, is_paired_fastq, fastq_qualtype
 
 
 def fastq_stats(fname, verbose=False):

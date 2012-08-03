@@ -19,7 +19,7 @@ sufficient overlap with the junction is established when reads are mapped.
 import os
 import sys
 import pysam
-from gtf_utils import GTF
+from gtf import GTF
 from support.eta import ETA
 
 

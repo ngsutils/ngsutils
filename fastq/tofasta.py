@@ -10,7 +10,7 @@ Same format as SOLiD csfasta / qual files.
 import os
 import sys
 
-from fastq_utils import read_fastq
+from fastq import read_fastq
 
 
 def export_seq(fname):

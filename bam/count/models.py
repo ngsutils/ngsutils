@@ -1,6 +1,6 @@
 from count import Model, _fetch_reads, _find_mapped_count, _fetch_reads_excluding
 from support.eta import ETA
-from gtf_utils import GTF
+from gtf import GTF
 import support.ngs_utils
 import pysam
 import os

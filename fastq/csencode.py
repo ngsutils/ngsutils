@@ -12,7 +12,7 @@ into an encoded ACGTN.
 import os
 import sys
 
-from fastq_utils import read_fastq
+from fastq import read_fastq
 
 _encoding = {
 '0': 'A',

@@ -22,7 +22,7 @@ The merged file is written to stdout.
 import os
 import sys
 
-from fastq_utils import read_fastq
+from fastq import read_fastq
 
 
 def fastq_merge(fnames, split_slashes=False):

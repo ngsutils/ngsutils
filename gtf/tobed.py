@@ -12,7 +12,7 @@ alternative splicing, such that each region is assigned to be 'constant' or
 
 import sys
 import os
-from gtf_utils import GTF
+from gtf import GTF
 
 
 def usage(msg=None):

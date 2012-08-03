@@ -8,7 +8,7 @@ Converts Illumina Qual values to Sanger scale.
 import os
 import sys
 
-from fastq_utils import read_fastq
+from fastq import read_fastq
 
 
 def usage():

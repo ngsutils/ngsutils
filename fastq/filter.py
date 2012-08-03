@@ -9,7 +9,7 @@ batch, allowing you to use more than one criterion at a time.
 import sys
 import os
 
-from fastq_utils import read_fastq
+from fastq import read_fastq
 
 
 def fastq_filter(filter_chain, stats_fname=None):
