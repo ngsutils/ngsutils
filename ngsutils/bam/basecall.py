@@ -261,6 +261,8 @@ class BamBaseCaller(object):
         self.buffer = collections.deque()
 
         for read in self._gen():
+            if (read.flag & self.mask) > 0:
+                continue
             if self.current_tid != read.tid:  # new chromosome
                 while self.buffer:
                     tid, pos, records = self.buffer.popleft()
