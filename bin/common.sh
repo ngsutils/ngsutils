@@ -1,12 +1,12 @@
 #!/bin/bash
 REAL=`python -c 'import os,sys;print os.path.realpath(sys.argv[1])' "$0"`
-DIR=`dirname "$REAL"`/..
+DIR=`dirname "$REAL"`/../
 SUBDIR=$(basename $0 | sed -e 's/utils//')
 
 function usage() {
     echo "Usage: $(basename $0) COMMAND"
     echo ""
-    cat $DIR/$SUBDIR/README
+    cat $DIR/ngsutils/$SUBDIR/README
     echo ""
     echo "Run '$(basename $0) help CMD' for more information about a specific command"
     echo -n "ngsutils "
@@ -46,20 +46,20 @@ if [ "$1" == "help" ]; then
     
     action=$2.py
     
-    if [ ! -e "$DIR"/$SUBDIR/$action ]; then
+    if [ ! -e "$DIR"/ngsutils/$SUBDIR/$action ]; then
         action=$2.sh
-        if [ ! -e "$DIR"/$SUBDIR/$action ]; then
+        if [ ! -e "$DIR"/ngsutils/$SUBDIR/$action ]; then
             echo "Unknown command '$2'"
             exit 1
         fi
     fi
-    "$DIR"/$SUBDIR/$action -h
+    "$DIR"/ngsutils/$SUBDIR/$action -h
 else
     action=$1.py
 
-    if [ ! -e "$DIR"/$SUBDIR/$action ]; then
+    if [ ! -e "$DIR"/ngsutils/$SUBDIR/$action ]; then
         action=$1.sh
-        if [ ! -e "$DIR"/$SUBDIR/$action ]; then
+        if [ ! -e "$DIR"/ngsutils/$SUBDIR/$action ]; then
             echo "Unknown command '$1'"
             exit 1
         fi
@@ -73,5 +73,5 @@ else
         ((++i))
     done
     
-    exec "$DIR"/$SUBDIR/$action "${ARGS[@]}"
+    exec "$DIR"/ngsutils/$SUBDIR/$action "${ARGS[@]}"
 fi
