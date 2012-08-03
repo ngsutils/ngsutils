@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 ## category General
 ## desc Removes "_dup" entries from a GTF file
+## experimental
 '''In RefSeq annotations, a particular transcript may be assigned to multiple
 locations. In this case, the transcript name is altered to be
 transciptid_dup1. This program will remove all _dup? entries from a GTF file.
