@@ -13,6 +13,7 @@ Commands
     extract       - Extracts reads based on regions in a BED file
     filter        - Removes reads from a BAM file based on criteria
     merge         - Combine multiple BAM files together (taking best-matches)
+    renamepair    - Postprocesses a BAM file to rename pairs that have an extra /N value
     split         - Splits a BAM file into smaller pieces
     stats         - Calculates simple stats for a BAM file
     tag           - Update read names with a suffix (for merging)
