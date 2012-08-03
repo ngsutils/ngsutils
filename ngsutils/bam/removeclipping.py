@@ -22,7 +22,14 @@ def bam_removeclipping(infile, outfile):
     out = pysam.Samfile(outfile, "wb", template=bam)
     total = 0
     count = 0
+    unmapped = 0
     for read in bam:
+        if read.is_unmapped:
+            out.write(read)
+            unmapped += 1
+            total += 1
+            continue
+
         newcigar = []
         clip_5 = 0
         clip_3 = 0
@@ -74,7 +81,7 @@ def bam_removeclipping(infile, outfile):
 
     bam.close()
     out.close()
-    sys.stderr.write('Wrote: %s reads\nAltered: %s\n' % (total, count))
+    sys.stderr.write('Wrote: %s reads\nAltered: %s\nUnmapped: %s\n' % (total, count, unmapped))
 
 
 def usage():
