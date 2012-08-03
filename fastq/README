@@ -1,18 +1,17 @@
 Commands
   General
-    bfq         - Converts to/from BFQ (binary-compressed FASTQ format) (experimental)
-    filter      - Filter out reads using a number of metrics
-    merge       - Merges paired FASTQ files into one file
-    names       - Write out the read names
-    split       - Splits a FASTQ file into N chunks
-    stats       - Calculate summary statistics for a FASTQ file
-    tag         - Adds a prefix or suffix to the read names in a FASTQ file
-    trim        - Remove 5' and 3' linker sequences (S/W aligned)
-    truncate    - Truncates reads to a maximum length
+    filter   - Filter out reads using a number of metrics
+    merge    - Merges paired FASTQ files into one file
+    names    - Write out the read names
+    split    - Splits a FASTQ file into N chunks
+    stats    - Calculate summary statistics for a FASTQ file
+    tag      - Adds a prefix or suffix to the read names in a FASTQ file
+    trim     - Remove 5' and 3' linker sequences (S/W aligned)
+    truncate - Truncates reads to a maximum length
 
   Conversion
     convertqual - Converts qual values from Illumina to Sanger scale
-    csencode    - Converts color-space FASTQ file to encoded FASTQ
-    fromfasta   - Converts (cs)FASTA/qual files to FASTQ format
-    fromqseq    - Converts Illumina qseq (export/sorted) files to FASTQ
-    tofasta     - Converts to FASTA format (seq or qual)
+    csencode - Converts color-space FASTQ file to encoded FASTQ
+    fromfasta - Converts (cs)FASTA/qual files to FASTQ format
+    fromqseq - Converts Illumina qseq (export/sorted) files to FASTQ
+    tofasta  - Converts to FASTA format (seq or qual)

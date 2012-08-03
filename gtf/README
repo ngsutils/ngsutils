@@ -2,10 +2,10 @@ Commands
   General
     add_isoform - Appends isoform annotation from UCSC isoforms file
     add_reflink - Appends isoform/name annotation from RefSeq/refLink
-    add_xref    - Appends name annotation from UCSC Xref file
-    genesize    - Extract genomic/transcript sizes for genes
-    junctions   - Build a junction library from FASTA and GFF/GTF model
-    remove_dup  - Removes "_dup" entries from a GTF file
+    add_xref - Appends name annotation from UCSC Xref file
+    genesize - Extract genomic/transcript sizes for genes
+    junctions - Build a junction library from FASTA and GFF/GTF model
+    remove_dup - Removes "_dup" entries from a GTF file
 
   Conversion
-    tobed       - Convert a GFF/GTF file to BED format
+    tobed    - Convert a GFF/GTF file to BED format
