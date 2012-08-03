@@ -1,13 +1,12 @@
 #!/bin/bash
-
-SUB=$(basename $0 | sed -e 's/utils//')
 REAL=`python -c 'import os,sys;print os.path.realpath(sys.argv[1])' "$0"`
 DIR=`dirname "$REAL"`/..
+SUBDIR=$(basename $0 | sed -e 's/utils//')
 
 function usage() {
     echo "Usage: $(basename $0) COMMAND"
     echo ""
-    cat $DIR/$SUB/README
+    cat $DIR/$SUBDIR/README
     echo ""
     echo "Run '$(basename $0) help CMD' for more information about a specific command"
     echo -n "ngsutils "
@@ -57,7 +56,7 @@ if [ "$1" == "help" ]; then
     "$DIR"/$SUBDIR/$action -h
 else
     action=$1.py
-    
+
     if [ ! -e "$DIR"/$SUBDIR/$action ]; then
         action=$1.sh
         if [ ! -e "$DIR"/$SUBDIR/$action ]; then
