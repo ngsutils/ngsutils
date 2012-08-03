@@ -47,12 +47,15 @@ def bam_removeclipping(infile, outfile):
                 read.cigar = newcigar
                 orig_length = len(read.seq)
 
+                s = read.seq
+                q = read.qual
+
                 if clip_3:
-                    read.seq = read.seq[clip_5:-clip_3]
-                    read.qual = read.qual[clip_5:-clip_3]
+                    read.seq = s[clip_5:-clip_3]
+                    read.qual = q[clip_5:-clip_3]
                 else:
-                    read.seq = read.seq[clip_5:]
-                    read.qual = read.qual[clip_5:]
+                    read.seq = s[clip_5:]
+                    read.qual = q[clip_5:]
 
                 newtags = list(read.tags)
                 if clip_5:
