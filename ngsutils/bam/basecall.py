@@ -144,21 +144,30 @@ class BamBaseCaller(object):
 
             count = 0
             for chrom, start, end in self.regions.regions:
+                working_chrom = None
                 if chrom in self.bam.references:
-                    self.cur_chrom = chrom
-                    self.cur_start = start
-                    self.cur_end = end
+                    working_chrom = chrom
+                elif chrom[0:3] == 'chr':
+                        if chrom[3:] in self.bam.references:
+                            working_chrom = chrom[3:]
 
-                    laststart = 0
-                    for read in self.bam.fetch(chrom, start, end):
-                        if read.pos != laststart:
-                            count += 1
-                            laststart = read.pos
+                if not working_chrom:
+                    continue
 
-                        if eta:
-                            eta.print_status(count, extra='%s/%s %s:%s' % (count, self.regions.total, self.bam.references[read.tid], read.pos))
+                self.cur_chrom = chrom
+                self.cur_start = start
+                self.cur_end = end
 
-                        yield read
+                laststart = 0
+                for read in self.bam.fetch(working_chrom, start, end):
+                    if read.pos != laststart:
+                        count += 1
+                        laststart = read.pos
+
+                    if eta:
+                        eta.print_status(count, extra='%s/%s %s:%s' % (count, self.regions.total, self.bam.references[read.tid], read.pos))
+
+                    yield read
             if eta:
                 eta.done()
 
@@ -398,6 +407,8 @@ def bam_basecall(bam_fname, ref_fname, min_qual=0, min_count=0, regions=None, ma
     sys.stdout.write('\n')
 
     bbc = BamBaseCaller(bam_fname, min_qual, min_count, regions, mask, quiet)
+    ebi_chr_convert = False
+
     for basepos in bbc.fetch():
         if profiler and profiler.abort():
             break
@@ -410,8 +421,14 @@ def bam_basecall(bam_fname, ref_fname, min_qual=0, min_count=0, regions=None, ma
         if big_total == 0 and not (showgaps and basepos.gaps > 0):
             continue
 
+        refbase = ''
         if ref:
-            refbase = ref.fetch(bbc.bam.references[basepos.tid], basepos.pos, basepos.pos + 1).upper()
+            if not ebi_chr_convert:
+                refbase = ref.fetch(bbc.bam.references[basepos.tid], basepos.pos, basepos.pos + 1).upper()
+                if not refbase and not bbc.bam.references[basepos.tid].startswith('chr'):
+                    ebi_chr_convert = True
+            if not refbase and ebi_chr_convert:
+                refbase = ref.fetch('chr%s' % bbc.bam.references[basepos.tid], basepos.pos, basepos.pos + 1).upper()
         else:
             refbase = 'N'
 
