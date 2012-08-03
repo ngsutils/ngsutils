@@ -1,5 +1,5 @@
 import sys
-from gtf_utils import GTF
+from gtf import GTF
 
 
 class RangeMatch(object):
