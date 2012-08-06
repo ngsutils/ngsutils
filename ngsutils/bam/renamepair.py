@@ -20,7 +20,7 @@ def bam_renamepair(infile, outfile, delim='/'):
     for read in bam:
         name, num = read.qname.rsplit(delim, 1)
         newtags = list(read.tags)
-        newtags.append('ZN', num)
+        newtags.append(('ZN', num))
         read.tags = newtags
         read.qname = name
         out.write(read)
