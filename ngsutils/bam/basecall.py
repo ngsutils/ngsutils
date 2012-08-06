@@ -244,6 +244,10 @@ class BamBaseCaller(object):
             elif cigar_op == 3:  # N
                 gaps += 1
                 reads.append(record)
+            elif cigar_op == 4:  # S - soft clipping
+                pass
+            elif cigar_op == 5:  # H - hard clipping
+                pass
 
         pcts = {'A': 0.0, 'C': 0.0, 'G': 0.0, 'T': 0.0, 'N': 0.0, 'ins': 0.0, 'del': 0.0}
         for k in pcts:
@@ -308,6 +312,7 @@ class BamBaseCaller(object):
                     except Exception, e:
                         sys.stderr.write('\n%s\nIf there is a BED file, is it sorted and reduced?\n' % e)
                         sys.stderr.write('read: %s (%s:%s-%s)\n' % (read.qname, self.bam.references[read.tid], read.pos, read.aend))
+                        sys.stderr.write('%s\n' % str(read))
                         if self.cur_chrom:
                             sys.stderr.write('current range: %s:%s-%s\n' % (self.cur_chrom, self.cur_start, self.cur_end))
                         sys.exit(1)
@@ -337,6 +342,11 @@ class BamBaseCaller(object):
                 for i in xrange(length):
                     self.buffer[buf_idx].records.append(mr)
                     buf_idx += 1
+            elif op == 4:  # S - soft clipping
+                read_idx += 1
+                pass
+            elif op == 5:  # H - hard clipping
+                pass
 
 
 def _calculate_consensus_minor(minorpct, a, c, g, t):
