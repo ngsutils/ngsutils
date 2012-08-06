@@ -18,11 +18,11 @@ def bam_renamepair(infile, outfile, delim='/'):
     bam = pysam.Samfile(infile, "rb")
     out = pysam.Samfile(outfile, "wb", template=bam)
     for read in bam:
-        name, num = read.name.rsplit(delim, 1)
+        name, num = read.qname.rsplit(delim, 1)
         newtags = list(read.tags)
         newtags.append('ZN', num)
         read.tags = newtags
-        read.name = name
+        read.qname = name
         out.write(read)
     bam.close()
     out.close()
