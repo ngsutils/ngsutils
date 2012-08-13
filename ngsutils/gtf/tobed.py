@@ -20,6 +20,7 @@ def usage(msg=None):
         print '%s\n' % msg
     print __doc__
     print 'Usage: gtfutils tobed [-genes|-exons|-regions] filename.gtf{.gz}'
+    sys.exit(1)
 
 
 def gtf_genes_tobed(fname):
