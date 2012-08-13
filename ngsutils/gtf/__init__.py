@@ -16,60 +16,84 @@ import os
 from ngsutils.support.ngs_utils import gzip_opener
 from ngsutils.support import symbols
 from ngsutils.support.eta import ETA
+import datetime
+
+try:
+    import cPickle as pickle
+except:
+    import pickle
 
 
 class GTF(object):
     def __init__(self, filename):
         self._genes = {}
         self._pos = 0
-        self._sources = []
-        self._gene_order = []
+        self._gene_order = {}
         warned = False
 
-        sys.stderr.write('Reading GTF file...\n')
-        with gzip_opener(filename) as f:
-            eta = ETA(os.stat(filename).st_size, fileobj=f)
-            for line in f:
-                try:
-                    idx = line.find('#')
-                    if idx > -1:
-                        if idx == 0:
-                            continue
-                        line = line[:-idx]
-                    chrom, source, feature, start, end, score, strand, frame, attrs = line.rstrip().split('\t')
-                    source = symbols[source]
-                    start = int(start) - 1  # Note: 1-based
-                    end = int(end)
-                    attributes = {}
-                    for key, val in [x.split(' ', 1) for x in [x.strip() for x in attrs.split(';')] if x]:
-                        if val[0] == '"' and val[-1] == '"':
-                            val = val[1:-1]
-                        attributes[key] = val
+        cachefile = os.path.join(os.path.dirname(filename), '.%s.cache' % os.path.basename(filename))
+        if os.path.exists(cachefile):
+            sys.stderr.write('Reading GTF file (cached)...')
+            started_t = datetime.datetime.now()
+            with open(cachefile) as cache:
+                self._genes, self._gene_order = pickle.load(cache)
+            sys.stderr.write('(%s sec)\n' % (datetime.datetime.now() - started_t).seconds)
+        else:
+            sys.stderr.write('Reading GTF file...\n')
+            with gzip_opener(filename) as f:
+                eta = ETA(os.stat(filename).st_size, fileobj=f)
+                for line in f:
+                    try:
+                        idx = line.find('#')
+                        if idx > -1:
+                            if idx == 0:
+                                continue
+                            line = line[:-idx]
+                        chrom, source, feature, start, end, score, strand, frame, attrs = line.rstrip().split('\t')
+                        source = symbols[source]
+                        start = int(start) - 1  # Note: 1-based
+                        end = int(end)
+                        attributes = {}
+                        for key, val in [x.split(' ', 1) for x in [x.strip() for x in attrs.split(';')] if x]:
+                            if val[0] == '"' and val[-1] == '"':
+                                val = val[1:-1]
+                            attributes[key] = val
 
-                    gid = None
-                    if 'isoform_id' in attributes:
-                        gid = attributes['isoform_id']
-                    else:
-                        gid = attributes['gene_id']
-                        if not warned:
-                            sys.stderr.write('\nGTF file missing isoform annotation! Each transcript will be treated separately. (%s)\n' % gid)
-                            warned = True
+                        gid = None
+                        if 'isoform_id' in attributes:
+                            gid = attributes['isoform_id']
+                        else:
+                            gid = attributes['gene_id']
+                            if not warned:
+                                sys.stderr.write('\nGTF file missing isoform annotation! Each transcript will be treated separately. (%s)\n' % gid)
+                                warned = True
 
-                    eta.print_status(extra=gid)
-                except:
-                    import traceback
-                    sys.stderr.write('Error parsing line:\n%s\n' % line)
-                    traceback.print_exc()
-                    sys.exit(1)
+                        eta.print_status(extra=gid)
+                    except:
+                        import traceback
+                        sys.stderr.write('Error parsing line:\n%s\n' % line)
+                        traceback.print_exc()
+                        sys.exit(1)
 
-                if not gid in self._genes or chrom != self._genes[gid].chrom:
-                    self._genes[gid] = _GTFGene(gid, chrom, source, **attributes)
-                    self._gene_order.append((chrom, start, gid))
+                    if not gid in self._genes or chrom != self._genes[gid].chrom:
+                        self._genes[gid] = _GTFGene(gid, chrom, source, **attributes)
 
-                self._genes[gid].add_feature(attributes['transcript_id'], feature, start, end, strand)
+                    self._genes[gid].add_feature(attributes['transcript_id'], feature, start, end, strand)
 
-        eta.done()
-        self._gene_order.sort()
+                eta.done()
+            for gid in self._genes:
+                gene = self._genes[gid]
+                if not gene.chrom in self._gene_order:
+                    self._gene_order[gene.chrom] = []
+                self._gene_order[gene.chrom].append((gene.start, gid))
+
+            for chrom in self._gene_order:
+                self._gene_order[chrom].sort()
+
+            sys.stderr.write('(saving GTF cache)...')
+            with open(cachefile, 'w') as cache:
+                pickle.dump((self._genes, self._gene_order), cache)
+            sys.stderr.write('\n')
 
     def fsize(self):
         return len(self._genes)
@@ -77,12 +101,37 @@ class GTF(object):
     def tell(self):
         return self._pos
 
+    def find(self, chrom, start, end=None, strand=None):
+        if chrom not in self._gene_order:
+            return
+
+        if end < start:
+            sys.stderr.write('[gtf.find] Error: End must be smaller than start!')
+            return
+
+        if not end:
+            end = start
+
+        for g_start, gid in self._gene_order[chrom]:
+            g_start = self._genes[gid].start
+            g_end = self._genes[gid].end
+            g_strand = self._genes[gid].strand
+
+            if strand and g_strand != strand:
+                continue
+
+            if g_start <= start <= g_end or g_start <= end <= g_end:
+                yield self._genes[gid]
+
+        return
+
     @property
     def genes(self):
         self._pos = 0
-        for chrom, start, gene_id in self._gene_order:
-            yield self._genes[gene_id]
-            self._pos += 1
+        for chrom in sorted(self._gene_order):
+            for start, gene_id in self._gene_order[chrom]:
+                yield self._genes[gene_id]
+                self._pos += 1
 
 
 class _GTFGene(object):
