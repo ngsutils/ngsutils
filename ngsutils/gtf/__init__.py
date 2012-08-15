@@ -25,6 +25,8 @@ except:
 
 
 class GTF(object):
+    _version = 1
+
     def __init__(self, filename):
         self._genes = {}
         self._pos = 0
@@ -32,13 +34,24 @@ class GTF(object):
         warned = False
 
         cachefile = os.path.join(os.path.dirname(filename), '.%s.cache' % os.path.basename(filename))
+
         if os.path.exists(cachefile):
             sys.stderr.write('Reading GTF file (cached)...')
             started_t = datetime.datetime.now()
-            with open(cachefile) as cache:
-                self._genes, self._gene_order = pickle.load(cache)
-            sys.stderr.write('(%s sec)\n' % (datetime.datetime.now() - started_t).seconds)
-        else:
+            try:
+                with open(cachefile) as cache:
+                    version, genes, gene_order = pickle.load(cache)
+                    if version == GTF._version:
+                        self._genes, self._gene_order = genes, gene_order
+                        sys.stderr.write('(%s sec)\n' % (datetime.datetime.now() - started_t).seconds)
+                    else:
+                        sys.stderr.write('Error reading cached file... Processing original file.\n')
+            except:
+                self._genes = {}
+                self._gene_order = {}
+                sys.stderr.write('Failed reading cache! Processing original file.\n')
+
+        if not self._genes:
             sys.stderr.write('Reading GTF file...\n')
             with gzip_opener(filename) as f:
                 eta = ETA(os.stat(filename).st_size, fileobj=f)
@@ -92,7 +105,7 @@ class GTF(object):
 
             sys.stderr.write('(saving GTF cache)...')
             with open(cachefile, 'w') as cache:
-                pickle.dump((self._genes, self._gene_order), cache)
+                pickle.dump((GTF._version, self._genes, self._gene_order), cache)
             sys.stderr.write('\n')
 
     def fsize(self):
