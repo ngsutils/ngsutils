@@ -218,7 +218,7 @@ def _fetch_reads(bam, chrom, strand, starts, ends, multiple, exclusive, whitelis
     assert multiple in ['complete', 'partial', 'ignore']
 
     if not chrom in bam.references:
-        return 0
+        return 0, []
 
     reads = set()
     start_pos = set()
