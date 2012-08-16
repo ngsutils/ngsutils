@@ -54,7 +54,7 @@ class ExonModel(Model):
         return 'gene geneid isoid chrom strand txstart txend '.split()
 
     def get_postheaders(self):
-        return 'const_count region_num const_alt count excl_count incl_pct excl_pct alt-index'.split()
+        return 'regionstart regionend const_count region_num const_alt count excl_count incl_pct excl_pct alt-index'.split()
 
     def get_regions(self):
         gtf = GTF(self.fname)
@@ -115,7 +115,7 @@ class ExonModel(Model):
                             other_reads += 1
 
                     if other_reads > 0:
-                        altindex = (count - excl_count) / other_reads
+                        altindex = float(count - excl_count) / other_reads
                     else:
                         altindex = ''
 
@@ -127,6 +127,8 @@ class ExonModel(Model):
                         excl_pct = ''
 
                     cols = common_cols[:]
+                    cols.append(start)
+                    cols.append(end)
                     cols.append(const_count)
                     cols.append(num)
                     cols.append('const' if const else 'alt')
