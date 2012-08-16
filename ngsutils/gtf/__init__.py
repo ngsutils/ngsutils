@@ -13,6 +13,7 @@ All positions returned are 0-based
 
 import sys
 import os
+import gzip
 from ngsutils.support.ngs_utils import gzip_opener
 from ngsutils.support import symbols
 from ngsutils.support.eta import ETA
@@ -39,7 +40,7 @@ class GTF(object):
             sys.stderr.write('Reading GTF file (cached)...')
             started_t = datetime.datetime.now()
             try:
-                with open(cachefile) as cache:
+                with gzip.open(cachefile) as cache:
                     version, genes, gene_order = pickle.load(cache)
                     if version == GTF._version:
                         self._genes, self._gene_order = genes, gene_order
@@ -104,7 +105,7 @@ class GTF(object):
                 self._gene_order[chrom].sort()
 
             sys.stderr.write('(saving GTF cache)...')
-            with open(cachefile, 'w') as cache:
+            with gzip.open(cachefile, 'w') as cache:
                 pickle.dump((GTF._version, self._genes, self._gene_order), cache)
             sys.stderr.write('\n')
 
