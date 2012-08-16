@@ -174,6 +174,9 @@ def _fetch_reads_excluding(bam, chrom, strand, start, end, multiple, whitelist=N
     reads = set()
     count = 0
 
+    if not chrom in bam.references:
+        return count, reads
+
     for read in bam.fetch(chrom, start, end):
         if not strand or (strand == '+' and not read.is_reverse) or (strand == '-' and read.is_reverse):
             excl = True
@@ -217,12 +220,12 @@ def _fetch_reads(bam, chrom, strand, starts, ends, multiple, exclusive, whitelis
     '''
     assert multiple in ['complete', 'partial', 'ignore']
 
-    if not chrom in bam.references:
-        return 0, []
-
     reads = set()
     start_pos = set()
     count = 0
+
+    if not chrom in bam.references:
+        return count, reads
 
     for s, e in zip(starts, ends):
         for read in bam.fetch(chrom, s, e):
