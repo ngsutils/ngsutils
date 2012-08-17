@@ -86,6 +86,8 @@ Possible annotation models: gtf, exon, bed, repeat, repeatfam, or bin
     Requires: bin-size
     Calculates: # reads
 
+Note: Output start positions are zero-based coordinates.
+
 '''
 
 import sys
