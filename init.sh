@@ -14,7 +14,7 @@ fi
 
 if [ ! -e env ]; then 
     echo "Initializing virtualenv folder (env)"
-    $VIRTUALENV env
+    $VIRTUALENV --no-site-packages env
 fi
 
 . env/bin/activate
