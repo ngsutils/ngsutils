@@ -1,0 +1,4 @@
+Commands
+    update        - Updates NGSUtils from git repository 
+                    (http://github.com/ngsutils/ngsutils)
+    tabixindex    - Index a tab-delimited file using Tabix and bgzip
