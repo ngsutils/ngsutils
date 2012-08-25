@@ -17,8 +17,8 @@ Currently, the available filters are:
     -maxlen val                Remove reads that are larger than {val}
     -mapped                    Keep only mapped reads
     -mask bitmask              Remove reads that match the mask (base 10/hex)
-    -uniq {length}             Remove reads that are duplicates (up to an
-                               optional length)
+    -uniq {length}             Remove reads that are have the same sequence
+                               (up to an optional length)
     -uniq_start                Remove reads that start at the same position
                                (Use only for low-coverage samples)
 
