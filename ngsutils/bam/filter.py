@@ -17,6 +17,10 @@ Currently, the available filters are:
     -maxlen val                Remove reads that are larger than {val}
     -mapped                    Keep only mapped reads
     -mask bitmask              Remove reads that match the mask (base 10/hex)
+    -uniq {length}             Remove reads that are duplicates (up to an
+                               optional length)
+    -uniq_start                Remove reads that start at the same position
+                               (Use only for low-coverage samples)
 
     -mismatch num              # mismatches or indels
                                indel always counts as 1 regardless of length
@@ -88,6 +92,56 @@ value less than 1000.
     sys.exit(1)
 
 bam_cigar = ['M', 'I', 'D', 'N', 'S', 'H', 'P']
+
+
+class Unique(object):
+    def __init__(self, length=None):
+        if length:
+            self.length = int(length)
+        else:
+            self.length = None
+
+        self.last_pos = None
+        self.pos_reads = set()
+
+    def __repr__(self):
+        return "uniq"
+
+    def filter(self, bam, read):
+        if self.last_pos != (read.rname, read.pos):
+            self.last_pos = (read.rname, read.pos)
+            self.pos_reads = set()
+
+        if self.length:
+            seq = read.seq[:self.length]
+        else:
+            seq = read.seq
+
+        if seq in self.pos_reads:
+            return False
+
+        self.pos_reads.add(seq)
+        return True
+
+    def close(self):
+        pass
+
+
+class UniqueStart(object):
+    def __init__(self):
+        self.last_pos = None
+
+    def __repr__(self):
+        return "uniq_start"
+
+    def filter(self, bam, read):
+        if self.last_pos != (read.rname, read.pos):
+            self.last_pos = (read.rname, read.pos)
+            return True
+        return False
+
+    def close(self):
+        pass
 
 
 class Blacklist(object):
@@ -483,7 +537,9 @@ _criteria = {
     'blacklist': Blacklist,
     'length': ReadMinLength,  # deprecated
     'minlen': ReadMinLength,
-    'maxlen': ReadMaxLength
+    'maxlen': ReadMaxLength,
+    'uniq': Unique,
+    'uniq_start': UniqueStart
 }
 
 
