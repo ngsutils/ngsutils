@@ -408,6 +408,8 @@ class MismatchDbSNP(object):
     def __repr__(self):
         return '>%s mismatch%s using %s' % (self.num, '' if self.num == 1 else 'es', os.path.basename(self.fname))
 
+    def close(self):
+        self.dbsnp.close()
 
 class MismatchRefDbSNP(object):
     def __init__(self, num, refname, dbsnpname):
@@ -449,6 +451,7 @@ class MismatchRefDbSNP(object):
 
     def close(self):
         self.ref.close()
+        self.dbsnp.close()
 
 
 class Mapped(object):
