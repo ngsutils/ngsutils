@@ -36,7 +36,9 @@ Currently, the available filters are:
                                Adds a 'ZS:i' tag with the number of found SNPs
                                in the read.
                                (requires NM and MD tags)
-
+                               
+                               Example command for indexing:
+                               ngsutils tabixindex snp.txt.gz -s 2 -b 3 -e 4 -0
 
     -mismatch_ref num ref.fa   # mismatches or indel - looks up mismatches
                                directly in a reference FASTA file 

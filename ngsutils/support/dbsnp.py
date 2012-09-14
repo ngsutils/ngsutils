@@ -57,6 +57,11 @@ class DBSNP(object):
         self.asTup = pysam.asTuple()
 
     def fetch(self, chrom, pos):
+        'Note: pos is 0-based'
+
+        # Note: tabix the command uses 1-based positions, but
+        #       pysam.Tabixfile uses 0-based positions
+
         for tup in self.dbsnp.fetch(chrom, pos, pos+1, parser=self.asTup):
             snp = SNPRecord._make(tup)
             if int(snp.chromStart) == pos:
@@ -79,16 +84,22 @@ class DBSNP(object):
             if op == 0:
                 if snp.clazz in ['single', 'mixed'] and seq in snp.alleles:
                     return True
+                elif verbose:
+                    for alt in snp.alleles:
+                        if len(alt) > 1:
+                            self.dump(chrom, op, pos, seq, snp, False)
+
 
             elif op == 1:
                 if snp.clazz in ['insertion', 'mixed', 'in-del']:
                     if seq in snp.alleles:
                         return True
+
                     if len(seq) > 1 and verbose:
                         self.dump(chrom, op, pos, seq, snp, False)
-                    else:
+                    elif verbose:
                         for alt in snp.alleles:
-                            if len(alt) > 1 and verbose:
+                            if len(alt) > 1:
                                 self.dump(chrom, op, pos, seq, snp, False)
 
             elif op == 2:

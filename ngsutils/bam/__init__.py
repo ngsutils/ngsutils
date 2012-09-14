@@ -19,12 +19,6 @@ def read_calc_mismatches(read):
     return edits - inserts - deletions + indels
 
 
-
-def read_calc_variations(read):
-    for tup in _read_calc_variations(read.pos, read.cigar, read.opt('MD'), read.seq):
-        yield tup
-
-
 def _extract_md_matches(md, maxlength):
     md_pos = 0
     variations = []
@@ -44,10 +38,25 @@ def _extract_md_matches(md, maxlength):
         return (pos, md)
 
 
+def read_calc_variations(read):
+    'see _read_calc_variations'
+    for tup in _read_calc_variations(read.pos, read.cigar, read.opt('MD'), read.seq):
+        yield tup
+
 
 def _read_calc_variations(start_pos, cigar, md, seq):
     '''
-    MD is the mismatch string. Not all aligners include the tag.
+    For each variation, outputs a tuple: (op, pos, seq)
+
+    op  - operation (0 = mismatch, 1 = insert, 2 = deletion) (like CIGAR)
+    pos - 0-based position of the variation (relative to reference)
+    seq - the base (or bases) involved in the variation
+          for mismatch or insert, this is the sequence inserted
+          for deletions, this is the reference sequence that was removed
+
+    MD is the mismatch string. Not all aligners include the tag. If your aligner
+    doesn't include this, then you'll need to add it, or use a different function 
+    (see: read_calc_mismatches_gen).
 
     Special care must be used to handle RNAseq reads that cross
     an exon-exon junction.
