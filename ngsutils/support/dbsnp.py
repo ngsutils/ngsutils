@@ -81,6 +81,10 @@ class DBSNP(object):
 
     def is_valid_variation(self, chrom, op, pos, seq, verbose=False):
         for snp in self.fetch(chrom, pos):
+            if not '/' in snp.observed or snp.clazz not in ['single', 'mixed', 'in-del', 'insertion', 'deletion']:
+                # these are odd variations that we can't deal with... (microsatellites, tooLongToDisplay members, etc)
+                continue
+
             if op == 0:
                 if snp.clazz in ['single', 'mixed'] and seq in snp.alleles:
                     return True
@@ -112,8 +116,10 @@ class DBSNP(object):
 
 __revcomp_mapping = {'A':'T', 'T':'A', 'C':'G', 'G':'C'}
 def _revcomp(seq):
-    if len(seq) == 1 and seq.upper() in __revcomp_mapping:
-        return __revcomp_mapping[seq.upper()]
+    if len(seq) == 1:
+        if seq.upper() in __revcomp_mapping:
+            return __revcomp_mapping[seq.upper()]
+        return seq
 
     ret = []
     for base in seq.upper()[::-1]:
