@@ -21,9 +21,29 @@ Currently, the available filters are:
     -mismatch num              # mismatches or indels
                                indel always counts as 1 regardless of length
                                (requires NM tag in reads)
+
+    -mismatch_dbsnp num dbsnp.txt.bgz
+                               # mismatches or indels - not in dbSNP.
+                               Variations are called using the MD tag.
+                               Variations that are found in the dbSNP list are
+                               not counted as mismatches. The dbSNP list is a 
+                               Tabix-indexed dump of dbSNP (from UCSC Genome
+                               Browser). Indels in dbSNP are also counted.
+                               Adds a 'ZS:i' tag with the number of found SNPs
+                               in the read.
+                               (requires NM and MD tags)
+
+
     -mismatch_ref num ref.fa   # mismatches or indel - looks up mismatches
-                               directly in a ref FASTA file (if NM not
-                               available)
+                               directly in a reference FASTA file 
+                               (use if NM tag not present)
+
+    -mismatch_ref_dbsnp num ref.fa dbsnp.txt.bgz
+                               # mismatches or indels - looks up mismatches 
+                               directly from a reference FASTA file. (See 
+                               -mismatch_dbsnp for dbSNP matching)
+                               (use if NM or MD tag not present)
+
     -noqcfail                  Remove reads that have the 0x200 flag set
     -nosecondary               Remove reads that have the 0x100 flag set
 
@@ -67,7 +87,8 @@ import os
 import sys
 import pysam
 from ngsutils.support.eta import ETA
-from ngsutils.bam import read_calc_mismatches, read_calc_mismatches_ref
+from ngsutils.support.dbsnp import DBSNP
+from ngsutils.bam import read_calc_mismatches, read_calc_mismatches_ref, read_calc_mismatches_gen, read_calc_variations
 
 
 def usage():
@@ -290,6 +311,89 @@ class MismatchRef(object):
         self.ref.close()
 
 
+class MismatchDbSNP(object):
+    def __init__(self, num, fname, verbose=None):
+        sys.stderr.write('Note: MismatchDbSNP is considered *experimental*\n')
+
+        self.num = int(num)
+        self.fname = fname
+        self.dbsnp = DBSNP(fname)
+        if verbose == 'verbose':
+            self.verbose = True
+        else:
+            self.verbose = False
+
+    def filter(self, bam, read):
+        if read.is_unmapped:
+            return False
+
+        if read_calc_mismatches(read) <= self.num:
+            return True
+
+        chrom = bam.getrname(read.rname)
+        
+        mm = 0
+        snps = 0
+        
+        for op, pos, seq in read_calc_variations(read):
+            if not self.dbsnp.is_valid_variation(chrom, op, pos, seq, self.verbose):
+                mm += 1
+            else:
+                snps += 1
+
+        if mm > self.num:
+            return False
+
+        if snps:
+            read.tags = read.tags + [('ZS', snps)]
+
+        return True
+
+    def __repr__(self):
+        return '>%s mismatch%s using %s' % (self.num, '' if self.num == 1 else 'es', os.path.basename(self.fname))
+
+class MismatchRefDbSNP(object):
+    def __init__(self, num, refname, dbsnpname):
+        sys.stderr.write('Note: MismatchRefDbSNP is considered *experimental*\n')
+        self.num = int(num)
+        self.refname = refname
+        self.dbsnp = DBSNP(dbsnpname)
+
+        if not os.path.exists('%s.fai' % refname):
+            pysam.faidx(refname)
+
+        self.ref = pysam.Fastafile(refname)
+
+    def filter(self, bam, read):
+        if read.is_unmapped:
+            return False
+
+        chrom = bam.getrname(read.rname)
+        
+        mm = 0
+        snps = 0
+
+        for op, pos, seq in read_calc_mismatches_gen(self.ref, read, chrom):
+            if not self.dbsnp.is_valid_variation(chrom, op, pos, seq):
+                mm += 1
+            else:
+                snps += 1
+
+        if mm > self.num:
+            return False
+
+        if snps:
+            read.tags = read.tags + [('ZS', snps)]
+
+        return True
+
+    def __repr__(self):
+        return '>%s mismatch%s using %s/%s' % (self.num, '' if self.num == 1 else 'es', os.path.basename(self.dbsnpname), os.path.basename(self.refname))
+
+    def close(self):
+        self.ref.close()
+
+
 class Mapped(object):
     def __init__(self):
         pass
@@ -475,6 +579,8 @@ _criteria = {
     'eq': TagEquals,
     'mismatch': Mismatch,
     'mismatch_ref': MismatchRef,
+    'mismatch_dbsnp': MismatchDbSNP,
+    'mismatch_ref_dbsnp': MismatchRefDbSNP,
     'exclude': ExcludeRegion,
     'excludebed': ExcludeBED,
     'include': IncludeRegion,
@@ -501,17 +607,19 @@ def bam_filter(infile, outfile, criteria, failedfile=None, verbose=False):
 
     bamfile = pysam.Samfile(infile, "rb")
     outfile = pysam.Samfile(outfile, "wb", template=bamfile)
+    
     if failedfile:
         failed_out = open(failedfile, 'w')
     else:
         failed_out = None
+    
     eta = ETA(0, bamfile=bamfile)
 
     passed = 0
     failed = 0
 
     for read in bamfile:
-        eta.print_status(extra="%s kept;%s failed" % (passed, failed), bam_pos=(read.rname, read.pos))
+        eta.print_status(extra="%s;%s kept,%s failed" % (bamfile.getrname(read.rname) if read.rname > -1 else 'unk', passed, failed), bam_pos=(read.rname, read.pos))
         p = True
 
         for criterion in criteria:
@@ -594,7 +702,7 @@ if __name__ == '__main__':
             print "Unknown argument: %s" % arg
             fail = True
 
-    if crit_args:
+    if not fail and crit_args:
         criteria.append(_criteria[crit_args[0][1:]](*crit_args[1:]))
 
     if fail or not infile or not outfile or not criteria:
