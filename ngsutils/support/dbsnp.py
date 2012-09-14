@@ -1,10 +1,11 @@
 '''
-Support package for processing a dbSNP tabix dump from UCSC. 
+Support package for processing a dbSNP tabix dump from UCSC.
 '''
 
 import pysam
 import collections
 import sys
+
 
 class SNPRecord(collections.namedtuple('SNPRecord', '''bin
 chrom
@@ -62,7 +63,7 @@ class DBSNP(object):
         # Note: tabix the command uses 1-based positions, but
         #       pysam.Tabixfile uses 0-based positions
 
-        for tup in self.dbsnp.fetch(chrom, pos, pos+1, parser=self.asTup):
+        for tup in self.dbsnp.fetch(chrom, pos, pos + 1, parser=self.asTup):
             snp = SNPRecord._make(tup)
             if int(snp.chromStart) == pos:
                 yield snp
@@ -71,13 +72,12 @@ class DBSNP(object):
         self.dbsnp.close()
 
     def dump(self, chrom, op, pos, base, snp, exit=True):
-        print 
-        print ' ->' , op, chrom, pos, base
+        print
+        print ' ->', op, chrom, pos, base
         print snp
         print snp.alleles
         if exit:
             sys.exit(1)
-
 
     def is_valid_variation(self, chrom, op, pos, seq, verbose=False):
         for snp in self.fetch(chrom, pos):
@@ -93,18 +93,18 @@ class DBSNP(object):
                         if len(alt) > 1:
                             self.dump(chrom, op, pos, seq, snp, False)
 
-
             elif op == 1:
                 if snp.clazz in ['insertion', 'mixed', 'in-del']:
                     if seq in snp.alleles:
                         return True
 
-                    if len(seq) > 1 and verbose:
-                        self.dump(chrom, op, pos, seq, snp, False)
-                    elif verbose:
-                        for alt in snp.alleles:
-                            if len(alt) > 1:
-                                self.dump(chrom, op, pos, seq, snp, False)
+                    if verbose:
+                        if len(seq) > 1:
+                            self.dump(chrom, op, pos, seq, snp, False)
+                        else:
+                            for alt in snp.alleles:
+                                if len(alt) > 1:
+                                    self.dump(chrom, op, pos, seq, snp, False)
 
             elif op == 2:
                 if snp.clazz in ['deletion', 'mixed', 'in-del']:
@@ -114,7 +114,9 @@ class DBSNP(object):
         return False
 
 
-__revcomp_mapping = {'A':'T', 'T':'A', 'C':'G', 'G':'C'}
+__revcomp_mapping = {'A': 'T', 'T': 'A', 'C': 'G', 'G': 'C'}
+
+
 def _revcomp(seq):
     if len(seq) == 1:
         if seq.upper() in __revcomp_mapping:

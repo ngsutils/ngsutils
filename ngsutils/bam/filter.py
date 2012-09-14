@@ -30,23 +30,23 @@ Currently, the available filters are:
                                # mismatches or indels - not in dbSNP.
                                Variations are called using the MD tag.
                                Variations that are found in the dbSNP list are
-                               not counted as mismatches. The dbSNP list is a 
+                               not counted as mismatches. The dbSNP list is a
                                Tabix-indexed dump of dbSNP (from UCSC Genome
                                Browser). Indels in dbSNP are also counted.
                                Adds a 'ZS:i' tag with the number of found SNPs
                                in the read.
                                (requires NM and MD tags)
-                               
+
                                Example command for indexing:
                                ngsutils tabixindex snp.txt.gz -s 2 -b 3 -e 4 -0
 
     -mismatch_ref num ref.fa   # mismatches or indel - looks up mismatches
-                               directly in a reference FASTA file 
+                               directly in a reference FASTA file
                                (use if NM tag not present)
 
     -mismatch_ref_dbsnp num ref.fa dbsnp.txt.bgz
-                               # mismatches or indels - looks up mismatches 
-                               directly from a reference FASTA file. (See 
+                               # mismatches or indels - looks up mismatches
+                               directly from a reference FASTA file. (See
                                -mismatch_dbsnp for dbSNP matching)
                                (use if NM or MD tag not present)
 
@@ -387,10 +387,10 @@ class MismatchDbSNP(object):
             return True
 
         chrom = bam.getrname(read.rname)
-        
+
         mm = 0
         snps = 0
-        
+
         for op, pos, seq in read_calc_variations(read):
             if not self.dbsnp.is_valid_variation(chrom, op, pos, seq, self.verbose):
                 mm += 1
@@ -407,6 +407,7 @@ class MismatchDbSNP(object):
 
     def __repr__(self):
         return '>%s mismatch%s using %s' % (self.num, '' if self.num == 1 else 'es', os.path.basename(self.fname))
+
 
 class MismatchRefDbSNP(object):
     def __init__(self, num, refname, dbsnpname):
@@ -425,7 +426,7 @@ class MismatchRefDbSNP(object):
             return False
 
         chrom = bam.getrname(read.rname)
-        
+
         mm = 0
         snps = 0
 
@@ -665,12 +666,12 @@ def bam_filter(infile, outfile, criteria, failedfile=None, verbose=False):
 
     bamfile = pysam.Samfile(infile, "rb")
     outfile = pysam.Samfile(outfile, "wb", template=bamfile)
-    
+
     if failedfile:
         failed_out = open(failedfile, 'w')
     else:
         failed_out = None
-    
+
     eta = ETA(0, bamfile=bamfile)
 
     passed = 0
