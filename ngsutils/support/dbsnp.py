@@ -112,10 +112,13 @@ class DBSNP(object):
 
 __revcomp_mapping = {'A':'T', 'T':'A', 'C':'G', 'G':'C'}
 def _revcomp(seq):
-    if len(seq) == 1:
+    if len(seq) == 1 and seq.upper() in __revcomp_mapping:
         return __revcomp_mapping[seq.upper()]
 
     ret = []
     for base in seq.upper()[::-1]:
-        ret.append(__revcomp_mapping[base])
+        if base in __revcomp_mapping:
+            ret.append(__revcomp_mapping[base])
+        else:
+            ret.append(base)
     return ''.join(ret)
