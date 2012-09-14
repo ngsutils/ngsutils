@@ -129,7 +129,7 @@ class Model(object):
 
                     if norm_val:
                         sys.stdout.write(str(count / norm_val))
-                        if norm_val_orig:
+                        if rpkm:
                             sys.stdout.write('\t')
                             sys.stdout.write(str(count / (coding_len / 1000.0) / norm_val))
 
