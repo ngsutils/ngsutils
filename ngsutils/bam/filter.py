@@ -411,6 +411,7 @@ class MismatchDbSNP(object):
     def close(self):
         self.dbsnp.close()
 
+
 class MismatchRefDbSNP(object):
     def __init__(self, num, refname, dbsnpname):
         sys.stderr.write('Note: MismatchRefDbSNP is considered *experimental*\n')
