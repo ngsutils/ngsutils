@@ -1,7 +1,3 @@
-import sys
-from ngsutils.gtf import GTF
-
-
 class RangeMatch(object):
     '''
     Simple genomic ranges.  You can define chrom:start-end ranges, then ask if a
@@ -45,12 +41,10 @@ class RangeMatch(object):
 
 
 class RegionTagger(object):
-    def __init__(self, gtf_file, valid_chroms=None):
+    def __init__(self, gtf, valid_chroms=None):
         self.regions = []
         self.counts = {}
 
-        sys.stderr.write('Loading gene model: %s\n' % gtf_file)
-        gtf = GTF(gtf_file)
         exons = RangeMatch('exon')
         introns = RangeMatch('intron')
         promoters = RangeMatch('promoter')
