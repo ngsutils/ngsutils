@@ -48,8 +48,24 @@ bitfields
         return alts
 
     @property
-    def var_length(self):
+    def snp_length(self):
         return int(self.chromEnd) - int(self.chromStart)
+
+
+def autotype(ar):
+    out = []
+    for el in ar:
+        val = None
+        try:
+            val = int(el)
+        except:
+            try:
+                val = float(el)
+            except:
+                val = el
+
+        out.append(val)
+    return out
 
 
 class DBSNP(object):
@@ -64,7 +80,7 @@ class DBSNP(object):
         #       pysam.Tabixfile uses 0-based positions
 
         for tup in self.dbsnp.fetch(chrom, pos, pos + 1, parser=self.asTup):
-            snp = SNPRecord._make(tup)
+            snp = SNPRecord._make(autotype(tup))
             if int(snp.chromStart) == pos:
                 yield snp
 
@@ -88,14 +104,16 @@ class DBSNP(object):
             if op == 0:
                 if snp.clazz in ['single', 'mixed'] and seq in snp.alleles:
                     return True
-                elif verbose:
-                    for alt in snp.alleles:
-                        if len(alt) > 1:
-                            self.dump(chrom, op, pos, seq, snp, False)
+                # elif verbose:
+                #     for alt in snp.alleles:
+                #         if len(alt) > 1:
+                #             self.dump(chrom, op, pos, seq, snp, False)
 
             elif op == 1:
                 if snp.clazz in ['insertion', 'mixed', 'in-del']:
                     if seq in snp.alleles:
+                        if len(seq) > 1 and verbose:
+                            self.dump(chrom, op, pos, seq, snp, False)
                         return True
 
                     if verbose:
@@ -109,6 +127,8 @@ class DBSNP(object):
             elif op == 2:
                 if snp.clazz in ['deletion', 'mixed', 'in-del']:
                     if '-' in snp.alleles and seq in snp.alleles:
+                        if len(seq) > 1 and verbose:
+                            self.dump(chrom, op, pos, seq, snp, False)
                         return True
 
         return False
