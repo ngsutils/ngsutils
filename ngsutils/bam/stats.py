@@ -272,7 +272,7 @@ class BamStats(object):
         acc = 0.0
         for val, count in self.tagbins[tag]:
             acc += count
-            pct = acc * 100 / self.mapped
+            pct = acc / self.mapped
             yield (val, count, pct)
 
 
