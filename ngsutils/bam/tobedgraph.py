@@ -20,7 +20,7 @@ import pysam
 def write_bedgraph(chrom, start, end, count, normalize=None):
     if start and end and count:
         if normalize:
-            sys.stdout.write('%s\t%s\t%s\t%s\n' % (chrom, start, end, int(normalize * count)))
+            sys.stdout.write('%s\t%s\t%s\t%s\n' % (chrom, start, end, normalize * count))
         else:
             sys.stdout.write('%s\t%s\t%s\t%s\n' % (chrom, start, end, count))
 
