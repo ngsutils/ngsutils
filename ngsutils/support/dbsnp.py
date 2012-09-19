@@ -49,7 +49,7 @@ bitfields
 
     @property
     def snp_length(self):
-        return int(self.chromEnd) - int(self.chromStart)
+        return self.chromEnd - self.chromStart
 
 
 def autotype(ar, length=26):
@@ -65,6 +65,9 @@ def autotype(ar, length=26):
                 val = el
 
         out.append(val)
+
+    if len(out) < 12:
+        raise TypeError("Invalid dbSNP file! We need at least 12 columns to work with.")
 
     while len(out) < length:
         out.append(None)
@@ -84,7 +87,7 @@ class DBSNP(object):
 
         for tup in self.dbsnp.fetch(chrom, pos, pos + 1, parser=self.asTup):
             snp = SNPRecord._make(autotype(tup))
-            if int(snp.chromStart) == pos:
+            if snp.chromStart == pos:
                 yield snp
 
     def close(self):
