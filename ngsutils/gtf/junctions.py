@@ -89,7 +89,7 @@ def usage(msg=None):
         print msg
     print __doc__
     print '''\
-Usage: sequtils junctions {opts} genes.gtf{.gz} genome.fasta
+Usage: gtfutils junctions {opts} genes.gtf{.gz} genome.fasta
 
 Arguments
   genes.txt       Gene model in GTF format
