@@ -88,6 +88,8 @@ Options:
 
 -bed fname     Only output positions that are present in this BED file
                (*must* be sorted and reduced with the -nostrand option)
+
+-variants      Only output positions that differ from reference
 """
     sys.exit(1)
 
@@ -308,7 +310,11 @@ class BamBaseCaller(object):
             if op == 0:  # M
                 for i in xrange(length):
                     try:
-                        self.buffer[buf_idx].records.append(MappingRecord(read_idx, op, read.seq[read_idx], read.qual[read_idx], read))
+                        if read.qual:
+                            qualval = read.qual[read_idx]
+                        else:
+                            qualval = 0
+                        self.buffer[buf_idx].records.append(MappingRecord(read_idx, op, read.seq[read_idx], qualval, read))
                     except Exception, e:
                         sys.stderr.write('\n%s\nIf there is a BED file, is it sorted and reduced?\n' % e)
                         sys.stderr.write('read: %s (%s:%s-%s)\n' % (read.qname, self.bam.references[read.tid], read.pos, read.aend))
@@ -324,7 +330,8 @@ class BamBaseCaller(object):
                 inqual = 0
                 for i in xrange(length):
                     inseq += read.seq[read_idx]
-                    inqual += ord(read.qual[read_idx]) - 33
+                    if read.qual:
+                        inqual += ord(read.qual[read_idx]) - 33
                     read_idx += 1
 
                 inqual = inqual / len(inseq)
@@ -402,7 +409,7 @@ def _calculate_heterozygosity(a, c, g, t):
     return float(minor - background) / (major - background + minor - background)
 
 
-def bam_basecall(bam_fname, ref_fname, min_qual=0, min_count=0, regions=None, mask=1540, quiet=False, showgaps=False, showstrand=False, minorpct=0.01, hettest=False, profiler=None):
+def bam_basecall(bam_fname, ref_fname, min_qual=0, min_count=0, regions=None, mask=1540, quiet=False, showgaps=False, showstrand=False, minorpct=0.01, hettest=False, variants=False, profiler=None):
     if ref_fname:
         ref = pysam.Fastafile(ref_fname)
     else:
@@ -477,6 +484,9 @@ def bam_basecall(bam_fname, ref_fname, min_qual=0, min_count=0, regions=None, ma
             ave_mapping = 0
 
         consensuscall, minorcall = _calculate_consensus_minor(minorpct, basepos.a, basepos.c, basepos.g, basepos.t)
+
+        if variants and consensuscall == refbase:
+            continue
 
         cols = [bbc.bam.references[basepos.tid],
                  basepos.pos + 1,
@@ -588,6 +598,7 @@ if __name__ == '__main__':
     showgaps = False
     showstrand = False
     hettest = False
+    variants = False
     minorpct = 0.01
     regions = None
 
@@ -633,6 +644,8 @@ if __name__ == '__main__':
                 showgaps = True
             elif arg == '-q':
                 quiet = True
+            elif arg == '-variants':
+                variants = True
             elif arg == '-hettest':
                 hettest = True
             elif arg in ['-qual', '-count', '-mask', '-ref', '-minorpct', '-profile', '-bed']:
@@ -665,8 +678,8 @@ if __name__ == '__main__':
             import cProfile
 
             def func():
-                bam_basecall(bam, ref, min_qual, min_count, regions, mask, quiet, showgaps, showstrand, minorpct, hettest, TimedProfiler())
+                bam_basecall(bam, ref, min_qual, min_count, regions, mask, quiet, showgaps, showstrand, minorpct, hettest, variants, TimedProfiler())
             sys.stderr.write('Profiling...\n')
             cProfile.run('func()', profile)
         else:
-                bam_basecall(bam, ref, min_qual, min_count, regions, mask, quiet, showgaps, showstrand, minorpct, hettest, None)
+                bam_basecall(bam, ref, min_qual, min_count, regions, mask, quiet, showgaps, showstrand, minorpct, hettest, variants, None)

@@ -59,10 +59,12 @@ def bam_removeclipping(infile, outfile):
 
                 if clip_3:
                     read.seq = s[clip_5:-clip_3]
-                    read.qual = q[clip_5:-clip_3]
+                    if q:
+                        read.qual = q[clip_5:-clip_3]
                 else:
                     read.seq = s[clip_5:]
-                    read.qual = q[clip_5:]
+                    if q:
+                        read.qual = q[clip_5:]
 
                 newtags = list(read.tags)
                 if clip_5:
