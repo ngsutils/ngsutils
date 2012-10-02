@@ -279,6 +279,9 @@ class BamStats(object):
 def bam_stats(infiles, gtf_file=None, region=None, delim=None, tags=[]):
     if gtf_file:
         gtf = GTF(gtf_file)
+    else:
+        gtf = None
+
     stats = [BamStats(x, gtf, region, delim, tags) for x in infiles]
 
     sys.stdout.write('\t')
