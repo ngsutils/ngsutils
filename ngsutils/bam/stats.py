@@ -408,6 +408,16 @@ def bam_stats(infiles, gtf_file=None, region=None, delim=None, tags=[]):
                     sys.stdout.write('\t0\t%s' % (last_pcts[i]))
             sys.stdout.write('\n')
         sys.stdout.write('\n')
+    
+    sys.stdout.write('Reference counts')
+    for stat in stats:
+        sys.stdout.write('\tcount\t')
+    sys.stdout.write('\n')
+    for k in sorted([x for x in stats[0].refs]):
+        sys.stdout.write('%s' % k)
+        for stat in stats:
+            sys.stdout.write('\t%s\t' % stat.refs[k])
+        sys.stdout.write('\n')
 
     if gtf_file:
         sys.stdout.write('Mapping regions')
