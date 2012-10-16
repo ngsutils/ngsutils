@@ -561,8 +561,8 @@ class BEDRegions(object):
                 for line in f:
                     if line[0] == '#':
                         continue
-                    chrom, start, end, name, score, strand = line.strip().split('\t')
-                    self.__total += (int(end) - int(start))
+                    cols = line.strip().split('\t')
+                    self.__total += (int(cols[2]) - int(cols[1]))
         return self.__total
 
     @property
