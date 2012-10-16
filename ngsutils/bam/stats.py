@@ -177,7 +177,7 @@ class BamStats(object):
             regiontagger = RegionTagger(gtf, bamfile.references)
 
         if region:
-            ref, startend = region.split(':')
+            ref, startend = region.rsplit(':', 1)
             if '-' in startend:
                 start, end = [int(x) for x in startend.split('-')]
                 start = start - 1
@@ -446,7 +446,7 @@ if __name__ == '__main__':
         elif last == '-tags':
             tags = arg.split(',')
             last = None
-        elif arg in ['-gtf', '-delim', '-tags']:
+        elif arg in ['-gtf', '-delim', '-tags', '-region']:
             last = arg
         elif os.path.exists(arg):
             infiles.append(arg)
