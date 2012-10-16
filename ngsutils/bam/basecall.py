@@ -571,8 +571,8 @@ class BEDRegions(object):
             for line in f:
                 if line[0] == '#':
                     continue
-                chrom, start, end, name, score, strand = line.strip().split('\t')
-                yield (chrom, int(start), int(end))
+                cols = line.strip().split('\t')
+                yield (cols[0], int(cols[1]), int(cols[2]))
 
 
 class TimedProfiler(object):
