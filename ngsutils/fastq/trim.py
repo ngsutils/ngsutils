@@ -28,45 +28,58 @@ def fastq_trim(fname, linker_5=None, linker_3=None, out=sys.stdout, pct_identity
     removed = 0
     trimmed = 0
     for name, seq, qual in read_fastq(fname):
-        if verbose:
-            sys.stderr.write('Read: %s\n    : %s\n' % (name, seq))
-        left = 0
-        right = len(seq)
-
-        if linker_5:
-            aln = sw.align(seq, linker_5)
-            if verbose:
-                sys.stderr.write("5' alignment:\n")
-                aln.dump(sys.stderr)
-            if aln.r_pos < min_trim and aln.identity > pct_identity:
-                left = aln.r_end
-
-        if linker_3:
-            aln = sw.align(seq, linker_3)
-            if verbose:
-                sys.stderr.write("3' alignment:\n")
-                aln.dump(sys.stderr)
-            if aln.r_end > len(seq) - min_trim and aln.identity > pct_identity:
-                right = aln.r_pos
-
-        s = seq[left:right]
-        if len(s) >= min_len:
-            if left > 0 or right < len(seq):
-                trimmed += 1
-            if cs and len(seq) != len(qual) and left == 0:
-                out.write('%s\n%s\n+\n%s\n' % (name, s, qual[left:right - 1]))
-            else:
-                out.write('%s\n%s\n+\n%s\n' % (name, s, qual[left:right]))
-        else:
+        retval = seq_trim(name, seq, qual, cs, sw, pct_identity, min_trim, min_len, verbose)
+        if not retval:
             removed += 1
+        else:
+            n_name, n_seq, n_qual = retval
 
-        # out.write('%s\n%s (%s-%s)\n' % (name,seq,left,right))
-        # out.write('x'*left)
-        # out.write(seq[left:right])
-        # out.write('x' *(len(seq)-right))
-        # out.write('\n')
+            if len(qual) != n_qual:
+                trimmed += 1
+
+            out.write('%s\n%s\n+\n%s\n' % (n_name, n_seq, n_qual))
+
     sys.stderr.write('Trimmed: %s\n' % trimmed)
     sys.stderr.write('Removed: %s (len)\n' % removed)
+
+
+def seq_trim(name, seq, qual, linker_5, linker_3, cs, sw, pct_identity, min_trim, min_len, verbose):
+    '''
+    TODO: Add doctest
+    >>> sw = ngsutils.support.localalign.LocalAlignment(ngsutils.support.localalign.NucleotideScoringMatrix(2, -1), -1)
+    >>> print "foo"
+    foos
+    '''
+
+    if verbose:
+        sys.stderr.write('Read: %s\n    : %s\n' % (name, seq))
+    left = 0
+    right = len(seq)
+
+    if linker_5:
+        aln = sw.align(seq, linker_5)
+        if verbose:
+            sys.stderr.write("5' alignment:\n")
+            aln.dump(sys.stderr)
+        if aln.r_pos < min_trim and aln.identity > pct_identity:
+            left = aln.r_end
+
+    if linker_3:
+        aln = sw.align(seq, linker_3)
+        if verbose:
+            sys.stderr.write("3' alignment:\n")
+            aln.dump(sys.stderr)
+        if aln.r_end > len(seq) - min_trim and aln.identity > pct_identity:
+            right = aln.r_pos
+
+    s = seq[left:right]
+    if len(s) >= min_len:
+        if cs and len(seq) != len(qual) and left == 0:
+            return (name, s, qual[left:right - 1])
+        else:
+            return (name, s, qual[left:right])
+    else:
+        return None
 
 
 def usage():
@@ -95,6 +108,11 @@ if __name__ == '__main__':
     min_trim = 4
     pct_identity = 0.8
     verbose = False
+
+    if '-test' in sys.argv[1:]:
+        import doctest
+        doctest.testmod()
+        sys.exit()
 
     for arg in sys.argv[1:]:
         if last == '-5':
