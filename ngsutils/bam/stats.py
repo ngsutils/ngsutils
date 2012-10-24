@@ -177,7 +177,7 @@ class BamStats(object):
             regiontagger = RegionTagger(gtf, bamfile.references)
 
         if region:
-            ref, startend = region.split(':')
+            ref, startend = region.rsplit(':', 1)
             if '-' in startend:
                 start, end = [int(x) for x in startend.split('-')]
                 start = start - 1
@@ -317,7 +317,10 @@ def bam_stats(infiles, gtf_file=None, region=None, delim=None, tags=[]):
     for flag in validflags:
         sys.stdout.write("[0x%03x] %-*s" % (flag, maxsize, flag_descriptions[flag]))
         for stat in stats:
-            sys.stdout.write('\t%s\t%s' % (stat.flag_counts[flag], (float(stat.flag_counts[flag]) * 100 / stat.total)))
+            if flag in stat.flag_counts:
+                sys.stdout.write('\t%s\t%s' % (stat.flag_counts[flag], (float(stat.flag_counts[flag]) * 100 / stat.total)))
+            else:
+                sys.stdout.write('\t0\t0')
         sys.stdout.write('\n')
 
     sys.stdout.write('\n')
@@ -456,7 +459,7 @@ if __name__ == '__main__':
         elif last == '-tags':
             tags = arg.split(',')
             last = None
-        elif arg in ['-gtf', '-delim', '-tags']:
+        elif arg in ['-gtf', '-delim', '-tags', '-region']:
             last = arg
         elif os.path.exists(arg):
             infiles.append(arg)
