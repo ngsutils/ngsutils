@@ -15,6 +15,12 @@ import pysam
 
 
 def bam_tag(infname, outfname, suffix, xs, tag):
+    '''
+    This sets up a processing chain to add tags, suffixes, etc... to reads in
+    a BAM file. The first processor in the chain is a class that iterates over
+    all the reads in a BAM file.
+    '''
+
     # write to a tmp file, then move afterwards
     tmp = os.path.join(os.path.dirname(outfname), '.tmp.%s' % os.path.basename(outfname))
 
@@ -67,27 +73,30 @@ class Suffix(object):
 
     def filter(self):
         for read in self.parent.filter():
-            read.qname = "%s%s" % (read.qname, suffix)
+            read.qname = "%s%s" % (read.qname, self.suffix)
             yield read
 
 
 class Tag(object):
     def __init__(self, parent, tag):
         self.parent = parent
-        self.tag = tag.rsplit(':', 1)
-        if self.tag[0][-2:].lower() == ':i':
-            self.tag = (self.tag[0], int(self.tag[1]))
-        if self.tag[0][-2:].lower() == ':f':
-            self.tag = (self.tag[0], float(self.tag[1]))
+        
+        spl = tag.rsplit(':', 1)
+        self.key = spl[0]
+
+        if self.key[-2:].lower() == ':i':
+            self.value = int(spl[1])
+        elif self.key[-2:].lower() == ':f':
+            self.value = float(spl[1])
+        else:
+            self.value = spl[1]
+
+        if ':' in self.key:
+            self.key = self.key.split(':')[0]
 
     def filter(self):
         for read in self.parent.filter():
-            newtags = []
-            for key, val in read.tags:
-                newtags.append((key, val))
-
-            newtags.append(self.tag)
-            read.tags = newtags
+            read.tags = read.tags + [(self.key, self.value)]
             yield read
 
 
@@ -123,7 +132,7 @@ Arguments:
 Options:
   -suffix suff  A suffix to add to each read name
   -xs           Add the XS:A tag for +/- strandedness (req'd by Cufflinks)
-  -tag tag      Add an arbitrary tag (ex: -tag XX:z:test)
+  -tag tag      Add an arbitrary tag (ex: -tag XX:Z:test)
   -f            Force overwriting the output BAM file if it exists
 """
     sys.exit(1)
