@@ -14,42 +14,23 @@ from ngsutils.support.eta import ETA
 import pysam
 
 
-def bam_tag(infname, outfname, suffix, xs, tag):
-    '''
-    This sets up a processing chain to add tags, suffixes, etc... to reads in
-    a BAM file. The first processor in the chain is a class that iterates over
-    all the reads in a BAM file.
-    '''
+class BamWriter(object):
+    def __init__(self, outname, template):
+        self.outname = outname
+        self.template = template
 
-    # write to a tmp file, then move afterwards
-    tmp = os.path.join(os.path.dirname(outfname), '.tmp.%s' % os.path.basename(outfname))
+    def run_chain(self, chain):
+        tmp = os.path.join(os.path.dirname(self.outname), '.tmp.%s' % os.path.basename(self.outname))
+        outbam = pysam.Samfile(tmp, 'wb', template=self.template)
 
-    bamreader = BamReader(infname)
-    outbam = pysam.Samfile(tmp, 'wb', template=bamreader.bamfile)
+        for read in chain.filter():
+            outbam.write(read)
 
-    chain = bamreader
+        outbam.close()
 
-    if suffix:
-        chain = Suffix(chain, suffix)
-
-    if xs:
-        chain = CufflinksXS(chain)
-
-    if tag:
-        chain = Tag(chain, tag)
-
-    if chain == bamreader:
-        sys.stderr.write('Missing tag argument\n')
-        usage()
-
-    for read in chain.filter():
-        outbam.write(read)
-
-    outbam.close()
-
-    if os.path.exists(outfname):
-        os.unlink(outfname)  # Not really needed on *nix
-    os.rename(tmp, outfname)
+        if os.path.exists(outfname):
+            os.unlink(outfname)  # Not really needed on *nix
+        os.rename(tmp, outfname)
 
 
 class BamReader(object):
@@ -80,7 +61,7 @@ class Suffix(object):
 class Tag(object):
     def __init__(self, parent, tag):
         self.parent = parent
-        
+
         spl = tag.rsplit(':', 1)
         self.key = spl[0]
 
@@ -106,17 +87,12 @@ class CufflinksXS(object):
 
     def filter(self):
         for read in self.parent.filter():
-            newtags = []
-            for key, val in read.tags:
-                newtags.append((key, val))
-
             if not read.is_unmapped:
                 if read.is_reverse:
-                    newtags.append(('XS:A', '-'))
+                    read.tags = read.tags + [('XS', '-')]
                 else:
-                    newtags.append(('XS:A', '+'))
+                    read.tags = read.tags + [('XS', '+')]
 
-            read.tags = newtags
             yield read
 
 
@@ -140,34 +116,40 @@ Options:
 if __name__ == "__main__":
     infname = None
     outfname = None
-    suffix = None
-    tag = None
     force = False
-    xs = False
     last = None
+
+    args = []
 
     for arg in sys.argv[1:]:
         if arg == '-f':
             force = True
         elif last == '-suffix':
-            suffix = arg
+            args.append([Suffix, arg])
             last = None
         elif last == '-tag':
-            tag = arg
+            args.append([Tag, arg])
             last = None
         elif arg in ['-suffix', '-tag']:
             last = arg
         elif arg == '-xs':
-            xs = True
+            args.append([CufflinksXS, ])
         elif not infname and os.path.exists(arg):
             infname = arg
         elif not outfname:
-            if not force and os.path.exists(arg):
-                sys.stderr.write('%s already exists! Not overwriting without force (-f)!' % arg)
-                sys.exit(1)
             outfname = arg
 
-    if not infname or not outfname:
+    if not infname or not outfname or not args:
         usage()
 
-    bam_tag(infname, outfname, suffix, xs, tag)
+    if not force and os.path.exists(outfname):
+        sys.stderr.write('ERROR: %s already exists! Not overwriting without force (-f)\n\n' % outfname)
+        sys.exit(1)
+
+    chain = BamReader(infname)
+    writer = BamWriter(outfname, chain.bamfile)
+
+    for arg in args:
+        chain = arg[0](chain, *arg[1:])
+
+    writer.run_chain(chain)
