@@ -14,7 +14,7 @@ def bam_pileup_iter(bam, mask=1796, quiet=False, callback=None):
     if not quiet:
         eta = ETA(os.stat(bam.filename).st_size)
 
-    for pileup in bam.pileup(mask):
+    for pileup in bam.pileup(mask=mask):
         pos = bam.tell()
         bgz_offset = pos >> 16
 
