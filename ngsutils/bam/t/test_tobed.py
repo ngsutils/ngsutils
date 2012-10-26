@@ -21,19 +21,20 @@ class ToBEDTest(unittest.TestCase):
         read.aend = 150
         read.is_reverse = False
 
+        # write out correct strand
         ngsutils.bam.tobed.write_read(read, 'chrom', sio)
         self.assertEqual(sio.getvalue(), 'chrom\t100\t150\treadname\t0\t+\n')
         sio.close()
 
+        # write out correct strand
         read.is_reverse = True
-
         sio = StringIO.StringIO("")
         ngsutils.bam.tobed.write_read(read, 'chrom', sio)
         self.assertEqual(sio.getvalue(), 'chrom\t100\t150\treadname\t0\t-\n')
         sio.close()
 
+        # skip unmapped reads
         read.is_unmapped = True
-
         sio = StringIO.StringIO("")
         ngsutils.bam.tobed.write_read(read, 'chrom', sio)
         self.assertEqual(sio.getvalue(), '')
