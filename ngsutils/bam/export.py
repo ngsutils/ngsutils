@@ -11,7 +11,7 @@ reference, the mapped position, and the CIGAR alignment string for a read.
 
 import sys
 import os
-from ngsutils.support.eta import ETA
+from ngsutils.bam import bam_iter
 import pysam
 
 bam_cigar = ['M', 'I', 'D', 'N', 'S', 'H', 'P']
@@ -19,10 +19,8 @@ bam_cigar = ['M', 'I', 'D', 'N', 'S', 'H', 'P']
 
 def bam_export(fname, mapped=False, unmapped=False, whitelist=None, blacklist=None, fields=None):
     bamfile = pysam.Samfile(fname, "rb")
-    eta = ETA(0, bamfile=bamfile)
 
-    for read in bamfile:
-        eta.print_status(extra=read.qname, bam_pos=(read.rname, read.pos))
+    for read in bam_iter(bamfile):
         if whitelist and not read.qname in whitelist:
             continue
         if blacklist and read.qname in blacklist:
@@ -36,7 +34,6 @@ def bam_export(fname, mapped=False, unmapped=False, whitelist=None, blacklist=No
         except IOError:
             break
 
-    eta.done()
     bamfile.close()
 
 

@@ -55,6 +55,7 @@ import sys
 import math
 import collections
 import datetime
+from ngsutils.bam import bam_iter
 from ngsutils.support.eta import ETA
 import pysam
 
@@ -174,18 +175,10 @@ class BamBaseCaller(object):
                 eta.done()
 
         def _gen2():
-            if not self.quiet:
-                eta = ETA(0, bamfile=self.bam)
-            else:
-                eta = None
-
-            for read in self.bam:
-                if eta:
-                    eta.print_status(extra='%s:%s (%s) %s:%s-%s' % (self.bam.references[read.tid], read.pos, len(self.buffer), self.cur_chrom, self.cur_start, self.cur_end), bam_pos=(read.tid, read.pos))
+            def callback(read):
+                return '%s:%s (%s) %s:%s-%s' % (self.bam.getrname(read.tid), read.pos, len(self.buffer), self.cur_chrom, self.cur_start, self.cur_end)
+            for read in bam_iter(self.bam, quiet=self.quiet, callback=callback):
                 yield read
-
-            if eta:
-                eta.done()
 
         if regions:
             self._gen = _gen1

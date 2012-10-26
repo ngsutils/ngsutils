@@ -13,7 +13,7 @@ normalize the counts by a given factor.
 
 import sys
 import os
-from ngsutils.support.eta import ETA
+from ngsutils.bam import bam_pileup_iter
 import pysam
 
 
@@ -27,14 +27,13 @@ def write_bedgraph(chrom, start, end, count, normalize=None):
 
 def bam_tobedgraph(bam_name, strand=None, normalize=None):
     bamfile = pysam.Samfile(bam_name, "rb")
-    eta = ETA(0, bamfile=bamfile)
 
     last_chrom = None
     last_count = 0
     last_start = None
     last_end = None
 
-    for pileup in bamfile.pileup():
+    for pileup in bam_pileup_iter(bamfile):
         # sys.stdin.readline()
         chrom = bamfile.getrname(pileup.tid)
 
@@ -43,8 +42,6 @@ def bam_tobedgraph(bam_name, strand=None, normalize=None):
             last_count = 0
             last_start = None
             last_end = None
-
-        eta.print_status(extra='%s:%s' % (chrom, pileup.pos), bam_pos=(pileup.tid, pileup.pos))
 
         count = 0
         if strand is None:
@@ -74,7 +71,6 @@ def bam_tobedgraph(bam_name, strand=None, normalize=None):
 
     write_bedgraph(last_chrom, last_start, last_end + 1, last_count, normalize)
 
-    eta.done()
     bamfile.close()
 
 

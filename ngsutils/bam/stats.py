@@ -8,8 +8,7 @@ Calculates simple stats for a BAM file
 import os
 import sys
 import pysam
-from ngsutils.bam import read_calc_mismatches
-from ngsutils.support.eta import ETA
+from ngsutils.bam import read_calc_mismatches, bam_iter
 from ngsutils.gtf import GTF
 from ngsutils.support.regions import RegionTagger
 
@@ -164,7 +163,6 @@ class BamStats(object):
         self.fname = os.path.basename(infile)
         sys.stderr.write('File: %s\n' % os.path.basename(infile))
         bamfile = pysam.Samfile(infile, "rb")
-        eta = ETA(0, bamfile=bamfile)
 
         regiontagger = None
         flag_counts = {}
@@ -209,7 +207,7 @@ class BamStats(object):
                 yield read
 
         def _foo2():
-            for read in bamfile:
+            for read in bam_iter(bamfile):
                 yield read
 
         if region:
@@ -240,7 +238,6 @@ class BamStats(object):
                     unmapped += 1
                     continue
 
-                eta.print_status(extra="%s:%s" % (bamfile.getrname(read.rname), read.pos), bam_pos=(read.rname, read.pos))
                 mapped += 1
 
                 if delim:
@@ -257,7 +254,6 @@ class BamStats(object):
         except KeyboardInterrupt:
             sys.stderr.write('*** Interrupted - displaying stats up to this point! ***\n\n')
 
-        eta.done()
         bamfile.close()
 
         self.total = total

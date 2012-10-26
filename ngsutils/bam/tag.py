@@ -10,7 +10,7 @@ Currently supported tags:
 '''
 import sys
 import os
-from ngsutils.support.eta import ETA
+from ngsutils.bam import bam_iter
 import pysam
 
 
@@ -38,12 +38,9 @@ class BamReader(object):
         self.bamfile = pysam.Samfile(fname, "rb")
 
     def filter(self):
-        eta = ETA(0, bamfile=self.bamfile)
-        for read in self.bamfile:
-            eta.print_status(extra=read.qname, bam_pos=(read.rname, read.pos))
+        for read in bam_iter(self.bamfile):
             yield read
 
-        eta.done()
         self.bamfile.close()
 
 

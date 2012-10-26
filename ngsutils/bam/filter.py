@@ -92,7 +92,7 @@ Common tags to filter by:
 import os
 import sys
 import pysam
-from ngsutils.support.eta import ETA
+from ngsutils.bam import bam_iter
 from ngsutils.support.dbsnp import DBSNP
 from ngsutils.bam import read_calc_mismatches, read_calc_mismatches_ref, read_calc_mismatches_gen, read_calc_variations
 
@@ -676,13 +676,13 @@ def bam_filter(infile, outfile, criteria, failedfile=None, verbose=False):
     else:
         failed_out = None
 
-    eta = ETA(0, bamfile=bamfile)
-
     passed = 0
     failed = 0
 
-    for read in bamfile:
-        eta.print_status(extra="%s | %s kept,%s failed" % ('%s:%s' % (bamfile.getrname(read.rname), read.pos) if read.rname > -1 else 'unk', passed, failed), bam_pos=(read.rname, read.pos))
+    def _callback(read):
+        return "%s | %s kept,%s failed" % ('%s:%s' % (bamfile.getrname(read.tid), read.pos) if read.tid > -1 else 'unk', passed, failed)
+
+    for read in bam_iter(bamfile):
         p = True
 
         for criterion in criteria:
@@ -697,7 +697,6 @@ def bam_filter(infile, outfile, criteria, failedfile=None, verbose=False):
             passed += 1
             outfile.write(read)
 
-    eta.done()
     bamfile.close()
     outfile.close()
     if failed_out:

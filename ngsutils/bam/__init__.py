@@ -10,7 +10,34 @@ def bam_open(fname, mode='r'):
     return pysam.Samfile(fname, '%s' % mode)
 
 
-def bam_iter(bam, quiet=False, show_ref_pos=False):
+def bam_pileup_iter(bam, mask=None, quiet=False, callback=None):
+    if not quiet:
+        eta = ETA(os.stat(bam.filename).st_size)
+
+    def _eta(pileup):
+        pos = bam.tell()
+        bgz_offset = pos >> 16
+
+        if not quiet:
+            if callback:
+                eta.print_status(bgz_offset, extra=callback(pileup))
+            else:
+                eta.print_status(bgz_offset, extra='%s:%s' % (bam.getrname(pileup.tid), pileup.pos))
+
+    if mask:
+        for pileup in bam.pileup(mask):
+            _eta(pileup)
+            yield pileup
+    else:
+        for pileup in bam.pileup():
+            _eta(pileup)
+            yield pileup
+
+    if not quiet:
+        eta.done()
+
+
+def bam_iter(bam, quiet=False, show_ref_pos=False, callback=None):
     if not quiet:
         eta = ETA(os.stat(bam.filename).st_size)
 
@@ -24,7 +51,9 @@ def bam_iter(bam, quiet=False, show_ref_pos=False):
         bgz_offset = pos >> 16
 
         if not quiet:
-            if (show_ref_pos):
+            if callback:
+                eta.print_status(bgz_offset, extra=callback(read))
+            elif (show_ref_pos):
                 eta.print_status(bgz_offset, extra='%s:%s %s' % (bam.getrname(read.tid), read.pos, read.qname))
             else:
                 eta.print_status(bgz_offset, extra='%s' % read.qname)

@@ -10,7 +10,7 @@ limit on the number of reads included.
 
 import os
 import sys
-from ngsutils.support.eta import ETA
+from ngsutils.bam import bam_iter
 import pysam
 
 
@@ -36,10 +36,9 @@ def bam_split(infile, out_template, read_count=1000000):
 
     file_count = 0
 
-    eta = ETA(0, bamfile=bamfile)
     count = 0
     fname = ""
-    for read in bamfile.fetch():
+    for read in bam_iter(bamfile):
         if not outfile or count >= read_count:
             if outfile:
                 outfile.close()
@@ -48,11 +47,9 @@ def bam_split(infile, out_template, read_count=1000000):
             fname = '%s.%s.bam' % (out_template, file_count)
             outfile = pysam.Samfile(fname, "wb", template=bamfile)
 
-        eta.print_status(extra=os.path.basename(fname), bam_pos=(read.rname, read.pos))
         outfile.write(read)
         count += 1
 
-    eta.done()
     bamfile.close()
     outfile.close()
     sys.stderr.write("Split into %s files" % (file_count))

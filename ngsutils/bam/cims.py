@@ -18,7 +18,7 @@ See: Zhang and Darnell, Nature Biotechnology (2011)
 
 import os
 import sys
-from ngsutils.support.eta import ETA
+from ngsutils.bam import bam_pileup_iter
 import pysam
 
 
@@ -175,7 +175,6 @@ def is_read_match_at_pos(read, pos):
 
 
 def bam_cims_finder(bam_fnames, output='bed', ref_fname=None, flanking=12, cutoff=0.1, stranded=True, window_size=20):
-
     for bam_fname in bam_fnames:
         sys.stderr.write('%s\n' % bam_fname)
         bam = pysam.Samfile(bam_fname, "rb")
@@ -192,10 +191,8 @@ def bam_cims_finder(bam_fnames, output='bed', ref_fname=None, flanking=12, cutof
 
         for strand in strands:
             manager = RegionManager(emitter, strand, window_size)
-            eta = ETA(0, bamfile=bam)
-            for pileup in bam.pileup(mask=1540):
+            for pileup in bam_pileup_iter(bam, mask=1540):
                 chrom = bam.getrname(pileup.tid)
-                eta.print_status(extra='%s:%s' % (chrom, pileup.pos), bam_pos=(pileup.tid, pileup.pos))
 
                 deletions = 0.0
                 total = 0.0
@@ -227,7 +224,6 @@ def bam_cims_finder(bam_fnames, output='bed', ref_fname=None, flanking=12, cutof
                         manager.add(chrom, pileup.pos, strand, del_reads, total_reads)
 
             manager.close()
-            eta.done()
         bam.close()
         emitter.close()
 

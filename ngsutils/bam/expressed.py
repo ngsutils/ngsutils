@@ -11,7 +11,7 @@ for peak-finding in ChIP-seq experiments.
 '''
 import sys
 import os
-from ngsutils.support.eta import ETA
+from ngsutils.bam import bam_pileup_iter
 
 import pysam
 
@@ -84,16 +84,13 @@ class ExpressedRegion(object):
 
 
 def bam_find_regions(bam_name, merge_distance=10, min_read_count=2, only_uniq_starts=False, nostrand=False):
-
     bamfile = pysam.Samfile(bam_name, "rb")
-    eta = ETA(0, bamfile=bamfile)
 
     region_plus = None
     region_minus = None
 
-    for pileup in bamfile.pileup(mask=1540):
+    for pileup in bam_pileup_iter(bamfile, mask=1540):
         chrom = bamfile.getrname(pileup.tid)
-        eta.print_status(extra='%s:%s' % (chrom, pileup.pos), bam_pos=(pileup.tid, pileup.pos))
 
         for read in pileup.pileups:
             if read.is_del:
@@ -118,7 +115,6 @@ def bam_find_regions(bam_name, merge_distance=10, min_read_count=2, only_uniq_st
     if region_minus and region_minus.read_count >= min_read_count:
         region_minus.write(sys.stdout)
 
-    eta.done()
     bamfile.close()
 
 

@@ -6,20 +6,17 @@ Convert BAM reads to BED regions
 '''
 import sys
 import os
-from ngsutils.support.eta import ETA
+from ngsutils.bam import bam_iter
 import pysam
 
 
 def bam_tobed(fname):
     bamfile = pysam.Samfile(fname, "rb")
-    eta = ETA(0, bamfile=bamfile)
 
-    for read in bamfile.fetch():
-        eta.print_status(extra=read.qname, bam_pos=(read.rname, read.pos))
+    for read in bam_iter(bamfile):
         if not read.is_unmapped:
             print '%s\t%s\t%s\t%s\t0\t%s' % (bamfile.getrname(read.rname), read.pos, read.aend, read.qname, '-' if read.is_reverse else '+')
 
-    eta.done()
     bamfile.close()
 
 

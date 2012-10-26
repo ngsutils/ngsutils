@@ -22,7 +22,7 @@ import os
 import sys
 import math
 import subprocess
-from ngsutils.support.eta import ETA
+from ngsutils.bam import bam_pileup_iter
 import pysam
 
 
@@ -86,7 +86,6 @@ Options:
 def bam_minorallele(bam_fname, ref_fname, min_qual=0, min_count=0, num_alleles=0, name=None, min_ci_low=None):
     bam = pysam.Samfile(bam_fname, "rb")
     ref = pysam.Fastafile(ref_fname)
-    eta = ETA(0, bamfile=bam)
 
     if not name:
         name = os.path.basename(bam_fname)
@@ -99,9 +98,8 @@ def bam_minorallele(bam_fname, ref_fname, min_qual=0, min_count=0, num_alleles=0
         sys.stdout.write("\tci_low\tci_high\tallele_lowt\tallele_high")
     sys.stdout.write('\n')
 
-    for pileup in bam.pileup(mask=1540):
+    for pileup in bam_pileup_iter(bam, mask=1540):
         chrom = bam.getrname(pileup.tid)
-        eta.print_status(extra='%s:%s' % (chrom, pileup.pos), bam_pos=(pileup.tid, pileup.pos))
 
         counts = {'A': 0, 'C': 0, 'G': 0, 'T': 0}
         total = 0
@@ -161,7 +159,7 @@ def bam_minorallele(bam_fname, ref_fname, min_qual=0, min_count=0, num_alleles=0
 
             if not math.isnan(ci_low) and (min_ci_low is None or ci_low > min_ci_low):
                 print '\t'.join([str(x) for x in cols])
-    eta.done()
+
     bam.close()
     ref.close()
 
