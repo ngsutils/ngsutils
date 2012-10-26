@@ -1,4 +1,37 @@
 import sys
+import os
+import pysam
+from ngsutils.support.eta import ETA
+
+
+def bam_open(fname, mode='r'):
+    if fname.lower()[-4:] == '.bam':
+        return pysam.Samfile(fname, '%sb' % mode)
+    return pysam.Samfile(fname, '%s' % mode)
+
+
+def bam_iter(bam, quiet=False, show_ref_pos=False):
+    if not quiet:
+        eta = ETA(os.stat(bam.filename).st_size)
+
+    if os.path.exists('%s.bai' % bam.filename):
+        # This is an indexed file, so it is ref sorted...
+        # Meaning that we should show chrom:pos, instead of read names
+        show_ref_pos = True
+
+    for read in bam:
+        pos = bam.tell()
+        bgz_offset = pos >> 16
+
+        if not quiet:
+            if (show_ref_pos):
+                eta.print_status(bgz_offset, extra='%s:%s %s' % (bam.getrname(read.tid), read.pos, read.qname))
+            else:
+                eta.print_status(bgz_offset, extra='%s' % read.qname)
+        yield read
+
+    if not quiet:
+        eta.done()
 
 
 def read_calc_mismatches(read):
