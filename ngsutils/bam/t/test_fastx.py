@@ -28,42 +28,26 @@ class FASTXTest(unittest.TestCase):
     def testFASTQ(self):
         sio = StringIO.StringIO("")
         ngsutils.bam.tofastq.write_fastq(read, sio)
-
-        self.assertEqual(sio.getvalue(), '''\
-@foo
-ACGT
-+
-AAAA
-''')
+        self.assertEqual(sio.getvalue(), '@foo\nACGT\n+\nAAAA\n')
+        sio.close()
 
     def testFASTA(self):
         sio = StringIO.StringIO("")
         ngsutils.bam.tofastq.write_fasta(read, sio)
-
-        self.assertEqual(sio.getvalue(), '''\
->foo
-ACGT
-''')
+        self.assertEqual(sio.getvalue(), '>foo\nACGT\n')
+        sio.close()
 
     def testFASTQ_cs(self):
         sio = StringIO.StringIO("")
         ngsutils.bam.tofastq.write_fastq(read, sio, colorspace=True)
-
-        self.assertEqual(sio.getvalue(), '''\
-@foo
-T0123
-+
-BBBB
-''')
+        self.assertEqual(sio.getvalue(), '@foo\nT0123\n+\nBBBB\n')
+        sio.close()
 
     def testFASTA_cs(self):
         sio = StringIO.StringIO("")
         ngsutils.bam.tofastq.write_fasta(read, sio, colorspace=True)
-
-        self.assertEqual(sio.getvalue(), '''\
->foo
-T0123
-''')
+        self.assertEqual(sio.getvalue(), '>foo\nT0123\n')
+        sio.close()
 
 
 if __name__ == '__main__':
