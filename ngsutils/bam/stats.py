@@ -7,8 +7,7 @@ Calculates simple stats for a BAM file
 
 import os
 import sys
-import pysam
-from ngsutils.bam import read_calc_mismatches, bam_iter
+from ngsutils.bam import read_calc_mismatches, bam_iter, bam_open
 from ngsutils.gtf import GTF
 from ngsutils.support.regions import RegionTagger
 
@@ -158,14 +157,22 @@ flag_descriptions = {
 }
 
 
-class BamStats(object):
-    def __init__(self, infile, gtf=None, region=None, delim=None, tags=[]):
-        self.fname = os.path.basename(infile)
-        sys.stderr.write('File: %s\n' % os.path.basename(infile))
-        bamfile = pysam.Samfile(infile, "rb")
+class FlagCounts(object):
+    def __init__(self):
+        self.counts = {}
+        for fd in flag_descriptions:
+            self.counts[fd] = 0
 
+    def add(self, flag):
+        for fd in flag_descriptions:
+            if (fd & flag) > 0:
+                self.counts[fd] += 1
+
+
+class BamStats(object):
+    def __init__(self, bamfile, gtf=None, region=None, delim=None, tags=[]):
         regiontagger = None
-        flag_counts = {}
+        flag_counts = FlagCounts()
 
         ref = None
         start = None
@@ -228,10 +235,7 @@ class BamStats(object):
                     #missing IH tag - ignore
                     pass
 
-                if not read.flag in flag_counts:
-                    flag_counts[read.flag] = 1
-                else:
-                    flag_counts[read.flag] += 1
+                flag_counts.add(read.flag)
 
                 total += 1
                 if read.is_unmapped:
@@ -253,8 +257,6 @@ class BamStats(object):
 
         except KeyboardInterrupt:
             sys.stderr.write('*** Interrupted - displaying stats up to this point! ***\n\n')
-
-        bamfile.close()
 
         self.total = total
         self.mapped = mapped
@@ -278,11 +280,11 @@ def bam_stats(infiles, gtf_file=None, region=None, delim=None, tags=[]):
     else:
         gtf = None
 
-    stats = [BamStats(x, gtf, region, delim, tags) for x in infiles]
+    stats = [BamStats(bam_open(x), gtf, region, delim, tags) for x in infiles]
 
     sys.stdout.write('\t')
-    for stat in stats:
-        sys.stdout.write('%s\t\t' % stat.fname)
+    for fname, stat in zip(infiles, stats):
+        sys.stdout.write('%s\t\t' % fname)
     sys.stdout.write('\n')
 
     sys.stdout.write('Reads:\t')
@@ -305,18 +307,14 @@ def bam_stats(infiles, gtf_file=None, region=None, delim=None, tags=[]):
     maxsize = 0
     for flag in flag_descriptions:
         for stat in stats:
-            for fc in stat.flag_counts:
-                if (flag & fc):
-                    validflags.add(flag)
-                    maxsize = max(maxsize, len(flag_descriptions[flag]))
+            if stat.flag_counts.counts[flag] > 0:
+                validflags.add(flag)
+                maxsize = max(maxsize, len(flag_descriptions[flag]))
 
     for flag in validflags:
         sys.stdout.write("[0x%03x] %-*s" % (flag, maxsize, flag_descriptions[flag]))
         for stat in stats:
-            if flag in stat.flag_counts:
-                sys.stdout.write('\t%s\t%s' % (stat.flag_counts[flag], (float(stat.flag_counts[flag]) * 100 / stat.total)))
-            else:
-                sys.stdout.write('\t0\t0')
+            sys.stdout.write('\t%s\t%s' % (stat.flag_counts.counts[flag], (float(stat.flag_counts.counts[flag]) * 100 / stat.total)))
         sys.stdout.write('\n')
 
     sys.stdout.write('\n')
@@ -407,7 +405,7 @@ def bam_stats(infiles, gtf_file=None, region=None, delim=None, tags=[]):
                     sys.stdout.write('\t0\t%s' % (last_pcts[i]))
             sys.stdout.write('\n')
         sys.stdout.write('\n')
-    
+
     sys.stdout.write('Reference counts')
     for stat in stats:
         sys.stdout.write('\tcount\t')
