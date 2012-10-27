@@ -47,7 +47,10 @@ def bam_iter(bam, quiet=False, show_ref_pos=False, callback=None):
             if callback:
                 eta.print_status(bgz_offset, extra=callback(read))
             elif (show_ref_pos):
-                eta.print_status(bgz_offset, extra='%s:%s %s' % (bam.getrname(read.tid), read.pos, read.qname))
+                if read.tid > -1:
+                    eta.print_status(bgz_offset, extra='%s:%s %s' % (bam.getrname(read.tid), read.pos, read.qname))
+                else:
+                    eta.print_status(bgz_offset, extra='unmapped %s' % (read.qname))
             else:
                 eta.print_status(bgz_offset, extra='%s' % read.qname)
         yield read
