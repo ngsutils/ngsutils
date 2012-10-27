@@ -2,7 +2,7 @@
 ## category Conversion
 ## desc Convert BAM coverage to bedGraph (for visualization)
 '''
-Convert BAM coverage to bedGraph
+Convert BAM coverage to bedGraph based on pileup counts
 
 Takes a BAM file and produces a bedGraph file.  This can optionally
 normalize the counts by a given factor.
@@ -17,17 +17,15 @@ from ngsutils.bam import bam_pileup_iter
 import pysam
 
 
-def write_bedgraph(chrom, start, end, count, normalize=None):
+def write_bedgraph(chrom, start, end, count, normalize=None, out=sys.stdout):
     if start and end and count:
         if normalize:
-            sys.stdout.write('%s\t%s\t%s\t%s\n' % (chrom, start, end, normalize * count))
+            out.write('%s\t%s\t%s\t%s\n' % (chrom, start, end, normalize * count))
         else:
-            sys.stdout.write('%s\t%s\t%s\t%s\n' % (chrom, start, end, count))
+            out.write('%s\t%s\t%s\t%s\n' % (chrom, start, end, count))
 
 
-def bam_tobedgraph(bam_name, strand=None, normalize=None):
-    bamfile = pysam.Samfile(bam_name, "rb")
-
+def bam_tobedgraph(bamfile, strand=None, normalize=None, out=sys.stdout):
     last_chrom = None
     last_count = 0
     last_start = None
@@ -38,7 +36,7 @@ def bam_tobedgraph(bam_name, strand=None, normalize=None):
         chrom = bamfile.getrname(pileup.tid)
 
         if chrom != last_chrom and last_count > 0 and last_end:
-            write_bedgraph(last_chrom, last_start, last_end + 1, last_count, normalize)
+            write_bedgraph(last_chrom, last_start, last_end + 1, last_count, normalize, out)
             last_count = 0
             last_start = None
             last_end = None
@@ -48,15 +46,15 @@ def bam_tobedgraph(bam_name, strand=None, normalize=None):
             count = pileup.n
         else:
             for read in pileup.pileups:
-                if not read.is_reverse and strand == '+':
+                if not read.alignment.is_reverse and strand == '+':
                     count += 1
-                elif read.is_reverse and strand == '-':
+                elif read.alignment.is_reverse and strand == '-':
                     count += 1
 
-        # print pileup.pos,count,last_start,last_end
-        if count != last_count or (pileup.pos - last_end) > 1:
+            # print pileup.pos,count,last_start,last_end
+        if count != last_count or not last_end or (pileup.pos - last_end) > 1:
             if last_count > 0:
-                write_bedgraph(last_chrom, last_start, last_end + 1, last_count, normalize)
+                write_bedgraph(last_chrom, last_start, last_end + 1, last_count, normalize, out)
 
             if count == 0:
                 last_start = None
@@ -69,9 +67,7 @@ def bam_tobedgraph(bam_name, strand=None, normalize=None):
         last_count = count
         last_chrom = chrom
 
-    write_bedgraph(last_chrom, last_start, last_end + 1, last_count, normalize)
-
-    bamfile.close()
+    write_bedgraph(last_chrom, last_start, last_end + 1, last_count, normalize, out)
 
 
 def usage():
@@ -116,4 +112,6 @@ if __name__ == "__main__":
     if not bam:
         usage()
 
-    bam_tobedgraph(bam, strand, norm)
+    bamfile = pysam.Samfile(bam, "rb")
+    bam_tobedgraph(bamfile, strand, norm, out=sys.stdout)
+    bamfile.close()
