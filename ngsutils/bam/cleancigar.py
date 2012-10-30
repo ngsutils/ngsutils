@@ -8,31 +8,54 @@ import sys
 import os
 import pysam
 
+from ngsutils.bam import bam_iter
+
 
 def bam_cleancigar(infile, outfile):
     bam = pysam.Samfile(infile, "rb")
     out = pysam.Samfile(outfile, "wb", template=bam)
     total = 0
     count = 0
-    for read in bam:
-        newcigar = []
-        changed = False
-        if not read.is_unmapped:
-            for op, length in read.cigar:
-                if length > 0:
-                    newcigar.append((op, length))
-                else:
-                    changed = True
+    for read in bam_iter(bam):
+        if read_cleancigar(read):
+            count += 1
 
-            if changed:
-                read.cigar = newcigar
-                count += 1
         total += 1
         out.write(read)
 
     bam.close()
     out.close()
     sys.stderr.write('Wrote: %s reads\nAltered: %s\n' % (total, count))
+
+
+def read_cleancigar(read):
+    if read.is_unmapped:
+        return False
+
+    newcigar = []
+    changed = False
+    last_op = None
+    size_acc = 0
+
+    for op, size in read.cigar:
+        if size > 0:
+            if last_op == op:
+                size_acc += size
+            else:
+                if last_op:
+                    newcigar.append((last_op, size_acc))
+                last_op = op
+                size_acc = size
+        else:
+            changed = True
+
+    newcigar.append((last_op, size_acc))
+
+    if changed:
+        read.cigar = newcigar
+        return True
+
+    return False
 
 
 def usage():

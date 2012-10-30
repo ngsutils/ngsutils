@@ -11,14 +11,11 @@ reference, the mapped position, and the CIGAR alignment string for a read.
 
 import sys
 import os
-from ngsutils.bam import bam_iter
-import pysam
-
-bam_cigar = ['M', 'I', 'D', 'N', 'S', 'H', 'P']
+from ngsutils.bam import bam_iter, cigar_tostr, bam_open
 
 
 def bam_export(fname, mapped=False, unmapped=False, whitelist=None, blacklist=None, fields=None):
-    bamfile = pysam.Samfile(fname, "rb")
+    bamfile = bam_open(fname)
 
     for read in bam_iter(bamfile):
         if whitelist and not read.qname in whitelist:
@@ -37,17 +34,17 @@ def bam_export(fname, mapped=False, unmapped=False, whitelist=None, blacklist=No
     bamfile.close()
 
 
-def export_read(bamfile, read, fields):
+def export_read(bamfile, read, fields, out=sys.stdout):
     cols = []
     for field in fields:
         if field == '-name':
             cols.append(read.qname)
         elif field == '-ref':
-            cols.append(bamfile.getrname(read.rname))
+            cols.append(bamfile.getrname(read.tid))
         elif field == '-pos':
             cols.append(read.pos + 1)  # output 1-based
         elif field == '-cigar':
-            cols.append(''.join(['%s%s' % (length, bam_cigar[op]) for op, length in read.cigar]))
+            cols.append(cigar_tostr(read.cigar))
         elif field == '-flags':
             cols.append(read.flag)
         elif field == '-seq':
@@ -77,12 +74,14 @@ def export_read(bamfile, read, fields):
                         cols.append('%s:i:%s' % (tag, val))
                     elif type(val) == float:
                         cols.append('%s:f:%s' % (tag, val))
+                    elif len(val) == 1:
+                        cols.append('%s:A:%s' % (tag, val))
                     else:
                         cols.append('%s:Z:%s' % (tag, val))
             else:
                 cols.append(read.opt(field[5:]))
 
-    print '\t'.join([str(x) for x in cols])
+    out.write('%s\n' % '\t'.join([str(x) for x in cols]))
 
 
 def usage():
@@ -159,12 +158,12 @@ if __name__ == "__main__":
 
     if not fname:
         usage()
-        sys.exit(1)
 
     if not fields:
         fields = ['-name', '-ref', '-pos', '-cigar']
 
     if not unmapped and not mapped:
-        bam_export(fname, True, True, wl, bl, fields)
-    else:
-        bam_export(fname, mapped, unmapped, wl, bl, fields)
+        unmapped = True
+        mapped = True
+
+    bam_export(fname, mapped, unmapped, wl, bl, fields)

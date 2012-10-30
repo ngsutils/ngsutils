@@ -48,30 +48,41 @@ Options:
 
 
 class BEDEmitter(object):
-    def __init__(self):
+    def __init__(self, out=None):
         self.num = 1
+        if out:
+            self.out = out
+        else:
+            self.out = sys.stdout
         pass
 
     def emit(self, chrom, start, end, strand):
         if not strand:
             strand = '+'
-        sys.stdout.write('%s\t%s\t%s\tregion_%s\t%s\t%s\n' % (chrom, start, end, self.num, 0, strand))
+        self.out.write('%s\t%s\t%s\tregion_%s\t%s\t%s\n' % (chrom, start, end, self.num, 0, strand))
         self.num += 1
 
     def close(self):
-        pass
+        if self.out != sys.stdout:
+            self.out.close()
 
 
 class FASTAEmitter(object):
-    def __init__(self, ref_fname, flanking=12):
+    def __init__(self, ref_fname, flanking=12, out=None):
         self.num = 1
         self.ref = pysam.Fastafile(ref_fname)
-
         assert flanking > 0
         self.flanking = flanking
 
+        if out:
+            self.out = out
+        else:
+            self.out = sys.stdout
+
     def close(self):
         self.ref.close()
+        if self.out != sys.stdout:
+            self.out.close()
 
     def emit(self, chrom, start, end, strand):
         seq = self.ref.fetch(chrom, start - self.flanking, end + self.flanking)
@@ -98,7 +109,7 @@ class FASTAEmitter(object):
                     rc.append('c')
             seq = ''.join(rc)
 
-        sys.stdout.write('>%s:%s%s%s\n%s\n' % (chrom, start - self.flanking, strand, end + self.flanking, seq))
+        self.out.write('>%s:%s%s%s\n%s\n' % (chrom, start - self.flanking, strand, end + self.flanking, seq))
 
 
 class RegionManager(object):

@@ -13,8 +13,7 @@ clipped bases is given in the 'ZC:f' tag.
 import sys
 import os
 import pysam
-
-bam_cigar = ['M', 'I', 'D', 'N', 'S', 'H', 'P']
+from ngsutils.bam import bam_iter
 
 
 def bam_removeclipping(infile, outfile):
@@ -23,60 +22,13 @@ def bam_removeclipping(infile, outfile):
     total = 0
     count = 0
     unmapped = 0
-    for read in bam:
-        if read.is_unmapped:
-            out.write(read)
+    for read in bam_iter(bam):
+        code = read_removeclipping(read)
+
+        if code == 1:
             unmapped += 1
-            total += 1
-            continue
-
-        newcigar = []
-        clip_5 = 0
-        clip_3 = 0
-
-        changed = False
-        if not read.is_unmapped:
-            inseq = False
-            for op, length in read.cigar:
-                if op == 5:  # H
-                    changed = True
-                elif op == 4:  # S
-                    changed = True
-                    if not inseq:
-                        clip_5 = length
-                    else:
-                        clip_3 = length
-                else:
-                    inseq = True
-                    newcigar.append((op, length))
-
-            if changed:
-                read.cigar = newcigar
-                orig_length = len(read.seq)
-
-                s = read.seq
-                q = read.qual
-
-                if clip_3:
-                    read.seq = s[clip_5:-clip_3]
-                    if q:
-                        read.qual = q[clip_5:-clip_3]
-                else:
-                    read.seq = s[clip_5:]
-                    if q:
-                        read.qual = q[clip_5:]
-
-                newtags = list(read.tags)
-                if clip_5:
-                    newtags.append(('ZA', clip_5))
-                if clip_3:
-                    newtags.append(('ZB', clip_3))
-
-                newtags.append(('ZC', float(clip_5 + clip_3) / orig_length))
-
-                read.tags = newtags
-
-                count += 1
+        elif code == 2:
+            count += 1
 
         total += 1
         out.write(read)
@@ -84,6 +36,60 @@ def bam_removeclipping(infile, outfile):
     bam.close()
     out.close()
     sys.stderr.write('Wrote: %s reads\nAltered: %s\nUnmapped: %s\n' % (total, count, unmapped))
+
+
+def read_removeclipping(read):
+    if read.is_unmapped:
+        return 1
+
+    newcigar = []
+    clip_5 = 0
+    clip_3 = 0
+
+    changed = False
+    inseq = False
+    for op, length in read.cigar:
+        if op == 5:  # H
+            changed = True
+        elif op == 4:  # S
+            changed = True
+            if not inseq:
+                clip_5 = length
+            else:
+                clip_3 = length
+        else:
+            inseq = True
+            newcigar.append((op, length))
+
+    if not changed:
+        return 0
+
+    read.cigar = newcigar
+    orig_length = len(read.seq)
+
+    s = read.seq
+    q = read.qual
+
+    if clip_3:
+        read.seq = s[clip_5:-clip_3]
+        if q:
+            read.qual = q[clip_5:-clip_3]
+    else:
+        read.seq = s[clip_5:]
+        if q:
+            read.qual = q[clip_5:]
+
+    newtags = []
+    if clip_5:
+        newtags.append(('ZA', clip_5))
+    if clip_3:
+        newtags.append(('ZB', clip_3))
+
+    newtags.append(('ZC', float(clip_5 + clip_3) / orig_length))
+
+    read.tags = read.tags + newtags
+
+    return 2
 
 
 def usage():

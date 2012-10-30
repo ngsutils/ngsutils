@@ -1,13 +1,14 @@
 import sys
 import os
+import re
 import pysam
 from ngsutils.support.eta import ETA
 
 
-def bam_open(fname, mode='r'):
+def bam_open(fname, mode='r', *args, **kwargs):
     if fname.lower()[-4:] == '.bam':
-        return pysam.Samfile(fname, '%sb' % mode)
-    return pysam.Samfile(fname, '%s' % mode)
+        return pysam.Samfile(fname, '%sb' % mode, *args, **kwargs)
+    return pysam.Samfile(fname, '%s' % mode, *args, **kwargs)
 
 
 def bam_pileup_iter(bam, mask=1796, quiet=False, callback=None):
@@ -31,6 +32,10 @@ def bam_pileup_iter(bam, mask=1796, quiet=False, callback=None):
 
 
 def bam_iter(bam, quiet=False, show_ref_pos=False, callback=None):
+    '''
+    >>> [x.qname for x in bam_iter(bam_open(os.path.join(os.path.dirname(__file__), 't', 'test.bam')), quiet=True)]
+    ['A', 'B', 'E', 'C', 'D', 'F', 'Z']
+    '''
     if not quiet:
         eta = ETA(os.stat(bam.filename).st_size)
 
@@ -57,6 +62,46 @@ def bam_iter(bam, quiet=False, show_ref_pos=False, callback=None):
 
     if not quiet:
         eta.done()
+
+
+bam_cigar = ['M', 'I', 'D', 'N', 'S', 'H', 'P']
+bam_cigar_op = {
+    'M': 0,
+    'I': 1,
+    'D': 2,
+    'N': 3,
+    'S': 4,
+    'H': 5,
+    'P': 6,
+}
+
+
+def cigar_fromstr(s):
+    '''
+    >>> cigar_fromstr('10M5I20M')
+    ((0, 10), (1, 5), (0, 20))
+    >>> cigar_fromstr('1M1I1D1N1S1H1P')
+    ((0, 1), (1, 1), (2, 1), (3, 1), (4, 1), (5, 1), (6, 1))
+    '''
+    ret = []
+    spl = re.split('([0-9]+)', s)[1:]
+    for op, size in zip(spl[1::2], spl[::2]):
+        ret.append((bam_cigar_op[op], int(size)))
+    return tuple(ret)
+
+
+def cigar_tostr(cigar):
+    '''
+    >>> cigar_tostr(((0, 10), (1, 5), (0, 20)))
+    '10M5I20M'
+    >>> cigar_tostr(((0, 1), (1, 1), (2, 1), (3, 1), (4, 1), (5, 1), (6, 1)))
+    '1M1I1D1N1S1H1P'
+    '''
+    s = ''
+    for op, size in cigar:
+        s += '%s%s' % (size, bam_cigar[op])
+
+    return s
 
 
 def read_calc_mismatches(read):

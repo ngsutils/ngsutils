@@ -6,30 +6,36 @@ Checks a BAM file for corruption
 '''
 import sys
 import os
-import pysam
+
+import ngsutils.bam
 
 
-def bam_check(fname):
-    sys.stdout.write('%s: ' % fname)
-    sys.stdout.flush()
+def bam_check(fname, quiet=False):
+    if not quiet:
+        sys.stdout.write('%s: ' % fname)
+        sys.stdout.flush()
     fail = False
     try:
-        bamfile = pysam.Samfile(fname, "rb")
-        for read in bamfile:
+        bamfile = ngsutils.bam.bam_open(fname)
+        for read in ngsutils.bam.bam_iter(bamfile):
             pass
         bamfile.close()
     except KeyboardInterrupt:
-        sys.stdout.write('\n')
+        if not quiet:
+            sys.stdout.write('\n')
         sys.exit(-1)
     except:
         fail = True
         pass
 
     if fail:
-        sys.stdout.write('ERROR\n')
+        if not quiet:
+            sys.stdout.write('ERROR\n')
         return False
 
-    sys.stdout.write('OK\n')
+    if not quiet:
+        sys.stdout.write('OK\n')
+    return True
 
 
 def usage():

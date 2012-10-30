@@ -12,20 +12,23 @@ exact same name.
 import sys
 import os
 import pysam
+from ngsutils.bam import bam_iter
 
 
 def bam_renamepair(infile, outfile, delim='/'):
     bam = pysam.Samfile(infile, "rb")
     out = pysam.Samfile(outfile, "wb", template=bam)
-    for read in bam:
-        name, num = read.qname.rsplit(delim, 1)
-        newtags = list(read.tags)
-        newtags.append(('ZN', num))
-        read.tags = newtags
-        read.qname = name
+    for read in bam_iter(bam):
+        read_renamepair(read, delim)
         out.write(read)
     bam.close()
     out.close()
+
+
+def read_renamepair(read, delim):
+    name, num = read.qname.rsplit(delim, 1)
+    read.tags = read.tags + [('ZN', num)]
+    read.qname = name
 
 
 def usage():

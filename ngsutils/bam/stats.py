@@ -222,7 +222,6 @@ class BamStats(object):
         else:
             read_gen = _foo2
 
-        sys.stderr.write('Calculating Read stats...\n')
         try:
             for read in read_gen():
                 try:
@@ -279,6 +278,8 @@ def bam_stats(infiles, gtf_file=None, region=None, delim=None, tags=[]):
         gtf = GTF(gtf_file)
     else:
         gtf = None
+
+    sys.stderr.write('Calculating Read stats...\n')
 
     stats = [BamStats(bam_open(x), gtf, region, delim, tags) for x in infiles]
 
