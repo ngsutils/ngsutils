@@ -56,7 +56,7 @@ import math
 import collections
 import datetime
 from ngsutils.bam import bam_iter
-from ngsutils.support.eta import ETA
+from eta import ETA
 import pysam
 
 

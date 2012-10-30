@@ -17,7 +17,7 @@ reads from a region, without iterating over all of the reads in the BAM file.
 
 import os
 import sys
-from ngsutils.support.eta import ETA
+from eta import ETA
 import pysam
 
 

@@ -11,7 +11,7 @@ order (so we don't have to load all the data and merge it).
 import sys
 import os
 import gzip
-from ngsutils.support.eta import ETA
+from eta import ETA
 
 
 def usage():

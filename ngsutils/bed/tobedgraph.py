@@ -11,7 +11,7 @@ can optionally normalize the counts by a given factor.
 
 import sys
 import os
-from ngsutils.support.eta import ETA
+from eta import ETA
 
 
 def write_regions(regions, normalize=None):

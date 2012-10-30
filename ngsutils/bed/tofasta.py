@@ -7,7 +7,7 @@ Extract BED regions from a reference FASTA file
 
 import sys
 import os
-from ngsutils.support.eta import ETA
+from eta import ETA
 import pysam
 
 

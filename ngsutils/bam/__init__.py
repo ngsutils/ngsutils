@@ -2,7 +2,7 @@ import sys
 import os
 import re
 import pysam
-from ngsutils.support.eta import ETA
+from eta import ETA
 
 
 def bam_open(fname, mode='r', *args, **kwargs):

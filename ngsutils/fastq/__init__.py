@@ -1,7 +1,7 @@
 
 import os
 import ngsutils.support.ngs_utils
-from ngsutils.support.eta import ETA
+from eta import ETA
 
 
 def read_fastq(fname, quiet=False, eta_callback=None):

@@ -8,7 +8,7 @@ Calculate a number of summary statistics / distribution for a BED file
 import os
 import sys
 
-from ngsutils.support.eta import ETA
+from eta import ETA
 from ngsutils.support.regions import RegionTagger
 import ngsutils.support.ngs_utils
 

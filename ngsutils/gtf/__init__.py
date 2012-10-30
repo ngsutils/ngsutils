@@ -15,7 +15,7 @@ import sys
 import os
 from ngsutils.support.ngs_utils import gzip_opener
 from ngsutils.support import symbols
-from ngsutils.support.eta import ETA
+from eta import ETA
 import datetime
 
 try:

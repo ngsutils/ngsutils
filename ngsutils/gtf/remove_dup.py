@@ -9,8 +9,8 @@ transciptid_dup1. This program will remove all _dup? entries from a GTF file.
 
 import sys
 import os
-from ngsutils.support.eta import ETA
-from ngsutils.support.ngs_utils import  gzip_opener
+from eta import ETA
+from ngsutils.support.ngs_utils import gzip_opener
 
 
 def gtf_remove_dup(gtf):

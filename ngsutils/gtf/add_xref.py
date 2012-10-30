@@ -17,8 +17,8 @@ This will add the following attributes:
 
 import sys
 import os
-from ngsutils.support.eta import ETA
-from ngsutils.support.ngs_utils import  gzip_opener
+from eta import ETA
+from ngsutils.support.ngs_utils import gzip_opener
 
 
 def gtf_add_xref(gtf, xref, column=4):

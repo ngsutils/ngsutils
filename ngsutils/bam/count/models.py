@@ -1,5 +1,5 @@
 from count import Model, _fetch_reads, _find_mapped_count, _fetch_reads_excluding
-from ngsutils.support.eta import ETA
+from eta import ETA
 from ngsutils.gtf import GTF
 import ngsutils.support.ngs_utils
 import pysam

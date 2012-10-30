@@ -22,7 +22,7 @@ ref B      4               1               1               0              3
 
 import os
 import sys
-from ngsutils.support.eta import ETA
+from eta import ETA
 import ngsutils.support.ngs_utils
 import pysam
 import ngsutils.support.stats

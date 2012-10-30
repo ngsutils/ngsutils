@@ -16,7 +16,7 @@ import math
 import os
 import gzip
 
-from ngsutils.support.eta import ETA
+from eta import ETA
 
 
 def read_illumina_export(filename, solexa_quals=True, min_length=0, trim=False, tag=None, qc_remove=True):

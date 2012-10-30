@@ -20,7 +20,7 @@ import os
 import sys
 import pysam
 from ngsutils.gtf import GTF
-from ngsutils.support.eta import ETA
+from eta import ETA
 
 
 def gtf_junctions(gtf_fname, refname, fragment_size, min_size, max_exons=5):
