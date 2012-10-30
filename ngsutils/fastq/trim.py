@@ -10,7 +10,7 @@ import os
 import sys
 
 from ngsutils.fastq import read_fastq, is_colorspace_fastq
-import ngsutils.support.localalign
+import swalign
 
 
 def fastq_trim(fname, linker_5=None, linker_3=None, out=sys.stdout, pct_identity=0.8, min_trim=4, min_len=25, verbose=False):
@@ -24,7 +24,7 @@ def fastq_trim(fname, linker_5=None, linker_3=None, out=sys.stdout, pct_identity
     '''
 
     cs = is_colorspace_fastq(fname)
-    sw = ngsutils.support.localalign.LocalAlignment(ngsutils.support.localalign.NucleotideScoringMatrix(2, -1), -1)
+    sw = swalign.LocalAlignment(swalign.NucleotideScoringMatrix(2, -1), -1)
     removed = 0
     trimmed = 0
     for name, seq, qual in read_fastq(fname):
@@ -46,8 +46,8 @@ def fastq_trim(fname, linker_5=None, linker_3=None, out=sys.stdout, pct_identity
 def seq_trim(name, seq, qual, linker_5, linker_3, cs, sw, pct_identity, min_trim, min_len, verbose):
     '''
     TODO: Add doctest
-    >>> sw = ngsutils.support.localalign.LocalAlignment(ngsutils.support.localalign.NucleotideScoringMatrix(2, -1), -1)
-    >>> print "foo"
+    >> sw = swalign.LocalAlignment(swalign.NucleotideScoringMatrix(2, -1), -1)
+    >> print "foo"
     foos
     '''
 
