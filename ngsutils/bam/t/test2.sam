@@ -1,0 +1,11 @@
+@HD	VN:0.1.2	SO:unsorted	GO:none
+@PG	ID:simulated	VN:0.0.1
+@SQ	SN:chr1	LN:2000
+@SQ	SN:chr2	LN:2000
+A	0	chr2	100	0	50M	*	0	0	ccctaacccaaccctaaccctaaccctaaccctaaccctaaccctaaccc	##################################################	AS:i:2
+B	0	chr2	175	0	25M200N25M	*	0	0	taacctaaccctaaccctaaccctactaaccctaaccctaaccctaaccc	##################################################	AS:i:1
+E	0	chr2	175	0	25M500N25M	*	0	0	taacctaaccctaaccctaaccctagcgcagagaggcgcgccgcgccggc	##################################################	AS:i:2
+C	0	chr2	425	0	50M	*	0	0	taaccctaaccctaacccctaaccctaaccctaaccctaaccctcgcggt	##################################################	AS:i:1
+D	0	chr2	475	0	25M200N25M	*	0	0	accctcagccggcccgcccgcccgggcgcagagaggcgcgccgcgccggc	##################################################	AS:i:1
+F	16	chr2	725	0	50M	*	0	0	gcaggcgcagagacacatgctaccgcgtccaggggtggaggcgtggcgca	##################################################	AS:i:2
+Z	4	*	0	0	*	*	0	0	AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA	##################################################

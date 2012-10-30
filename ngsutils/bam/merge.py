@@ -57,7 +57,7 @@ def bam_reads_batch(bam):
         yield reads
 
 
-def bam_merge(fname, infiles, tag='AS', discard=False):
+def bam_merge(fname, infiles, tag='AS', discard=False, quiet=False):
     bams = []
     last_reads = []
     bamgens = []
@@ -112,7 +112,6 @@ def bam_merge(fname, infiles, tag='AS', discard=False):
                 last_reads[i] = None
 
         if best_reads:
-#            print infiles[best_source],best_reads[0].qname
             counts[best_source] += 1
             for read in best_reads:
                 outfile.write(read)
@@ -122,9 +121,10 @@ def bam_merge(fname, infiles, tag='AS', discard=False):
             if not discard:
                 outfile.write(first_group[0])
 
-    for fn, cnt in zip(infiles, counts):
-        print "%s\t%s" % (fn, cnt)
-    print "unmapped\t%s" % unmapped
+    if not quiet:
+        for fn, cnt in zip(infiles, counts):
+            print "%s\t%s" % (fn, cnt)
+        print "unmapped\t%s" % unmapped
 
     outfile.close()
     for bam in bams:
