@@ -378,7 +378,7 @@ def _calculate_consensus_minor(minorpct, a, c, g, t):
         return ('N', '')
 
     if best and (float(minor) / best) < minorpct:
-        minorcalls = []
+        minorcalls = []  # too low of a pct...
 
     # if there is one major, there can be more than one minor
     # however, if there is more than one major, there are *no* minors
