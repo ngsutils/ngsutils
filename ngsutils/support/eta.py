@@ -6,12 +6,25 @@ can be smoothed out.  Additionally, you can set a 'modulo' parameter that will o
 N iterations (thus relieving you from having to calculate it).
 
 Marcus R Breese <marcus@breese.com>
-Jan 2010
+Created: Jan 2010
+Last update: Oct 2012
 
 '''
 import sys
 import datetime
 import os
+
+
+def eta_open_iter(fname, callback=None):
+    f = open(fname)  # not using with to support 2.4
+    _eta = ETA(os.stat(fname).st_size, fileobj=f)
+    for line in f:
+        if callback:
+            extra = callback()
+        _eta.print_status(extra=extra)
+        yield line
+    _eta.done()
+    f.close()
 
 
 class _NoopETA(object):
