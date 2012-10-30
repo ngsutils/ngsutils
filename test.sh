@@ -10,7 +10,7 @@ export HIDE_ETA="1"
 if [ "$1" == "" ]; then
     # run all tests...
    	cd $DIR
-    python -m unittest discover ngsutils 'test*py' -v
+    python -m unittest discover ngsutils 'test_*py' -v
 else
     coverage run $1
     if [ $? -eq 0 ]; then
