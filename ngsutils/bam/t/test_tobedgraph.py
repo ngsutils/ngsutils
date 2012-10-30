@@ -11,7 +11,7 @@ import ngsutils.bam.tobedgraph
 import StringIO
 
 
-class ToBEDTest(unittest.TestCase):
+class ToBEDGraphTest(unittest.TestCase):
     def setUp(self):
         self.bam = ngsutils.bam.bam_open(os.path.join(os.path.dirname(__file__), 'test.bam'))
 

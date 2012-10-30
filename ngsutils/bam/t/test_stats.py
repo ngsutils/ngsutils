@@ -26,8 +26,7 @@ class StatsTest(unittest.TestCase):
         self.assertEqual(1, stats.flag_counts.counts[0x4])   # one unmapped
         self.assertEqual(0, stats.flag_counts.counts[0x2])   # zero all aligned (not paired)
         self.assertTrue('chr1' in stats.refs)   # 6 on chr1
-        self.assertTrue('chr2' not in stats.refs)   # 6 on chr1
-        self.assertEqual(6, stats.refs['chr1'])   # 6 on chr1
+        self.assertTrue('chr3' not in stats.refs)
 
     def testStatsGTF(self):
         # Add a test with a mock GTF file
