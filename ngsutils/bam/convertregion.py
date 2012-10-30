@@ -31,6 +31,7 @@ chr1    1025    25M950N50M950M25M
 import os
 import sys
 import pysam
+import ngsutils.bam
 
 
 def usage():
@@ -44,8 +45,6 @@ Options:
 """
     sys.exit(1)
 
-bam_cigar = ['M', 'I', 'D', 'N', 'S', 'H', 'P']
-
 _region_cache = {}
 
 
@@ -55,8 +54,15 @@ def region_pos_to_genomic_pos(name, start, cigar):
         ref name, the junction position, and the cigar alignment.
 
         returns: (genomic ref, genomic pos, genomic cigar)
+
+    >>> region_pos_to_genomic_pos('chr1:1000-1050,2000-2050,3000-4000', 25, [(0, 100)])
+    ('chr1', 1025, [(0, 25), (3, 950), (0, 50), (3, 950), (0, 25)])
+
+    >>> region_pos_to_genomic_pos('chr3R:17630851-17630897,17634338-17634384', 17, [(0, 39)])
+    ('chr3R', 17630868, [(0, 29), (3, 3441), (0, 10)])
+
     '''
-    # example name: chr3R:17630851-17630897,17634338-17634384       17       39M
+
     if name in _region_cache:
         chrom, fragments = _region_cache[name]
     else:
@@ -116,7 +122,7 @@ def region_pos_to_genomic_pos(name, start, cigar):
                 cur_pos = cur_pos + length
                 chr_cigar.append((op, length))
         else:
-            print "Unsupported CIGAR operation (%s)" % bam_cigar[op]
+            print "Unsupported CIGAR operation (%s)" % ngsutils.bam.bam_cigar[op]
             sys.exit(1)
 
     return (chrom, chr_start, chr_cigar)
@@ -136,6 +142,25 @@ def is_junction_valid(cigar, min_overlap=4):
                                             XXXXXXXXXXXXXXXXXXXXXXXX (bad 1)
       XXXXXXXXXXXXX (bad 2)                           XXXXXXXXXXXXXXXX (bad 2)
                         XX-----------------XXXXXXXXXXXXXXXXX (bad 3)
+
+    >>> is_junction_valid(ngsutils.bam.cigar_fromstr('1000N40M'))
+    (False, 'Starts at gap (1000N40M)')
+
+    >>> is_junction_valid(ngsutils.bam.cigar_fromstr('100M'))
+    (False, "Doesn't cover junction")
+
+    >>> is_junction_valid(ngsutils.bam.cigar_fromstr('100M1000N3M'), 4)
+    (False, "Too short overlap at 3' (100M1000N3M)")
+
+    >>> is_junction_valid(ngsutils.bam.cigar_fromstr('2M1000N100M'), 4)
+    (False, "Too short overlap at 5' (2M1000N100M)")
+
+    >>> is_junction_valid(ngsutils.bam.cigar_fromstr('4M1000N100M'), 4)
+    (True, '')
+
+    >>> is_junction_valid(ngsutils.bam.cigar_fromstr('100M1000N4M'), 4)
+    (True, '')
+
     '''
     first = True
     pre_gap = True
@@ -148,7 +173,7 @@ def is_junction_valid(cigar, min_overlap=4):
     for op, length in cigar:
         # mapping can't start at a gap
         if first and op == 3:
-            return (False, 'Starts at gap (%s)' % cigar)
+            return (False, 'Starts at gap (%s)' % ngsutils.bam.cigar_tostr(cigar))
         first = False
 
         if op == 3:
@@ -166,9 +191,9 @@ def is_junction_valid(cigar, min_overlap=4):
     if not has_gap:
         return (False, "Doesn't cover junction")
     elif pre_gap_count < min_overlap:
-        return (False, "Too short overlap at 5' (%s)" % cigar)
+        return (False, "Too short overlap at 5' (%s)" % ngsutils.bam.cigar_tostr(cigar))
     elif post_gap_count < min_overlap:
-        return (False, "Too short overlap at 3' (%s)" % cigar)
+        return (False, "Too short overlap at 3' (%s)" % ngsutils.bam.cigar_tostr(cigar))
 
     return True, ''
 
@@ -200,17 +225,12 @@ def bam_convertregion(infile, outfname, chrom_sizes, enforce_overlap=False):
 
     outfile = pysam.Samfile('%s.tmp' % outfname, "wb", header=header)
 
-    # count = 0
     converted_count = 0
     invalid_count = 0
     unmapped_count = 0
 
     for batch in bam_batch_reads(bamfile):
-        # count += 1
         outreads = []
-
-        # if count > 10000:
-            # count = 0
 
         for read in batch:
             if read.is_unmapped and not read.is_secondary:
