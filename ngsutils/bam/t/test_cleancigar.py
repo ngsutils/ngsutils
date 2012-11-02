@@ -4,7 +4,7 @@ Tests for bamutils tag
 '''
 
 import unittest
-from mock import *
+from ngsutils.bam.t import MockRead
 
 import ngsutils.bam
 import ngsutils.bam.cleancigar
@@ -13,13 +13,7 @@ import ngsutils.bam.cleancigar
 class CleanCigarTest(unittest.TestCase):
 
     def testCleanCigar(self):
-        read = Mock()
-        read.qname = 'foo'
-        read.tags = [('XA', 1)]
-        read.seq = 'AAAATTTTCCCGGG'
-        read.qual = 'AAAABBBBBBBCCC'
-        read.is_unmapped = False
-        read.cigar = ngsutils.bam.cigar_fromstr('10M0I4M')
+        read = MockRead('foo', 'AAAATTTTCCCGGG', 'AAAABBBBBBBCCC', tid=1, pos=1, cigar='10M0I4M', tags=[('XA', 1)])
 
         code = ngsutils.bam.cleancigar.read_cleancigar(read)
         self.assertEqual(code, True)
@@ -28,25 +22,14 @@ class CleanCigarTest(unittest.TestCase):
         self.assertEqual(ngsutils.bam.cigar_tostr(read.cigar), '14M')
 
     def testNoClean(self):
-        read = Mock()
-        read.qname = 'foo'
-        read.tags = [('XA', 1)]
-        read.seq = 'AAAATTTTCCCGGG'
-        read.qual = 'AAAABBBBBBBCCC'
-        read.is_unmapped = False
-        read.cigar = ngsutils.bam.cigar_fromstr('14M')
+        read = MockRead('foo', 'AAAATTTTCCCGGG', 'AAAABBBBBBBCCC', tid=1, pos=1, cigar='14M', tags=[('XA', 1)])
 
         code = ngsutils.bam.cleancigar.read_cleancigar(read)
         self.assertEqual(code, False)
         self.assertEqual(ngsutils.bam.cigar_tostr(read.cigar), '14M')
 
     def testUnmapped(self):
-        read = Mock()
-        read.qname = 'foo'
-        read.tags = [('XA', 1)]
-        read.seq = 'AAAATTTTCCCGGG'
-        read.qual = 'AAAABBBBBBBCCC'
-        read.is_unmapped = True
+        read = MockRead('foo', 'AAAATTTTCCCGGG', 'AAAABBBBBBBCCC', tags=[('XA', 1)])
 
         code = ngsutils.bam.cleancigar.read_cleancigar(read)
         self.assertEqual(code, False)

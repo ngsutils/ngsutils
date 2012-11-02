@@ -4,24 +4,12 @@ Tests for bamutils tag
 '''
 
 import unittest
-from mock import *
+from ngsutils.bam.t import MockRead
 
 import ngsutils.bam.tofastq
 import StringIO
 
-read = Mock()
-read.qname = 'foo'
-read.seq = 'ACGT'
-read.qual = 'AAAA'
-read.tags = [('CS', 'T0123'), ('CQ', 'BBBB')]
-
-
-def opt(tag):
-    for k, v in read.tags:
-        if k == tag:
-            return v
-    return None
-read.opt = Mock(side_effect=opt)
+read = MockRead('foo', 'ACGT', 'AAAA', tags=[('CS', 'T0123'), ('CQ', 'BBBB')])
 
 
 class FASTXTest(unittest.TestCase):

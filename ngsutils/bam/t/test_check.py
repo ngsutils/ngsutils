@@ -5,7 +5,6 @@ Tests for bamutils check
 
 import os
 import unittest
-from mock import *
 
 import ngsutils.bam
 import ngsutils.bam.check

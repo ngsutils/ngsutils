@@ -4,7 +4,7 @@ Tests for bamutils tag
 '''
 
 import unittest
-from mock import *
+from ngsutils.bam.t import MockRead
 
 import ngsutils.bam.tobed
 import StringIO
@@ -14,12 +14,7 @@ class ToBEDTest(unittest.TestCase):
     def testBEDWriter(self):
         sio = StringIO.StringIO("")
 
-        read = Mock()
-        read.is_unmapped = False
-        read.qname = 'readname'
-        read.pos = 100
-        read.aend = 150
-        read.is_reverse = False
+        read = MockRead('readname', tid=1, pos=100, aend=150)
 
         # write out correct strand
         ngsutils.bam.tobed.write_read(read, 'chrom', sio)

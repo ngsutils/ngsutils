@@ -26,9 +26,10 @@ def bam_renamepair(infile, outfile, delim='/'):
 
 
 def read_renamepair(read, delim):
-    name, num = read.qname.rsplit(delim, 1)
-    read.tags = read.tags + [('ZN', num)]
-    read.qname = name
+    if delim in read.qname:
+        name, num = read.qname.rsplit(delim, 1)
+        read.tags = read.tags + [('ZN', num)]
+        read.qname = name
 
 
 def usage():
