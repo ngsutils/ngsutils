@@ -64,7 +64,7 @@ def bam_batch_reads(bam):
         yield reads
 
 
-def bam_convertregion(infile, outfname, chrom_sizes, enforce_overlap=False):
+def bam_convertregion(infile, outfname, chrom_sizes, enforce_overlap=False, quiet=False):
     bamfile = pysam.Samfile(infile, "rb")
     header = bamfile.header
     header['SQ'] = []
@@ -155,7 +155,8 @@ def bam_convertregion(infile, outfname, chrom_sizes, enforce_overlap=False):
     bamfile.close()
     outfile.close()
 
-    sys.stderr.write("converted:%d\ninvalid:%d\nunmapped:%d\n" % (converted_count, invalid_count, unmapped_count))
+    if not quiet:
+        sys.stderr.write("converted:%d\ninvalid:%d\nunmapped:%d\n" % (converted_count, invalid_count, unmapped_count))
 
     os.rename('%s.tmp' % outfname, outfname)
 
