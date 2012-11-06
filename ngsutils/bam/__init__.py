@@ -79,15 +79,15 @@ bam_cigar_op = {
 def cigar_fromstr(s):
     '''
     >>> cigar_fromstr('10M5I20M')
-    ((0, 10), (1, 5), (0, 20))
+    [(0, 10), (1, 5), (0, 20)]
     >>> cigar_fromstr('1M1I1D1N1S1H1P')
-    ((0, 1), (1, 1), (2, 1), (3, 1), (4, 1), (5, 1), (6, 1))
+    [(0, 1), (1, 1), (2, 1), (3, 1), (4, 1), (5, 1), (6, 1)]
     '''
     ret = []
     spl = re.split('([0-9]+)', s)[1:]
     for op, size in zip(spl[1::2], spl[::2]):
         ret.append((bam_cigar_op[op], int(size)))
-    return tuple(ret)
+    return ret
 
 
 def cigar_tostr(cigar):
@@ -535,22 +535,22 @@ def is_junction_valid(cigar, min_overlap=4):
       XXXXXXXXXXXXX (bad 2)                           XXXXXXXXXXXXXXXX (bad 2)
                         XX-----------------XXXXXXXXXXXXXXXXX (bad 3)
 
-    >>> is_junction_valid(ngsutils.bam.cigar_fromstr('1000N40M'))
+    >>> is_junction_valid(cigar_fromstr('1000N40M'))
     (False, 'Starts at gap (1000N40M)')
 
-    >>> is_junction_valid(ngsutils.bam.cigar_fromstr('100M'))
+    >>> is_junction_valid(cigar_fromstr('100M'))
     (False, "Doesn't cover junction")
 
-    >>> is_junction_valid(ngsutils.bam.cigar_fromstr('100M1000N3M'), 4)
+    >>> is_junction_valid(cigar_fromstr('100M1000N3M'), 4)
     (False, "Too short overlap at 3' (100M1000N3M)")
 
-    >>> is_junction_valid(ngsutils.bam.cigar_fromstr('2M1000N100M'), 4)
+    >>> is_junction_valid(cigar_fromstr('2M1000N100M'), 4)
     (False, "Too short overlap at 5' (2M1000N100M)")
 
-    >>> is_junction_valid(ngsutils.bam.cigar_fromstr('4M1000N100M'), 4)
+    >>> is_junction_valid(cigar_fromstr('4M1000N100M'), 4)
     (True, '')
 
-    >>> is_junction_valid(ngsutils.bam.cigar_fromstr('100M1000N4M'), 4)
+    >>> is_junction_valid(cigar_fromstr('100M1000N4M'), 4)
     (True, '')
 
     '''
@@ -565,7 +565,7 @@ def is_junction_valid(cigar, min_overlap=4):
     for op, length in cigar:
         # mapping can't start at a gap
         if first and op == 3:
-            return (False, 'Starts at gap (%s)' % ngsutils.bam.cigar_tostr(cigar))
+            return (False, 'Starts at gap (%s)' % cigar_tostr(cigar))
         first = False
 
         if op == 3:
@@ -583,9 +583,9 @@ def is_junction_valid(cigar, min_overlap=4):
     if not has_gap:
         return (False, "Doesn't cover junction")
     elif pre_gap_count < min_overlap:
-        return (False, "Too short overlap at 5' (%s)" % ngsutils.bam.cigar_tostr(cigar))
+        return (False, "Too short overlap at 5' (%s)" % cigar_tostr(cigar))
     elif post_gap_count < min_overlap:
-        return (False, "Too short overlap at 3' (%s)" % ngsutils.bam.cigar_tostr(cigar))
+        return (False, "Too short overlap at 3' (%s)" % cigar_tostr(cigar))
 
     return True, ''
 

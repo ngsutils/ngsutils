@@ -9,16 +9,16 @@ import unittest
 import ngsutils.bam
 import ngsutils.bam.convertregion
 
+infname = os.path.join(os.path.dirname(__file__), 'test3.bam')
+outfname = os.path.join(os.path.dirname(__file__), 'tmp-convert.bam')
+chromsizes = os.path.join(os.path.dirname(__file__), 'test.chromsizes.txt')
+
 
 class ConvertRegionTest(unittest.TestCase):
     def testConvertRegion(self):
         '''
         Merge test.bam and test2.bam to tmp.bam
         '''
-        infname = os.path.join(os.path.dirname(__file__), 'test3.bam')
-        outfname = os.path.join(os.path.dirname(__file__), 'tmp-convert.bam')
-        chromsizes = os.path.join(os.path.dirname(__file__), 'test.chromsizes.txt')
-
         ngsutils.bam.convertregion.bam_convertregion(infname, outfname, chromsizes, quiet=True)
 
         bam = ngsutils.bam.bam_open(outfname)
@@ -38,6 +38,7 @@ class ConvertRegionTest(unittest.TestCase):
             elif read.qname == 'Z':
                 self.assertTrue(read.is_unmapped)
 
+    def testConvertRegionOverlap(self):
         ngsutils.bam.convertregion.bam_convertregion(infname, outfname, chromsizes, enforce_overlap=True, quiet=True)
         foundA = False
         foundB = False

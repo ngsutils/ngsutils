@@ -42,13 +42,14 @@ class MockBam(object):
 
 
 class MockRead(object):
-    def __init__(self, qname, seq=None, qual=None, tid=-1, pos=-1, aend=None, cigar=None, tags=None, is_reverse=False, is_paired=False, is_mate_unmapped=False, is_secondary=False, is_qcfail=False, flags=0):
+    def __init__(self, qname, seq=None, qual=None, tid=-1, pos=-1, aend=None, cigar=None, tags=None, mapq=0, is_reverse=False, is_paired=False, is_mate_unmapped=False, is_secondary=False, is_qcfail=False, flag=0):
         self.qname = qname
         self.seq = seq
         self.qual = qual
         self.tid = tid
         self.pos = pos
         self.aend = aend
+        self.mapq = mapq
 
         self.is_paired = is_paired
         self.is_mate_unmapped = is_mate_unmapped
@@ -56,22 +57,22 @@ class MockRead(object):
         self.is_secondary = is_secondary
         self.is_qcfail = is_qcfail
 
-        if flags:
-            self._flags = flags
-            self.is_paired = 0x1 & self.flags > 0
-            self.is_unmapped = 0x4 & self.flags > 0
-            self.is_mate_unmapped = 0x8 & self.flags > 0
-            self.is_reverse = 0x10 & self.flags > 0
-            self.is_secondary = 0x100 & self.flags > 0
-            self.is_qcfail = 0x200 & self.flags > 0
+        if flag:
+            self._flag = flag
+            self.is_paired = 0x1 & self.flag > 0
+            self.is_unmapped = 0x4 & self.flag > 0
+            self.is_mate_unmapped = 0x8 & self.flag > 0
+            self.is_reverse = 0x10 & self.flag > 0
+            self.is_secondary = 0x100 & self.flag > 0
+            self.is_qcfail = 0x200 & self.flag > 0
         else:
-            self._flags = 0
-            self._flags |= 0x1 if self.is_paired else 0
-            self._flags |= 0x4 if self.is_unmapped else 0
-            self._flags |= 0x8 if self.is_mate_unmapped else 0
-            self._flags |= 0x10 if self.is_reverse else 0
-            self._flags |= 0x100 if self.is_secondary else 0
-            self._flags |= 0x200 if self.is_qcfail else 0
+            self._flag = 0
+            self._flag |= 0x1 if self.is_paired else 0
+            self._flag |= 0x4 if self.is_unmapped else 0
+            self._flag |= 0x8 if self.is_mate_unmapped else 0
+            self._flag |= 0x10 if self.is_reverse else 0
+            self._flag |= 0x100 if self.is_secondary else 0
+            self._flag |= 0x200 if self.is_qcfail else 0
 
         if self.tid == -1 or self.pos == -1:
             self.is_unmapped = True
@@ -93,12 +94,12 @@ class MockRead(object):
         return None
 
     @property
-    def flags(self):
-        return self._flags
+    def flag(self):
+        return self._flag
 
     @property
     def is_unmapped(self):
-        if self.tid and self.pos > -1:
+        if self.tid > -1 and self.pos > -1:
             return False
         return True
 
@@ -107,8 +108,8 @@ class MockRead(object):
         if val:
             self.tid = -1
             self.pos = -1
-            self._flags |= 0x4
+            self._flag |= 0x4
         else:
-            self.tid = 1
+            self.tid = 0
             self.pos = 0
-            self._flags = self._flags & 0xFFFB  # removes 0x4
+            self._flag = self._flag & 0xFFFB  # removes 0x4

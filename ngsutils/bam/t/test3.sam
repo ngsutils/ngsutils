@@ -1,0 +1,7 @@
+@HD	VN:0.1.2	SO:unsorted	GO:none
+@PG	ID:simulated	VN:0.0.1
+@SQ	SN:chr1:100-200,300-400	LN:2000
+A	0	chr1:100-200,300-400	10	0	50M	*	0	0	ccctaacccaaccctaaccctaaccctaaccctaaccctaaccctaaccc	##################################################	AS:i:2
+B	0	chr1:100-200,300-400	75	0	50M	*	0	0	taacctaaccctaaccctaaccctactaaccctaaccctaaccctaaccc	##################################################	AS:i:1
+C	0	chr1:100-200,300-400	98	0	50M	*	0	0	taacctaaccctaaccctaaccctactaaccctaaccctaaccctaaccc	##################################################	AS:i:1
+Z	4	*	0	0	*	*	0	0	AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA	##################################################

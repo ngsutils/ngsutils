@@ -55,12 +55,17 @@ Currently, the available filters are:
 
 
     -exclude ref:start-end     Remove reads in this region (1-based start)
-    -excludebed file.bed       Remove reads that are in any of the regions
-                               from the given BED file
+    -excludebed file.bed {nostrand}
+                               Remove reads that are in any of the regions
+                               from the given BED file. If 'nostrand' is given,
+                               strand information from the BED file is ignored.
 
     -include ref:start-end     Remove reads NOT in the region (can only be one)
-    -includebed file.bed       Remove reads that are NOT any of the regions
-                               from the given BED file
+    -includebed file.bed {nostrand}
+                               Remove reads that are NOT any of the regions
+                               from the given BED file. If 'nostrand' is given,
+                               strand information from the BED file is ignored.
+
                                Note: If this is a large dataset, use
                                "bamutils extract" instead.
 
@@ -131,14 +136,17 @@ class Unique(object):
         return "uniq"
 
     def filter(self, bam, read):
-        if self.last_pos != (read.rname, read.pos):
-            self.last_pos = (read.rname, read.pos)
+        if self.last_pos != (read.tid, read.pos):
+            self.last_pos = (read.tid, read.pos)
             self.pos_reads = set()
 
-        if self.length:
-            seq = read.seq[:self.length]
+        if read.is_reverse:
+            seq = read.seq[::-1]  # ignore revcomp for now, it isn't needed, just need to compare in the proper order
         else:
             seq = read.seq
+
+        if self.length:
+            seq = seq[:self.length]
 
         if seq in self.pos_reads:
             return False
@@ -158,8 +166,8 @@ class UniqueStart(object):
         return "uniq_start"
 
     def filter(self, bam, read):
-        if self.last_pos != (read.rname, read.pos):
-            self.last_pos = (read.rname, read.pos)
+        if self.last_pos != (read.tid, read.pos):
+            self.last_pos = (read.tid, read.pos)
             return True
         return False
 
@@ -231,14 +239,14 @@ class IncludeRegion(object):
 
 
 class IncludeBED(object):
-    def __init__(self, fname):
-        self.excl = ExcludeBED(fname)
+    def __init__(self, fname, nostrand=None):
+        self.excl = ExcludeBED(fname, nostrand)
 
     def filter(self, bam, read):
         return not self.excl.filter(bam, read)
 
     def __repr__(self):
-        return 'Including from BED: %s' % (self.excl.fname)
+        return 'Including from BED: %s%s' % (self.excl.fname, ' nostrand' if self.excl.nostrand else '')
 
     def close(self):
         pass
@@ -255,7 +263,7 @@ class ExcludeRegion(object):
 
     def filter(self, bam, read):
         if not read.is_unmapped:
-            if bam.getrname(read.rname) == self.chrom:
+            if bam.getrname(read.tid) == self.chrom:
                 if self.start <= read.pos <= self.end:
                     return False
                 if self.start <= read.aend <= self.end:
@@ -270,9 +278,14 @@ class ExcludeRegion(object):
 
 
 class ExcludeBED(object):
-    def __init__(self, fname):
+    def __init__(self, fname, nostrand=None):
         self.regions = {}  # store BED regions as keyed bins (chrom, bin)
         self.fname = fname
+        if nostrand == 'nostrand':
+            self.nostrand = True
+        else:
+            self.nostrand = False
+
         with open(fname) as f:
             for line in f:
                 if not line:
@@ -284,7 +297,10 @@ class ExcludeBED(object):
                 chrom = cols[0]
                 start = int(cols[1])
                 end = int(cols[2])
-                strand = cols[5]
+                if self.nostrand:
+                    strand = '?'
+                else:
+                    strand = cols[5]
 
                 startbin = start / 100000
                 endbin = end / 100000
@@ -297,16 +313,17 @@ class ExcludeBED(object):
     def filter(self, bam, read):
         if not read.is_unmapped:
             bin = read.pos / 100000
-            ref = bam.getrname(read.rname)
+            ref = bam.getrname(read.tid)
 
             if not (ref, bin) in self.regions:
                 return True
 
             for start, end, strand in self.regions[(ref, bin)]:
-                if strand == '+' and read.is_reverse:
-                    continue
-                if strand == '-' and not read.is_reverse:
-                    continue
+                if not self.nostrand:
+                    if strand == '+' and read.is_reverse:
+                        continue
+                    if strand == '-' and not read.is_reverse:
+                        continue
                 if start <= read.pos <= end:
                     return False
                 if start <= read.aend <= end:
@@ -314,7 +331,7 @@ class ExcludeBED(object):
         return True
 
     def __repr__(self):
-        return 'Excluding from BED: %s' % (self.fname)
+        return 'Excluding from BED: %s%s' % (self.fname, ' nostrand' if self.nostrand else '')
 
     def close(self):
         pass
@@ -354,7 +371,7 @@ class MismatchRef(object):
         if read.is_unmapped:
             return False
 
-        chrom = bam.getrname(read.rname)
+        chrom = bam.getrname(read.tid)
         if read_calc_mismatches_ref(self.ref, read, chrom) > self.num:
             return False
 
@@ -386,7 +403,7 @@ class MismatchDbSNP(object):
         if read_calc_mismatches(read) <= self.num:
             return True
 
-        chrom = bam.getrname(read.rname)
+        chrom = bam.getrname(read.tid)
 
         mm = 0
         snps = 0
@@ -428,7 +445,7 @@ class MismatchRefDbSNP(object):
         if read.is_unmapped:
             return False
 
-        chrom = bam.getrname(read.rname)
+        chrom = bam.getrname(read.tid)
 
         mm = 0
         snps = 0
@@ -475,10 +492,13 @@ class Mapped(object):
 
 class MaskFlag(object):
     def __init__(self, value):
-        if value[0:2] == '0x':
-            self.flag = int(value, 16)
+        if type(value) == type(1):
+            self.flag = value
         else:
-            self.flag = int(value)
+            if value[0:2] == '0x':
+                self.flag = int(value, 16)
+            else:
+                self.flag = int(value)
 
     def __repr__(self):
         return "Doesn't match flag: %s" % self.flag
@@ -523,7 +543,7 @@ class ReadMaxLength(object):
         return "read length max: %s" % self.val
 
     def filter(self, bam, read):
-        return len(read.seq) < self.val
+        return len(read.seq) <= self.val
 
     def close(self):
         pass
@@ -593,7 +613,7 @@ class TagLessThan(_TagCompare):
         return False
 
 
-class TagLessThanEquals(_TagCompare):
+class TagLessThanEqual(_TagCompare):
     op = '<='
 
     def filter(self, bam, read):
@@ -611,7 +631,7 @@ class TagGreaterThan(_TagCompare):
         return False
 
 
-class TagGreaterThanEquals(_TagCompare):
+class TagGreaterThanEqual(_TagCompare):
     op = '>='
 
     def filter(self, bam, read):
@@ -620,7 +640,7 @@ class TagGreaterThanEquals(_TagCompare):
         return False
 
 
-class TagEquals(_TagCompare):
+class TagEqual(_TagCompare):
     op = '='
 
     def filter(self, bam, read):
@@ -635,9 +655,9 @@ _criteria = {
     'mask': MaskFlag,
     'lt': TagLessThan,
     'gt': TagGreaterThan,
-    'lte': TagLessThanEquals,
-    'gte': TagGreaterThanEquals,
-    'eq': TagEquals,
+    'lte': TagLessThanEqual,
+    'gte': TagGreaterThanEqual,
+    'eq': TagEqual,
     'mismatch': Mismatch,
     'mismatch_ref': MismatchRef,
     'mismatch_dbsnp': MismatchDbSNP,
@@ -721,7 +741,7 @@ def read_to_unmapped(read):
     #       remove excess tags
 
     read.is_unmapped = True
-    read.rname = None
+    read.tid = None
     read.pos = 0
     read.mapq = 0
     return read
