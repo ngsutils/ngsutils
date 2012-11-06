@@ -415,6 +415,8 @@ def read_calc_mismatches_gen(ref, read, chrom):
             ref_pos += length
         elif op == 0:
             refseq = ref.fetch(chrom, start + ref_pos, start + ref_pos + length)
+            if not refseq:
+                raise ValueError("Reference '%s' not found in FASTA file: %s" % (chrom, ref.filename))
             cur_pos = start + ref_pos
             for refbase, readbase in zip(refseq.upper(), read.seq[read_pos:read_pos + length].upper()):
                 if refbase != readbase:
@@ -422,6 +424,8 @@ def read_calc_mismatches_gen(ref, read, chrom):
                 cur_pos += 1
             ref_pos += length
             read_pos += length
+        else:
+            raise ValueError("Unsupported CIGAR operation: %s" % op)
 
 
 def read_calc_mismatches_ref(ref, read, chrom):
@@ -431,6 +435,160 @@ def read_calc_mismatches_ref(ref, read, chrom):
         edits += 1
 
     return edits
+
+
+__region_cache = {}
+
+
+def region_pos_to_genomic_pos(name, start, cigar):
+    '''
+        converts a junction position to a genomic location given a junction
+        ref name, the junction position, and the cigar alignment.
+
+        returns: (genomic ref, genomic pos, genomic cigar)
+
+    >>> region_pos_to_genomic_pos('chr1:1000-1050,2000-2050,3000-4000', 25, [(0, 100)])
+    ('chr1', 1025, [(0, 25), (3, 950), (0, 50), (3, 950), (0, 25)])
+
+    >>> region_pos_to_genomic_pos('chr3R:17630851-17630897,17634338-17634384', 17, [(0, 39)])
+    ('chr3R', 17630868, [(0, 29), (3, 3441), (0, 10)])
+
+    '''
+
+    if name in __region_cache:
+        chrom, fragments = __region_cache[name]
+    else:
+        c1 = name.split(':')
+        chrom = c1[0]
+
+        fragments = []
+        for fragment in c1[1].split(','):
+            s, e = fragment.split('-')
+            fragments.append((int(s), int(e)))
+
+        __region_cache[name] = (chrom, fragments)
+
+    chr_cigar = []
+    chr_start = fragments[0][0]
+
+    read_start = int(start)
+
+    frag_idx = 0
+    frag_start = 0
+    frag_end = 0
+
+    for i, (s, e) in enumerate(fragments):
+        if chr_start + read_start < e:
+            chr_start += read_start
+            frag_idx = i
+            frag_start = s
+            frag_end = e
+            break
+
+        else:
+            chr_start += (e - s)
+            read_start -= (e - s)
+
+    cur_pos = chr_start
+
+    for op, length in cigar:
+        if op == 1:
+            chr_cigar.append((op, length))
+
+        elif op in [0, 2]:
+            if cur_pos + length <= frag_end:
+                cur_pos += length
+                chr_cigar.append((op, length))
+
+            else:
+                while cur_pos + length > frag_end:
+                    if frag_end - cur_pos > 0:
+                        chr_cigar.append((op, frag_end - cur_pos))
+                        length -= (frag_end - cur_pos)
+                    cur_pos = frag_end
+                    frag_idx += 1
+                    frag_start, frag_end = fragments[frag_idx]
+                    chr_cigar.append((3, frag_start - cur_pos))
+                    cur_pos = frag_start
+
+                cur_pos = cur_pos + length
+                chr_cigar.append((op, length))
+        else:
+            print "Unsupported CIGAR operation (%s)" % bam_cigar[op]
+            sys.exit(1)
+
+    return (chrom, chr_start, chr_cigar)
+
+
+def is_junction_valid(cigar, min_overlap=4):
+    '''
+        Does the genomic cigar alignment represent a 'good' alignment.
+        Used for checking junction->genome alignments
+
+        1) the alignment must not start at a splice junction
+        2) the alignment must not start or end with an overhang
+        3) the alignment must overhang the splice junction by min_overlap (4)
+
+        |     Exon1       |     Intron     |      Exon2       |
+        |-----------------|oooooooooooooooo|------------------|
+                                            XXXXXXXXXXXXXXXXXXXXXXXX (bad 1)
+      XXXXXXXXXXXXX (bad 2)                           XXXXXXXXXXXXXXXX (bad 2)
+                        XX-----------------XXXXXXXXXXXXXXXXX (bad 3)
+
+    >>> is_junction_valid(ngsutils.bam.cigar_fromstr('1000N40M'))
+    (False, 'Starts at gap (1000N40M)')
+
+    >>> is_junction_valid(ngsutils.bam.cigar_fromstr('100M'))
+    (False, "Doesn't cover junction")
+
+    >>> is_junction_valid(ngsutils.bam.cigar_fromstr('100M1000N3M'), 4)
+    (False, "Too short overlap at 3' (100M1000N3M)")
+
+    >>> is_junction_valid(ngsutils.bam.cigar_fromstr('2M1000N100M'), 4)
+    (False, "Too short overlap at 5' (2M1000N100M)")
+
+    >>> is_junction_valid(ngsutils.bam.cigar_fromstr('4M1000N100M'), 4)
+    (True, '')
+
+    >>> is_junction_valid(ngsutils.bam.cigar_fromstr('100M1000N4M'), 4)
+    (True, '')
+
+    '''
+    first = True
+    pre_gap = True
+
+    pre_gap_count = 0
+    post_gap_count = 0
+
+    has_gap = False
+
+    for op, length in cigar:
+        # mapping can't start at a gap
+        if first and op == 3:
+            return (False, 'Starts at gap (%s)' % ngsutils.bam.cigar_tostr(cigar))
+        first = False
+
+        if op == 3:
+            pre_gap = False
+            post_gap_count = 0
+            has_gap = True
+
+        elif pre_gap:
+            pre_gap_count += length
+        else:
+            post_gap_count += length
+
+        # mapping must start with more than min_overlap base match
+
+    if not has_gap:
+        return (False, "Doesn't cover junction")
+    elif pre_gap_count < min_overlap:
+        return (False, "Too short overlap at 5' (%s)" % ngsutils.bam.cigar_tostr(cigar))
+    elif post_gap_count < min_overlap:
+        return (False, "Too short overlap at 3' (%s)" % ngsutils.bam.cigar_tostr(cigar))
+
+    return True, ''
+
 
 if __name__ == '__main__':
     import doctest

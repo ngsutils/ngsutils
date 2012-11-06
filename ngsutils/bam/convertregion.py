@@ -45,160 +45,12 @@ Options:
 """
     sys.exit(1)
 
-_region_cache = {}
-
-
-def region_pos_to_genomic_pos(name, start, cigar):
-    '''
-        converts a junction position to a genomic location given a junction
-        ref name, the junction position, and the cigar alignment.
-
-        returns: (genomic ref, genomic pos, genomic cigar)
-
-    >>> region_pos_to_genomic_pos('chr1:1000-1050,2000-2050,3000-4000', 25, [(0, 100)])
-    ('chr1', 1025, [(0, 25), (3, 950), (0, 50), (3, 950), (0, 25)])
-
-    >>> region_pos_to_genomic_pos('chr3R:17630851-17630897,17634338-17634384', 17, [(0, 39)])
-    ('chr3R', 17630868, [(0, 29), (3, 3441), (0, 10)])
-
-    '''
-
-    if name in _region_cache:
-        chrom, fragments = _region_cache[name]
-    else:
-        c1 = name.split(':')
-        chrom = c1[0]
-
-        fragments = []
-        for fragment in c1[1].split(','):
-            s, e = fragment.split('-')
-            fragments.append((int(s), int(e)))
-
-        _region_cache[name] = (chrom, fragments)
-
-    chr_cigar = []
-    chr_start = fragments[0][0]
-
-    read_start = int(start)
-
-    frag_idx = 0
-    frag_start = 0
-    frag_end = 0
-
-    for i, (s, e) in enumerate(fragments):
-        if chr_start + read_start < e:
-            chr_start += read_start
-            frag_idx = i
-            frag_start = s
-            frag_end = e
-            break
-
-        else:
-            chr_start += (e - s)
-            read_start -= (e - s)
-
-    cur_pos = chr_start
-
-    for op, length in cigar:
-        if op == 1:
-            chr_cigar.append((op, length))
-
-        elif op in [0, 2]:
-            if cur_pos + length <= frag_end:
-                cur_pos += length
-                chr_cigar.append((op, length))
-
-            else:
-                while cur_pos + length > frag_end:
-                    if frag_end - cur_pos > 0:
-                        chr_cigar.append((op, frag_end - cur_pos))
-                        length -= (frag_end - cur_pos)
-                    cur_pos = frag_end
-                    frag_idx += 1
-                    frag_start, frag_end = fragments[frag_idx]
-                    chr_cigar.append((3, frag_start - cur_pos))
-                    cur_pos = frag_start
-
-                cur_pos = cur_pos + length
-                chr_cigar.append((op, length))
-        else:
-            print "Unsupported CIGAR operation (%s)" % ngsutils.bam.bam_cigar[op]
-            sys.exit(1)
-
-    return (chrom, chr_start, chr_cigar)
-
-
-def is_junction_valid(cigar, min_overlap=4):
-    '''
-        Does the genomic cigar alignment represent a 'good' alignment.
-        Used for checking junction->genome alignments
-
-        1) the alignment must not start at a splice junction
-        2) the alignment must not start or end with an overhang
-        3) the alignment must overhang the splice junction by min_overlap (4)
-
-        |     Exon1       |     Intron     |      Exon2       |
-        |-----------------|oooooooooooooooo|------------------|
-                                            XXXXXXXXXXXXXXXXXXXXXXXX (bad 1)
-      XXXXXXXXXXXXX (bad 2)                           XXXXXXXXXXXXXXXX (bad 2)
-                        XX-----------------XXXXXXXXXXXXXXXXX (bad 3)
-
-    >>> is_junction_valid(ngsutils.bam.cigar_fromstr('1000N40M'))
-    (False, 'Starts at gap (1000N40M)')
-
-    >>> is_junction_valid(ngsutils.bam.cigar_fromstr('100M'))
-    (False, "Doesn't cover junction")
-
-    >>> is_junction_valid(ngsutils.bam.cigar_fromstr('100M1000N3M'), 4)
-    (False, "Too short overlap at 3' (100M1000N3M)")
-
-    >>> is_junction_valid(ngsutils.bam.cigar_fromstr('2M1000N100M'), 4)
-    (False, "Too short overlap at 5' (2M1000N100M)")
-
-    >>> is_junction_valid(ngsutils.bam.cigar_fromstr('4M1000N100M'), 4)
-    (True, '')
-
-    >>> is_junction_valid(ngsutils.bam.cigar_fromstr('100M1000N4M'), 4)
-    (True, '')
-
-    '''
-    first = True
-    pre_gap = True
-
-    pre_gap_count = 0
-    post_gap_count = 0
-
-    has_gap = False
-
-    for op, length in cigar:
-        # mapping can't start at a gap
-        if first and op == 3:
-            return (False, 'Starts at gap (%s)' % ngsutils.bam.cigar_tostr(cigar))
-        first = False
-
-        if op == 3:
-            pre_gap = False
-            post_gap_count = 0
-            has_gap = True
-
-        elif pre_gap:
-            pre_gap_count += length
-        else:
-            post_gap_count += length
-
-        # mapping must start with more than min_overlap base match
-
-    if not has_gap:
-        return (False, "Doesn't cover junction")
-    elif pre_gap_count < min_overlap:
-        return (False, "Too short overlap at 5' (%s)" % ngsutils.bam.cigar_tostr(cigar))
-    elif post_gap_count < min_overlap:
-        return (False, "Too short overlap at 3' (%s)" % ngsutils.bam.cigar_tostr(cigar))
-
-    return True, ''
-
 
 def bam_batch_reads(bam):
+    '''
+    Batches mapping for the same reads (qname) together, this way
+    they can all be compared/converted together.
+    '''
     reads = []
     last = None
     for read in bam:
@@ -239,7 +91,7 @@ def bam_convertregion(infile, outfname, chrom_sizes, enforce_overlap=False):
                     outfile.write(read)
                 continue
 
-            chrom, pos, cigar = region_pos_to_genomic_pos(bamfile.getrname(read.rname), read.pos, read.cigar)
+            chrom, pos, cigar = ngsutils.bam.region_pos_to_genomic_pos(bamfile.getrname(read.tid), read.pos, read.cigar)
 
             read.pos = pos
             read.cigar = cigar
@@ -247,7 +99,7 @@ def bam_convertregion(infile, outfname, chrom_sizes, enforce_overlap=False):
             chrom_found = False
             for i, name in enumerate(outfile.references):
                 if name == chrom:
-                    read.rname = i
+                    read.tid = i
                     chrom_found = True
                     break
             if not chrom_found:
@@ -258,7 +110,7 @@ def bam_convertregion(infile, outfname, chrom_sizes, enforce_overlap=False):
                 outfile.write(read)
                 continue
 
-            valid, reason = is_junction_valid(cigar)
+            valid, reason = ngsutils.bam.is_junction_valid(cigar)
             if valid:
                 converted_count += 1
                 outreads.append(read)
@@ -307,14 +159,6 @@ def bam_convertregion(infile, outfname, chrom_sizes, enforce_overlap=False):
 
     os.rename('%s.tmp' % outfname, outfname)
 
-
-def test():
-
-    chrom, start, cigar = region_pos_to_genomic_pos('chr1:1000-1050,2000-2050,3000-4000', 25, [(0, 100)])
-
-    assert chrom == 'chr1'
-    assert start == 1025
-    assert cigar == [(0, 25), (3, 950), (0, 50), (3, 950), (0, 25)]
 
 if __name__ == '__main__':
     infile = None
