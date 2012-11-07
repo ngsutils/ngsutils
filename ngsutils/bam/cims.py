@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 ## category RNA-seq
 ## desc Finds regions of unusual deletions (CLIP-seq)
+## experimental
 """
 Finds regions of unusual deletions (CLIP-seq)
 
