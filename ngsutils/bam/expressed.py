@@ -11,11 +11,9 @@ for peak-finding in ChIP-seq experiments.
 '''
 import sys
 import os
-from ngsutils.bam import bam_pileup_iter
+from ngsutils.bam import bam_pileup_iter, bam_open
 
 import pysam
-
-bam_cigar = ['M', 'I', 'D', 'N', 'S', 'H', 'P']
 
 
 class ExpressedRegion(object):
@@ -83,9 +81,8 @@ class ExpressedRegion(object):
         fs.write('\n')
 
 
-def bam_find_regions(bam_name, merge_distance=10, min_read_count=2, only_uniq_starts=False, nostrand=False):
-    bamfile = pysam.Samfile(bam_name, "rb")
-
+def bam_find_regions(bam_name, merge_distance=10, min_read_count=2, only_uniq_starts=False, nostrand=False, out=sys.stdout):
+    bamfile = bam_open(bam_name)
     region_plus = None
     region_minus = None
 
@@ -98,22 +95,22 @@ def bam_find_regions(bam_name, merge_distance=10, min_read_count=2, only_uniq_st
             if nostrand or not read.alignment.is_reverse:
                 if not region_plus or region_plus.chrom != chrom or (region_plus.end + merge_distance) < pileup.pos:
                     if region_plus and region_plus.read_count >= min_read_count:
-                        region_plus.write(sys.stdout)
+                        region_plus.write(out)
 
                     region_plus = ExpressedRegion(chrom, only_uniq_starts)
                 region_plus.add_column(read, pileup.pos)
             else:
                 if not region_minus or region_minus.chrom != chrom or (region_minus.end + merge_distance) < pileup.pos:
                     if region_minus and region_minus.read_count >= min_read_count:
-                        region_minus.write(sys.stdout)
+                        region_minus.write(out)
 
                     region_minus = ExpressedRegion(chrom, only_uniq_starts)
                 region_minus.add_column(read, pileup.pos)
 
     if region_plus and region_plus.read_count >= min_read_count:
-        region_plus.write(sys.stdout)
+        region_plus.write(out)
     if region_minus and region_minus.read_count >= min_read_count:
-        region_minus.write(sys.stdout)
+        region_minus.write(out)
 
     bamfile.close()
 
