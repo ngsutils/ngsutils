@@ -13,6 +13,8 @@ after), it is ignored.
 
 This tends to be faster than running 'bamutils filter' because this extracts
 reads from a region, without iterating over all of the reads in the BAM file.
+But, if you are already filtering the BAM file for other criteria, it is
+probably worth it to just to the filtering with your other criteria.
 """
 
 import os

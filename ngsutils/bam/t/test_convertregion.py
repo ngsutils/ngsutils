@@ -17,7 +17,7 @@ chromsizes = os.path.join(os.path.dirname(__file__), 'test.chromsizes.txt')
 class ConvertRegionTest(unittest.TestCase):
     def testConvertRegion(self):
         '''
-        Merge test.bam and test2.bam to tmp.bam
+        Convert region/junction coordinates
         '''
         ngsutils.bam.convertregion.bam_convertregion(infname, outfname, chromsizes, quiet=True)
 
@@ -39,6 +39,9 @@ class ConvertRegionTest(unittest.TestCase):
                 self.assertTrue(read.is_unmapped)
 
     def testConvertRegionOverlap(self):
+        '''
+        Convert region/junction coordinates, require overlap with junction
+        '''
         ngsutils.bam.convertregion.bam_convertregion(infname, outfname, chromsizes, enforce_overlap=True, quiet=True)
         foundA = False
         foundB = False
