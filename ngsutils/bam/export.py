@@ -14,10 +14,8 @@ import os
 from ngsutils.bam import bam_iter, cigar_tostr, bam_open
 
 
-def bam_export(fname, mapped=False, unmapped=False, whitelist=None, blacklist=None, fields=None):
-    bamfile = bam_open(fname)
-
-    for read in bam_iter(bamfile):
+def bam_export(bam, mapped=False, unmapped=False, whitelist=None, blacklist=None, fields=None):
+    for read in bam_iter(bam):
         if whitelist and not read.qname in whitelist:
             continue
         if blacklist and read.qname in blacklist:
@@ -25,13 +23,11 @@ def bam_export(fname, mapped=False, unmapped=False, whitelist=None, blacklist=No
 
         try:
             if mapped and not read.is_unmapped:
-                export_read(bamfile, read, fields)
+                export_read(bam, read, fields)
             elif unmapped and read.is_unmapped:
-                export_read(bamfile, read, fields)
+                export_read(bam, read, fields)
         except IOError:
             break
-
-    bamfile.close()
 
 
 def export_read(bamfile, read, fields, out=sys.stdout):
@@ -63,8 +59,6 @@ def export_read(bamfile, read, fields, out=sys.stdout):
                 cols.append(-1)
             else:
                 cols.append(read.pnext + 1)  # output 1-based
-        elif field == '-tlen':
-            cols.append(read.tlen)
         elif field == '-isize':
             cols.append(read.isize)
         elif field[:5] == '-tag:':
@@ -107,7 +101,7 @@ Fields:
   -mapq          MAPQ score
   -nextref       Next mapped reference (paired-end)
   -nextpos       Next mapped position (paired-end)
-  -tlen          Template length (paired, observed)
+  -isize         Insert size (paired-end)
   -tag:tag_name  Any tag
                  For example:
                    -tag:AS -tag:NH
@@ -166,4 +160,6 @@ if __name__ == "__main__":
         unmapped = True
         mapped = True
 
-    bam_export(fname, mapped, unmapped, wl, bl, fields)
+    bamfile = bam_open(fname)
+    bam_export(bamfile, mapped, unmapped, wl, bl, fields)
+    bamfile.close()
