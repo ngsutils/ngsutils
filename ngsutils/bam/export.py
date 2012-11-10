@@ -14,8 +14,8 @@ import os
 from ngsutils.bam import bam_iter, cigar_tostr, bam_open
 
 
-def bam_export(bam, mapped=False, unmapped=False, whitelist=None, blacklist=None, fields=None):
-    for read in bam_iter(bam):
+def bam_export(bam, mapped=True, unmapped=True, whitelist=None, blacklist=None, fields=None, out=sys.stdout, quiet=False):
+    for read in bam_iter(bam, quiet=quiet):
         if whitelist and not read.qname in whitelist:
             continue
         if blacklist and read.qname in blacklist:
@@ -23,9 +23,9 @@ def bam_export(bam, mapped=False, unmapped=False, whitelist=None, blacklist=None
 
         try:
             if mapped and not read.is_unmapped:
-                export_read(bam, read, fields)
+                export_read(bam, read, fields, out)
             elif unmapped and read.is_unmapped:
-                export_read(bam, read, fields)
+                export_read(bam, read, fields, out)
         except IOError:
             break
 
@@ -36,11 +36,17 @@ def export_read(bamfile, read, fields, out=sys.stdout):
         if field == '-name':
             cols.append(read.qname)
         elif field == '-ref':
-            cols.append(bamfile.getrname(read.tid))
+            if read.tid == -1:
+                cols.append('*')
+            else:
+                cols.append(bamfile.getrname(read.tid))
         elif field == '-pos':
             cols.append(read.pos + 1)  # output 1-based
         elif field == '-cigar':
-            cols.append(cigar_tostr(read.cigar))
+            if read.cigar:
+                cols.append(cigar_tostr(read.cigar))
+            else:
+                cols.append('*')
         elif field == '-flags':
             cols.append(read.flag)
         elif field == '-seq':
@@ -56,9 +62,11 @@ def export_read(bamfile, read, fields, out=sys.stdout):
                 cols.append(bamfile.getrname(read.rnext))
         elif field == '-nextpos':
             if read.rnext == -1:
-                cols.append(-1)
+                cols.append(0)
             else:
                 cols.append(read.pnext + 1)  # output 1-based
+        elif field == '-tlen':
+            cols.append(read.tlen)
         elif field == '-isize':
             cols.append(read.isize)
         elif field[:5] == '-tag:':
@@ -101,7 +109,7 @@ Fields:
   -mapq          MAPQ score
   -nextref       Next mapped reference (paired-end)
   -nextpos       Next mapped position (paired-end)
-  -isize         Insert size (paired-end)
+  -tlen          Template length (paired-end)
   -tag:tag_name  Any tag
                  For example:
                    -tag:AS -tag:NH
