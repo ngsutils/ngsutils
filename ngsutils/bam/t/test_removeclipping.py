@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 '''
-Tests for bamutils tag
+Tests for bamutils removeclipping
 '''
 
 import unittest

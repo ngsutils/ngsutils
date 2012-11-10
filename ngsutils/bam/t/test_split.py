@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 '''
-Tests for bamutils merge
+Tests for bamutils split
 '''
 
 import os
