@@ -12,8 +12,10 @@ def bam_open(fname, mode='r', *args, **kwargs):
 
 
 def bam_pileup_iter(bam, mask=1796, quiet=False, callback=None):
-    if not quiet:
+    if not quiet and bam.filename:
         eta = ETA(os.stat(bam.filename).st_size)
+    else:
+        eta = None
 
     for pileup in bam.pileup(mask=mask):
         pos = bam.tell()
@@ -27,7 +29,7 @@ def bam_pileup_iter(bam, mask=1796, quiet=False, callback=None):
 
         yield pileup
 
-    if not quiet:
+    if eta:
         eta.done()
 
 
@@ -36,8 +38,10 @@ def bam_iter(bam, quiet=False, show_ref_pos=False, callback=None):
     >>> [x.qname for x in bam_iter(bam_open(os.path.join(os.path.dirname(__file__), 't', 'test.bam')), quiet=True)]
     ['A', 'B', 'E', 'C', 'D', 'F', 'Z']
     '''
-    if not quiet:
+    if not quiet and bam.filename:
         eta = ETA(os.stat(bam.filename).st_size)
+    else:
+        eta = None
 
     if os.path.exists('%s.bai' % bam.filename):
         # This is an indexed file, so it is ref sorted...
@@ -60,7 +64,7 @@ def bam_iter(bam, quiet=False, show_ref_pos=False, callback=None):
                 eta.print_status(bgz_offset, extra='%s' % read.qname)
         yield read
 
-    if not quiet:
+    if eta:
         eta.done()
 
 
