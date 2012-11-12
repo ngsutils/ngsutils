@@ -41,13 +41,13 @@ def bam_extract(infile, outfile, bedfile, nostrand=False):
         eta = ETA(os.stat(bedfile).st_size, fileobj=f)
 
         passed = 0
-        checked = 0
+
         for line in f:
-            eta.print_status(extra="extracted:%s, checked:%s" % (passed, checked))
+            eta.print_status(extra="extracted:%s" % (passed))
             if line[0] == '#':
                 continue
             cols = line.strip().split('\t')
-            if not cols or len(cols) < 6:
+            if not cols:
                 continue
 
             chrom = cols[0]
@@ -57,20 +57,29 @@ def bam_extract(infile, outfile, bedfile, nostrand=False):
 
             start = int(cols[1])
             end = int(cols[2])
-            strand = cols[5]
 
-            for read in bamfile.fetch(chrom, start, end):
-                checked += 1
-                if nostrand or (read.is_reverse and strand == '-') or (not read.is_reverse and strand == '+'):
-                    if start <= read.pos <= end or start <= read.aend <= end:
-                        outfile.write(read)
-                        passed += 1
+            if not nostrand and len(cols) >= 6:
+                strand = cols[5]
+            else:
+                strand = None
+
+            for read in bam_extract_reads(bamfile, chrom, start, end, strand):
+                outfile.write(read)
+                passed += 1
 
         eta.done()
         bamfile.close()
         outfile.close()
 
     sys.stderr.write("%s extracted\n" % (passed,))
+
+
+def bam_extract_reads(bamfile, chrom, start, end, strand=None):
+    for read in bamfile.fetch(chrom, start, end):
+        if strand is None or (read.is_reverse and strand == '-') or (not read.is_reverse and strand == '+'):
+            if start <= read.pos <= end or start <= read.aend <= end:
+                yield read
+
 
 if __name__ == '__main__':
     infile = None
