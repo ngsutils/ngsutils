@@ -83,7 +83,7 @@ class gzip_opener:
     def __enter__(self):
         if self.fname == '-':
             self.f = sys.stdin
-        elif self.fname[-3:] == '.gz':
+        elif self.fname[-3:] == '.gz' or self.fname[-4:] == '.bgz':
             self.f = gzip.open(os.path.expanduser(self.fname))
         else:
             self.f = open(os.path.expanduser(self.fname))
