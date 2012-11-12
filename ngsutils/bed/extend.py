@@ -7,7 +7,7 @@ Extends BED regions (3' only)
 
 import os
 import sys
-import ngsutils.support.ngs_utils
+from ngsutils.bed import BedFile, BedRegion
 
 
 def usage():
@@ -26,26 +26,25 @@ SIZE bases, regardless of how long it is to start with.
     sys.exit(1)
 
 
-def bed_extend(fname, size, relative=False):
-    with ngsutils.support.ngs_utils.gzip_opener(fname) as f:
-        for line in f:
-            chrom, start, end, name, score, strand = line.strip().split('\t')
-
-            if strand == '+':
-                if relative:
-                    end = int(end) + size
-                else:
-                    end = int(start) + size
+def bed_extend(bed, size, relative=False, out=sys.stdout):
+    for region in bed:
+        if region.strand == '+':
+            start = region.start
+            if relative:
+                end = region.end + size
             else:
-                if relative:
-                    start = int(start) - size
-                else:
-                    start = int(end) - size
+                end = region.start + size
+        else:
+            end = region.end
+            if relative:
+                start = region.start - size
+            else:
+                start = region.end - size
 
-            if start < 0:
-                start = 0
+        if start < 0:
+            start = 0
 
-            sys.stdout.write('%s\t%s\t%s\t%s\t%s\t%s\n' % (chrom, start, end, name, score, strand))
+        out.write('%s\n' % BedRegion(region.chrom, start, end, region.name, region.score, region.strand))
 
 if __name__ == '__main__':
     fname = None
@@ -71,4 +70,4 @@ if __name__ == '__main__':
     if not fname or not size:
         usage()
 
-    bed_extend(fname, size, relative)
+    bed_extend(BedFile(fname), size, relative)

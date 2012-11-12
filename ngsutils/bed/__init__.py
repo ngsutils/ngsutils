@@ -109,8 +109,3 @@ class BedRegion(object):
         if self.score and self.name and self.strand:
             return '\t'. join([str(x) for x in [self.chrom, self.start, self.end, self.name, self.score, self.strand]])
         return '\t'. join([str(x) for x in [self.chrom, self.start, self.end]])
-
-
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
