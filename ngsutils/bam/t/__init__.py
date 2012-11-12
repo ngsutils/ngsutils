@@ -4,9 +4,7 @@ import ngsutils.bam
 
 class MockBam(object):
     def __init__(self, refs):
-        self._refs = {}
-        for i, val in enumerate(refs):
-            self._refs[i] = val
+        self._refs = refs[:]
         self._reads = {}
         self._read_keys = []
         self.filename = ''
@@ -58,8 +56,12 @@ class MockBam(object):
                 yield read
             else:
                 if self._reads[k].tid == tid:
-                    if start <= read.pos <= end or start <= read.aend <= end or (read.pos < start and reads.aend > end):
+                    if start <= read.pos <= end or start <= read.aend <= end or (read.pos < start and read.aend > end):
                         yield read
+
+    @property
+    def references(self):
+        return self._refs[:]
 
     def getrname(self, tid):
         return self._refs[tid]
