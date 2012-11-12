@@ -9,7 +9,8 @@ map to the given BED regions.
 
 Specifically, if a read starts or ends within a BED region, it is extracted.
 However, if a read completely spans a region (starting before and ending
-after), it is ignored.
+after), it is ignored. If the read "touches" the region at all, it is
+extracted.
 
 This tends to be faster than running 'bamutils filter' because this extracts
 reads from a region, without iterating over all of the reads in the BAM file.
@@ -81,7 +82,8 @@ def bam_extract_reads(bamfile, chrom, start, end, strand=None):
         if strand is None or (read.is_reverse and strand == '-') or (not read.is_reverse and strand == '+'):
             good = False
             for frag_start, frag_end in read_alignment_fragments_gen(read):
-                if start <= frag_start <= end or start <= frag_end <= end:
+                if start <= frag_start <= end or start <= frag_end <= end or (frag_start < start and frag_end > end):
+                    # starts w/in region, ends w/in region, or spans region
                     good = True
                     break
             if good:
