@@ -38,8 +38,10 @@ def export_read(bamfile, read, fields, out=sys.stdout):
         elif field == '-ref':
             if read.tid == -1:
                 cols.append('*')
-            else:
+            elif bamfile:
                 cols.append(bamfile.getrname(read.tid))
+            else:
+                cols.append('?')
         elif field == '-pos':
             cols.append(read.pos + 1)  # output 1-based
         elif field == '-cigar':
@@ -58,8 +60,10 @@ def export_read(bamfile, read, fields, out=sys.stdout):
         elif field == '-nextref':
             if read.rnext == -1:
                 cols.append('*')
-            else:
+            elif bamfile:
                 cols.append(bamfile.getrname(read.rnext))
+            else:
+                cols.append('?')
         elif field == '-nextpos':
             if read.rnext == -1:
                 cols.append(0)

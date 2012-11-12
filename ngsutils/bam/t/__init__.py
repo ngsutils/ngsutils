@@ -1,5 +1,7 @@
 from mock import *
 import ngsutils.bam
+import ngsutils.bam.export
+import StringIO
 
 
 def _matches(valid, queries):
@@ -97,7 +99,7 @@ class MockBam(object):
 
 
 class MockRead(object):
-    def __init__(self, qname, seq=None, qual=None, tid=-1, pos=-1, aend=None, cigar=None, tags=None, mapq=0, rnext=-1, pnext=-1, isize=0, tlen=0, is_reverse=False, is_paired=False, is_secondary=False, is_qcfail=False, mate_is_unmapped=False, mate_is_reverse=False, is_read1=False, is_read2=False, flag=0):
+    def __init__(self, qname, seq=None, qual=None, tid=-1, pos=-1, aend=None, cigar=None, tags=None, mapq=0, rnext=-1, pnext=-1, isize=0, tlen=0, is_reverse=False, is_paired=False, is_secondary=False, is_qcfail=False, mate_is_unmapped=False, mate_is_reverse=False, is_read1=False, is_read2=False, flag=0, bam=None):
         self.qname = qname
         self.seq = seq
         self.qual = qual
@@ -109,6 +111,7 @@ class MockRead(object):
         self.pnext = pnext
         self.isize = isize
         self.tlen = tlen
+        self.bam = bam
 
         self.is_paired = is_paired
         self.is_reverse = is_reverse
@@ -204,3 +207,8 @@ class MockRead(object):
             self.rnext = 0
             self.pnext = 0
             self._flag = self._flag & 0xFFF7  # removes 0x8
+
+    def __repr__(self):
+        out = StringIO.StringIO('')
+        ngsutils.bam.export.export_read(self.bam, self, ['-name', '-flags', '-ref', '-pos', '-cigar'], out=out)
+        return out.getvalue()
