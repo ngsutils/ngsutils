@@ -7,40 +7,55 @@ import os
 import unittest
 
 import ngsutils.bam
-import ngsutils.bam.merge
+import ngsutils.bam.split
 
 
-class MergeTest(unittest.TestCase):
-    def testMerge(self):
+class SplitTest(unittest.TestCase):
+    def testSplit(self):
         '''
         Merge test.bam and test2.bam to tmp.bam
         '''
         fname1 = os.path.join(os.path.dirname(__file__), 'test.bam')
-        fname2 = os.path.join(os.path.dirname(__file__), 'test2.bam')
-        outfname = os.path.join(os.path.dirname(__file__), 'tmp.bam')
+        outfname = os.path.join(os.path.dirname(__file__), 'tmp')
+        outfname1 = os.path.join(os.path.dirname(__file__), 'tmp.1.bam')
+        outfname2 = os.path.join(os.path.dirname(__file__), 'tmp.2.bam')
 
-        ngsutils.bam.merge.bam_merge(outfname, [fname1, fname2], quiet=True)
+        ngsutils.bam.split.bam_split(fname1, outfname, 4)
 
-        bam = ngsutils.bam.bam_open(outfname)
+        self.assertTrue(os.path.exists(outfname1))
+        self.assertTrue(os.path.exists(outfname2))
+
+        foundA = False
+        foundB = False
+        foundC = False
+        foundE = False
+        foundOther = False
+
+        bam = ngsutils.bam.bam_open(outfname1)
         for read in ngsutils.bam.bam_iter(bam):
-            if read.qname == 'A':  # AS chr2
-                self.assertEqual(bam.getrname(read.tid), 'chr2')
-            elif read.qname == 'B':  # AS tie
-                self.assertEqual(bam.getrname(read.tid), 'chr1')
-            elif read.qname == 'C':  # AS tie
-                self.assertEqual(bam.getrname(read.tid), 'chr1')
-            elif read.qname == 'D':  # AS tie
-                self.assertEqual(bam.getrname(read.tid), 'chr1')
-            elif read.qname == 'E':  # AS chr2
-                self.assertEqual(bam.getrname(read.tid), 'chr2')
-            elif read.qname == 'F':  # AS chr1
-                self.assertEqual(bam.getrname(read.tid), 'chr1')
-            elif read.qname == 'Z':  # still unmapped
-                self.assertTrue(read.is_unmapped)
+            if read.qname == 'A':
+                foundA = True
+            elif read.qname == 'B':
+                foundB = True
+            elif read.qname == 'C':
+                foundC = True
+            elif read.qname == 'E':
+                foundE = True
+            else:
+                foundOther = True
+
+        self.assertTrue(foundA)
+        self.assertTrue(foundB)
+        self.assertTrue(foundC)
+        self.assertTrue(foundE)
+        self.assertFalse(foundOther)
 
     def tearDown(self):
-        outfname = os.path.join(os.path.dirname(__file__), 'tmp.bam')
-        os.unlink(outfname)
+        outfname1 = os.path.join(os.path.dirname(__file__), 'tmp.1.bam')
+        outfname2 = os.path.join(os.path.dirname(__file__), 'tmp.2.bam')
+
+        os.unlink(outfname1)
+        os.unlink(outfname2)
 
 if __name__ == '__main__':
     unittest.main()

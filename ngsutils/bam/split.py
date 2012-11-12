@@ -30,7 +30,7 @@ Options:
     sys.exit(1)
 
 
-def bam_split(infile, out_template, read_count=1000000):
+def bam_split(infile, out_template, read_count=1000000, quiet=False):
     bamfile = pysam.Samfile(infile, "rb")
     outfile = None
 
@@ -52,7 +52,8 @@ def bam_split(infile, out_template, read_count=1000000):
 
     bamfile.close()
     outfile.close()
-    sys.stderr.write("Split into %s files" % (file_count))
+    if not quiet:
+        sys.stderr.write("Split into %s files" % (file_count))
 
 
 if __name__ == '__main__':
