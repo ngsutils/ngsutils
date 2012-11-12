@@ -2,6 +2,25 @@ from mock import *
 import ngsutils.bam
 
 
+def _matches(valid, queries):
+    extra = False
+    check = [False, ] * len(valid)
+    for q in queries:
+        found = False
+        for i, v in enumerate(valid):
+            if v == q:
+                check[i] = True
+                found = True
+                break
+        if not found:
+            extra = True
+
+    if not check or extra:
+        return False
+
+    return True
+
+
 class MockBam(object):
     def __init__(self, refs):
         self._refs = refs[:]
