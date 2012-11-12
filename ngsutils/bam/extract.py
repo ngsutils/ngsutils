@@ -22,6 +22,8 @@ import sys
 from eta import ETA
 import pysam
 
+from ngsutils.bam import read_alignment_fragments_gen
+
 
 def usage():
     print __doc__
@@ -77,7 +79,12 @@ def bam_extract(infile, outfile, bedfile, nostrand=False):
 def bam_extract_reads(bamfile, chrom, start, end, strand=None):
     for read in bamfile.fetch(chrom, start, end):
         if strand is None or (read.is_reverse and strand == '-') or (not read.is_reverse and strand == '+'):
-            if start <= read.pos <= end or start <= read.aend <= end:
+            good = False
+            for frag_start, frag_end in read_alignment_fragments_gen(read):
+                if start <= frag_start <= end or start <= frag_end <= end:
+                    good = True
+                    break
+            if good:
                 yield read
 
 

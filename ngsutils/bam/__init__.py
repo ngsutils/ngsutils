@@ -594,6 +594,44 @@ def is_junction_valid(cigar, min_overlap=4):
     return True, ''
 
 
+def read_alignment_fragments_gen(read):
+    '''
+    Takes a read and returns the start and end positions for each match/mismatch region.
+    This will let us know where each read alignment "touches" the genome.
+    '''
+
+    for start, end in _read_alignment_fragments_gen(read.pos, read.cigar):
+        yield (start, end)
+
+
+def _read_alignment_fragments_gen(pos, cigar):
+    ''' Test-able version of read_alignment_fragments_gen
+    >>> list(_read_alignment_fragments_gen(1, cigar_fromstr('50M')))
+    [(1, 51)]
+
+    >>> list(_read_alignment_fragments_gen(1, cigar_fromstr('25M100N25M')))
+    [(1, 26), (126, 151)]
+
+    >>> list(_read_alignment_fragments_gen(1, cigar_fromstr('20M1D4M100N10M5I10M')))
+    [(1, 21), (22, 26), (126, 136), (136, 146)]
+    '''
+    ref_pos = pos
+
+    for op, length in cigar:
+        if op == 0:
+            yield (ref_pos, ref_pos + length)
+            ref_pos += length
+        elif op == 1:
+            pass
+        elif op == 2:
+            ref_pos += length
+        elif op == 3:
+            ref_pos += length
+        else:
+            raise ValueError("Unsupported CIGAR operation: %s" % op)
+
+
+
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
