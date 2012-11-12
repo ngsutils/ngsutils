@@ -15,8 +15,12 @@ def _matches(valid, queries):
         if not found:
             extra = True
 
-    if not check or extra:
+    if extra:
         return False
+
+    for c in check:
+        if not c:
+            return False
 
     return True
 

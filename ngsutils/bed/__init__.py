@@ -1,26 +1,58 @@
-import gzip
+import ngsutils.support.ngs_utils
 
 
 class BedFile(object):
-    def __init__(self, fname):
-        self.fname = fname
-        self._fobj = None
-        self._bins = {}
+    '''
+    For non-Tabix indexed BED files, read in the entire file, allowing for
+    iteration from region to region.
 
-    def fetch(self, chrom, start, end, strand=None):
-        ''' For non-TABIX indexed BED files, find all regions w/in a range '''
-        if not self._bins:
-            for region in self:
-                startbin = region.start / 100000
-                endbin = region.end / 100000
+    This reads the entire file into memory, in a series of bins. Each bin
+    is ~100K in size. Each bin can then be iterated over.
+
+    This is less efficient than using a proper Tree, but in reality, this
+    usually isn't an issue.
+    '''
+
+    _bin_const = 100000
+
+    def __init__(self, fname=None, fileobj=None):
+        self._bins = {}
+        self._bin_list = []
+        self._cur_bin_idx = 0
+        self._cur_bin_pos = 0
+
+        if not fname and not fileobj:
+            raise ValueError("Must specify either filename or fileobj")
+
+        if fname:
+            with ngsutils.support.ngs_utils.gzip_opener(fname) as fobj:
+                self._read(fobj)
+        else:
+            self._read(fileobj)
+
+    def _read(self, fobj):
+        for line in fobj:
+            line = line.strip()
+            if line and line[0] != '#':
+                cols = line.split('\t')
+                while len(cols) < 6:
+                    cols.append('')
+
+                region = BedRegion(*cols)
+                startbin = region.start / BedFile._bin_const
+                endbin = region.end / BedFile._bin_const
 
                 for bin in xrange(startbin, endbin + 1):
                     if not (region.chrom, bin) in self._bins:
-                        self._bins[(chrom, bin)] = []
-                self._bins[(chrom, bin)].append(region)
+                        self._bin_list.append((region.chrom, bin))
+                        self._bins[(region.chrom, bin)] = []
+                self._bins[(region.chrom, bin)].append(region)
+        self._bin_list.sort()
 
-        startbin = start / 100000
-        endbin = end / 100000
+    def fetch(self, chrom, start, end, strand=None):
+        ''' For non-TABIX indexed BED files, find all regions w/in a range '''
+        startbin = start / BedFile._bin_const
+        endbin = end / BedFile._bin_const
 
         for bin in xrange(startbin, endbin + 1):
             if (chrom, bin) in self._bins:
@@ -33,38 +65,29 @@ class BedFile(object):
                         yield region
 
     def __iter__(self):
-        if self.fname[-4:] == '.bgz' or self.fname[-3:] == '.gz':
-            self._fobj = gzip.open(self.fname)
-        else:
-            self._fobj = open(self.fname)
+        self._cur_bin_idx = 0
+        self._cur_bin_pos = 0
         return self
 
     def tell(self):
-        if self._fobj:
-            return self._fobj.tell()
-        else:
-            return -1
+        return self._cur_bin_idx
 
     def close(self):
-        if self._fobj:
-            self._fobj.close()
-        self._bins = None
+        pass
 
     def next(self):
-        valid = False
-        while not valid:
-            line = self._fobj.next()
-            if not line:
-                self._fobj.close()
-                self._fobj = None
-                raise StopIteration
-            line = line.strip()
-            if line and line[0] != '#':
-                cols = line.split('\t')
-                while len(cols) < 6:
-                    cols.append('')
+        if self._cur_bin_idx >= len(self._bin_list):
+            raise StopIteration
 
-                return BedRegion(*cols)
+        binvals = self._bins[self._bin_list[self._cur_bin_idx]]
+        if self._cur_bin_pos < len(binvals):
+            val = binvals[self._cur_bin_pos]
+            self._cur_bin_pos += 1
+            return val
+        else:
+            self._cur_bin_idx += 1
+            self._cur_bin_pos = 0
+            return self.next()
 
 
 class BedRegion(object):
@@ -83,7 +106,10 @@ class BedRegion(object):
             self.strand = strand
 
     def __repr__(self):
-        return '%s|%s|%s|%s|%s|%s' % (self.chrom, self.start, self.end, self.name, self.score, self.strand)
+        if self.score and self.name and self.strand:
+            return '\t'. join([str(x) for x in [self.chrom, self.start, self.end, self.name, self.score, self.strand]])
+        return '\t'. join([str(x) for x in [self.chrom, self.start, self.end]])
+
 
 if __name__ == '__main__':
     import doctest
