@@ -100,6 +100,7 @@ import pysam
 from ngsutils.bam import bam_iter
 from ngsutils.support.dbsnp import DBSNP
 from ngsutils.bam import read_calc_mismatches, read_calc_mismatches_ref, read_calc_mismatches_gen, read_calc_variations
+from ngsutils.bed import BedFile
 
 
 def usage():
@@ -286,49 +287,62 @@ class ExcludeBED(object):
         else:
             self.nostrand = False
 
-        with open(fname) as f:
-            for line in f:
-                if not line:
-                    continue
-                if line[0] == '#':
-                    continue
-                cols = line.strip().split('\t')
+        self.bed = BedFile(fname)
+        # with open(fname) as f:
+        #     for line in f:
+        #         if not line:
+        #             continue
+        #         if line[0] == '#':
+        #             continue
+        #         cols = line.strip().split('\t')
 
-                chrom = cols[0]
-                start = int(cols[1])
-                end = int(cols[2])
-                if self.nostrand:
-                    strand = '?'
-                else:
-                    strand = cols[5]
+        #         chrom = cols[0]
+        #         start = int(cols[1])
+        #         end = int(cols[2])
+        #         if self.nostrand:
+        #             strand = '?'
+        #         else:
+        #             strand = cols[5]
 
-                startbin = start / 100000
-                endbin = end / 100000
+        #         startbin = start / 100000
+        #         endbin = end / 100000
 
-                for bin in xrange(startbin, endbin + 1):
-                    if not (chrom, bin) in self.regions:
-                        self.regions[(chrom, bin)] = []
-                self.regions[(chrom, bin)].append((start, end, strand))
+        #         for bin in xrange(startbin, endbin + 1):
+        #             if not (chrom, bin) in self.regions:
+        #                 self.regions[(chrom, bin)] = []
+        #         self.regions[(chrom, bin)].append((start, end, strand))
 
     def filter(self, bam, read):
         if not read.is_unmapped:
-            bin = read.pos / 100000
-            ref = bam.getrname(read.tid)
+            if self.nostrand:
+                strand = None
+            elif read.is_reverse:
+                strand = '-'
+            else:
+                strand = '+'
 
-            if not (ref, bin) in self.regions:
-                return True
+            for region in self.bed.fetch(bam.getrname(read.tid), read.pos, read.aend, strand):
+                # region found, exclude read
+                return False
+            return True
 
-            for start, end, strand in self.regions[(ref, bin)]:
-                if not self.nostrand:
-                    if strand == '+' and read.is_reverse:
-                        continue
-                    if strand == '-' and not read.is_reverse:
-                        continue
-                if start <= read.pos <= end:
-                    return False
-                if start <= read.aend <= end:
-                    return False
-        return True
+        #     bin = read.pos / 100000
+        #     ref = bam.getrname(read.tid)
+
+        #     if not (ref, bin) in self.regions:
+        #         return True
+
+        #     for start, end, strand in self.regions[(ref, bin)]:
+        #         if not self.nostrand:
+        #             if strand == '+' and read.is_reverse:
+        #                 continue
+        #             if strand == '-' and not read.is_reverse:
+        #                 continue
+        #         if start <= read.pos <= end:
+        #             return False
+        #         if start <= read.aend <= end:
+        #             return False
+        # return True
 
     def __repr__(self):
         return 'Excluding from BED: %s%s' % (self.fname, ' nostrand' if self.nostrand else '')
