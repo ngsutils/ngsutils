@@ -48,6 +48,8 @@ class BedFile(object):
                         self._bins[(region.chrom, bin)] = []
                 self._bins[(region.chrom, bin)].append(region)
         self._bin_list.sort()
+        for bin in self._bins:
+            self._bins[bin].sort()
 
     def fetch(self, chrom, start, end, strand=None):
         ''' For non-TABIX indexed BED files, find all regions w/in a range '''
@@ -104,6 +106,18 @@ class BedRegion(object):
             self.strand = None
         else:
             self.strand = strand
+
+    def __key(self):
+        return (self.chrom, self.start, self.end, self.strand, self.name)
+
+    def __lt__(self, other):
+        return self.__key() < other.__key()
+
+    def __gt__(self, other):
+        return self.__key() > other.__key()
+
+    def __eq__(self, other):
+        return self.__key() == other.__key()
 
     def __repr__(self):
         if self.score and self.name and self.strand:
