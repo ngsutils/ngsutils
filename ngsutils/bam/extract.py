@@ -24,6 +24,7 @@ from eta import ETA
 import pysam
 
 from ngsutils.bam import read_alignment_fragments_gen
+from ngsutils.bed import BedFile
 
 
 def usage():
@@ -37,42 +38,27 @@ Options:
     sys.exit(1)
 
 
-def bam_extract(infile, outfile, bedfile, nostrand=False):
-    with open(bedfile) as f:
-        bamfile = pysam.Samfile(infile, "rb")
-        outfile = pysam.Samfile(outfile, "wb", template=bamfile)
-        eta = ETA(os.stat(bedfile).st_size, fileobj=f)
+def bam_extract(inbam, outbam, bedfile, nostrand=False):
+    bed = BedFile(bedfile)
+    eta = ETA(os.stat(bedfile).st_size, fileobj=bed)
 
-        passed = 0
+    passed = 0
 
-        for line in f:
-            eta.print_status(extra="extracted:%s" % (passed))
-            if line[0] == '#':
-                continue
-            cols = line.strip().split('\t')
-            if not cols:
-                continue
+    for region in bed:
+        eta.print_status(extra="extracted:%s" % (passed))
+        if not region.chrom in inbam.references:
+            continue
 
-            chrom = cols[0]
+        if not nostrand:
+            strand = region.strand
+        else:
+            strand = None
 
-            if not chrom in bamfile.references:
-                continue
+        for read in bam_extract_reads(inbam, region.chrom, region.start, region.end, strand):
+            outbam.write(read)
+            passed += 1
 
-            start = int(cols[1])
-            end = int(cols[2])
-
-            if not nostrand and len(cols) >= 6:
-                strand = cols[5]
-            else:
-                strand = None
-
-            for read in bam_extract_reads(bamfile, chrom, start, end, strand):
-                outfile.write(read)
-                passed += 1
-
-        eta.done()
-        bamfile.close()
-        outfile.close()
+    eta.done()
 
     sys.stderr.write("%s extracted\n" % (passed,))
 
@@ -114,4 +100,10 @@ if __name__ == '__main__':
     if not infile or not outfile or not bedfile:
         usage()
     else:
-        bam_extract(infile, outfile, bedfile, nostrand)
+        inbam = pysam.Samfile(infile, "rb")
+        outbam = pysam.Samfile(outfile, "wb", template=inbam)
+
+        bam_extract(inbam, outbam, bedfile, nostrand)
+
+        inbam.close()
+        outbam.close()

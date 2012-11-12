@@ -4,6 +4,7 @@ Tests for bamutils extract
 '''
 
 import unittest
+import os
 
 import ngsutils.bam
 import ngsutils.bam.extract
@@ -20,6 +21,33 @@ testbam1.add_read('foo6', tid=0, pos=2000, aend=3050, cigar='20M500N20M500M10M')
 
 
 class ExtractTest(unittest.TestCase):
+    def setUp(self):
+        self.fname1 = os.path.join(os.path.dirname(__file__), 'testbam1')
+        with open(self.fname1, 'w') as f:
+            f.write('chr1\t200\t250\tfoo\t1\t+\n')
+            f.write('chr1\t125\t170\tfoo\t1\t+\n')
+
+        self.fname2 = os.path.join(os.path.dirname(__file__), 'testbam2')
+        with open(self.fname2, 'w') as f:
+            f.write('chr1\t200\t250\n')
+            f.write('chr1\t125\t170\n')
+
+    def tearDown(self):
+        os.unlink(self.fname1)
+        os.unlink(self.fname2)
+
+    def testExtractBED(self):
+        outbam = MockBam(['chr1'])
+        ngsutils.bam.extract.bam_extract(testbam1, outbam, self.fname1)
+        passed = [x.qname for x in outbam]
+        self.assertTrue(_matches(['foo2', 'foo1', 'foo4'], passed))
+
+    def testExtractBED3(self):
+        outbam = MockBam(['chr1'])
+        ngsutils.bam.extract.bam_extract(testbam1, outbam, self.fname2)
+        passed = [x.qname for x in outbam]
+        self.assertTrue(_matches(['foo2', 'foo5', 'foo1', 'foo4'], passed))
+
     def testExtract(self):
         passed = [x.qname for x in ngsutils.bam.extract.bam_extract_reads(testbam1, 'chr1', 200, 250, '+')]
         self.assertTrue(_matches(['foo2', 'foo4'], passed))
@@ -30,7 +58,7 @@ class ExtractTest(unittest.TestCase):
         passed = [x.qname for x in ngsutils.bam.extract.bam_extract_reads(testbam1, 'chr1', 200, 250, None)]
         self.assertTrue(_matches(['foo2', 'foo4', 'foo5'], passed))
 
-    def testTouching(self):
+    def testExtractTouching(self):
         passed = [x.qname for x in ngsutils.bam.extract.bam_extract_reads(testbam1, 'chr1', 2520, 2540, None)]
         self.assertTrue(_matches(['foo6'], passed))
 

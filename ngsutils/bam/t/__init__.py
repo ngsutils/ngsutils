@@ -33,14 +33,17 @@ class MockBam(object):
     def tell(self):
         return self.__pos
 
-    def add_read(self, read, *args, **kwargs):
-        if type(read) != MockRead:
-            read = MockRead(read, *args, **kwargs)
-
+    def write(self, read):
         k = (read.tid, read.pos, len(self._reads))
         self._reads[k] = read
         self._read_keys.append(k)
         self._read_keys.sort()
+
+    def add_read(self, read, *args, **kwargs):
+        if type(read) != MockRead:
+            read = MockRead(read, *args, **kwargs)
+
+        self.write(read)
 
     def __iter__(self):
         self.__iter = self.fetch()

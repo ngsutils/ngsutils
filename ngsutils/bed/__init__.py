@@ -9,11 +9,8 @@ class BedFile(object):
 
     def fetch(self, chrom, start, end, strand=None):
         ''' For non-TABIX indexed BED files, find all regions w/in a range '''
-        print ''
-        print 'searching for:', chrom, start, end, strand
         if not self._bins:
             for region in self:
-                print region
                 startbin = region.start / 100000
                 endbin = region.end / 100000
 
@@ -42,12 +39,24 @@ class BedFile(object):
             self._fobj = open(self.fname)
         return self
 
+    def tell(self):
+        if self._fobj:
+            return self._fobj.tell()
+        else:
+            return -1
+
+    def close(self):
+        if self._fobj:
+            self._fobj.close()
+        self._bins = None
+
     def next(self):
         valid = False
         while not valid:
             line = self._fobj.next()
             if not line:
                 self._fobj.close()
+                self._fobj = None
                 raise StopIteration
             line = line.strip()
             if line and line[0] != '#':
