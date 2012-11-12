@@ -631,7 +631,6 @@ def _read_alignment_fragments_gen(pos, cigar):
             raise ValueError("Unsupported CIGAR operation: %s" % op)
 
 
-
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
