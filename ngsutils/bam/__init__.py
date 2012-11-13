@@ -52,7 +52,7 @@ def bam_iter(bam, quiet=False, show_ref_pos=False, callback=None):
         pos = bam.tell()
         bgz_offset = pos >> 16
 
-        if not quiet:
+        if not quiet and eta:
             if callback:
                 eta.print_status(bgz_offset, extra=callback(read))
             elif (show_ref_pos):
@@ -106,6 +106,39 @@ def cigar_tostr(cigar):
         s += '%s%s' % (size, bam_cigar[op])
 
     return s
+
+
+def cigar_read_len(cigar):
+    '''
+    >>> cigar_read_len(cigar_fromstr('8M'))
+    8
+    >>> cigar_read_len(cigar_fromstr('8M100N8M'))
+    16
+    >>> cigar_read_len(cigar_fromstr('8M10I8M'))
+    26
+    >>> cigar_read_len(cigar_fromstr('8M10D8M'))
+    16
+    '''
+
+    read_pos = 0
+
+    for op, length in cigar:
+        if op == 0:  # M
+            read_pos += length
+        elif op == 1:  # I
+            read_pos += length
+        elif op == 2:  # D
+            pass
+        elif op == 3:  # N
+            pass
+        elif op == 4:  # S
+            read_pos += length
+        elif op == 5:  # H
+            pass
+        else:
+            raise ValueError("Unsupported CIGAR operation: %s" % op)
+
+    return read_pos
 
 
 def read_calc_mismatches(read):

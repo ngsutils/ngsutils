@@ -44,7 +44,7 @@ class ExportTest(unittest.TestCase):
         self._run_test(testbam1, ['foo1|chr1|1|8M', 'foo3|*|0|*'], fields=['-name', '-ref', '-pos', '-cigar'], blacklist=['foo2'])
 
     def testSeqQual(self):
-        self._run_test(testbam1, ['atcgatcg|AAAAAAAA', 'atcgtttt|AAAABBBB', 'gggggggg|CCCCCCCC'], fields=['-seq', '-qual'])
+        self._run_test(testbam1, ['ATCGATCG|AAAAAAAA', 'ATCGTTTT|AAAABBBB', 'GGGGGGGG|CCCCCCCC'], fields=['-seq', '-qual'])
 
     def testFlags(self):
         self._run_test(testbam1, ['foo1|0', 'foo2|16', 'foo3|4'], fields=['-name', '-flags'])

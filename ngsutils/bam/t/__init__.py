@@ -101,7 +101,7 @@ class MockBam(object):
 class MockRead(object):
     def __init__(self, qname, seq=None, qual=None, tid=-1, pos=-1, aend=None, cigar=None, tags=None, mapq=0, rnext=-1, pnext=-1, isize=0, tlen=0, is_reverse=False, is_paired=False, is_secondary=False, is_qcfail=False, mate_is_unmapped=False, mate_is_reverse=False, is_read1=False, is_read2=False, flag=0, bam=None):
         self.qname = qname
-        self.seq = seq
+        self.seq = seq.upper() if seq else ''
         self.qual = qual
         self.tid = tid
         self.pos = pos
@@ -153,13 +153,15 @@ class MockRead(object):
 
         if cigar:
             self.cigar = ngsutils.bam.cigar_fromstr(cigar)
+            if not aend:
+                self.aend = self.pos + ngsutils.bam.cigar_read_len(self.cigar)
         else:
             self.cigar = None
 
         if tags:
             self.tags = tags
         else:
-            self.tags = []
+            self.tags = [('IH', 1), ('HI', 1)]
 
     def opt(self, k):
         for k1, val in self.tags:
@@ -211,4 +213,4 @@ class MockRead(object):
     def __repr__(self):
         out = StringIO.StringIO('')
         ngsutils.bam.export.export_read(self.bam, self, ['-name', '-flags', '-ref', '-pos', '-cigar'], out=out)
-        return out.getvalue()
+        return out.getvalue().rstrip()
