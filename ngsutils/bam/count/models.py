@@ -1,6 +1,7 @@
 from count import Model, _fetch_reads, _find_mapped_count, _fetch_reads_excluding
 from eta import ETA
 from ngsutils.gtf import GTF
+from ngsutils.bed import BedFile
 import ngsutils.support.ngs_utils
 import pysam
 import os
@@ -203,6 +204,7 @@ class BinModel(Model):
 
 class BEDModel(Model):
     def __init__(self, fname):
+        self.bed = BedFile(fname)
         self.fname = fname
 
     def get_source(self):
@@ -215,15 +217,11 @@ class BEDModel(Model):
         return 'chrom start end strand'.split()
 
     def get_regions(self):
-        with ngsutils.support.ngs_utils.gzip_opener(self.fname) as f:
-            eta = ETA(os.stat(self.fname).st_size, fileobj=f)
-            for line in f:
-                if line[0] == '#':
-                    continue
-                cols = line.strip().split('\t')
-                eta.print_status(extra='%s:%s-%s[%s]' % (cols[0], cols[1], cols[2], cols[5]))
-                yield (cols[0], [int(cols[1])], [int(cols[2])], cols[5], [cols[0], cols[1], cols[2], cols[5]], None)
-            eta.done()
+        eta = ETA(self.bed.length, fileobj=self.bed)
+        for region in self.bed:
+            eta.print_status(extra='%s:%s-%s[%s]' % (region.chrom, region.start, region.end, region.strand))
+            yield (region.chrom, [region.start], [region.end], region.strand, [region.chrom, region.start, region.end, region.strand], None)
+        eta.done()
 
 
 def _repeatreader(fname):
