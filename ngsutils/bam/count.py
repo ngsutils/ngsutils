@@ -94,6 +94,7 @@ import sys
 import os
 
 import count
+from ngsutils.bam import bam_open
 
 
 def usage(msg=None):
@@ -221,4 +222,6 @@ if __name__ == '__main__':
         usage('Missing BAM file!')
 
     modelobj = count.models[model](model_arg)
-    modelobj.count(bamfile, stranded, coverage, uniq_only, rpkm, norm, multiple, whitelist, blacklist)
+    bam = bam_open(bamfile)
+    modelobj.count(bam, stranded, coverage, uniq_only, rpkm, norm, multiple, whitelist, blacklist)
+    bam.close()
