@@ -66,6 +66,16 @@ chr1|490|710|foo3,foo4,foo5|30|+
         ngsutils.bed.reduce.bed_reduce(bedtest, extend=(10, 10), stranded=False, out=out)
         self.assertTrue(_matches(valids, out.getvalue().split('\n')))
 
+    def testReduceExtendAsync(self):
+        valids = '''\
+chr1|90|220|foo1,foo2|20|+
+chr1|490|720|foo3,foo4,foo5|30|+
+'''.replace('|', '\t').split('\n')
+
+        out = StringIO.StringIO('')
+        ngsutils.bed.reduce.bed_reduce(bedtest, extend=(10, 20), stranded=False, out=out)
+        self.assertTrue(_matches(valids, out.getvalue().split('\n')))
+
     def testReduceExtendClip(self):
         valids = '''\
 chr1|100|200|foo1,foo2|20|+
