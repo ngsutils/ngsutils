@@ -1,7 +1,13 @@
 from mock import *
 import ngsutils.bam
 import ngsutils.bam.export
+import ngsutils.bam.basecall
+import ngsutils.bed
 import StringIO
+import collections
+
+PileupRecords = collections.namedtuple('PileupRecord', 'tid pos n pileups')
+PileupRead = collections.namedtuple('PileupRecord', 'alignment indel is_del is_head is_tail level qpos')
 
 
 def _matches(valid, queries):
@@ -28,13 +34,24 @@ def _matches(valid, queries):
 
 
 class MockBam(object):
-    def __init__(self, refs):
+    def __init__(self, refs, lengths=None):
         self._refs = refs[:]
+        self._ref_lengths = []
+        if lengths:
+            for length in lengths:
+                self._ref_lengths.append(length)
+        else:
+            for ref in refs:
+                self._ref_lengths.append(0)
+
         self._reads = {}
         self._read_keys = []
         self.filename = ''
         self.__iter = None
         self.__pos = 0
+
+    def seek(self, pos):
+        self.__pos = pos
 
     def tell(self):
         return self.__pos
@@ -45,11 +62,15 @@ class MockBam(object):
         self._read_keys.append(k)
         self._read_keys.sort()
 
+        if self._ref_lengths[read.tid] < read.aend:
+            self._ref_lengths[read.tid] = read.aend
+
     def add_read(self, read, *args, **kwargs):
         if type(read) != MockRead:
             read = MockRead(read, *args, **kwargs)
 
         self.write(read)
+        return self
 
     def __iter__(self):
         self.__iter = self.fetch()
@@ -61,6 +82,37 @@ class MockBam(object):
         except:
             self.__iter = None
             raise StopIteration
+
+    def pileup(self, ref, start, end):
+        ''' A cheap pileup knock-off using BamBaseCaller '''
+
+        basecaller = ngsutils.bam.basecall.BamBaseCaller(self, regions=ngsutils.bed.BedFile(region='%s:%s-%s' % (ref, start + 1, end)))
+        for basepos in basecaller.fetch():
+            pileups = []
+            for record in basepos.reads:
+                indel = 0  # size of indel, ins > 0, del < 0
+                level = 0  # don't know what this is...
+                is_del = False
+                is_head = False  # Guessing about these
+                is_tail = False
+                if record.qpos == 0:
+                    if record.read.is_reverse:
+                        is_tail = True
+                    else:
+                        is_head = True
+
+                # Doubt these do the right thing
+                if basepos.insertions:
+                    indel = max([len(ins) for ins in basepos.insertions])
+
+                if basepos.deletions:
+                    indel = - max(basepos.deletions)
+                    is_del = True
+
+                pr = PileupRead(record.read, indel, is_del, is_head, is_tail, level, record.qpos)
+                pileups.append(pr)
+
+            yield PileupRecords(basepos.tid, basepos.pos, basepos.total, pileups)
 
     def fetch(self, ref=None, start=-1, end=-1, region=None):
         if region:
@@ -90,6 +142,10 @@ class MockBam(object):
     @property
     def references(self):
         return self._refs[:]
+
+    @property
+    def lengths(self):
+        return self._ref_lengths[:]
 
     def getrname(self, tid):
         return self._refs[tid]

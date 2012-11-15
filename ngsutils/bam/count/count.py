@@ -1,6 +1,6 @@
 import ngsutils.support.stats
 import sys
-import pysam
+from ngsutils.bam.t import MockBam
 
 
 class Model(object):
@@ -34,8 +34,8 @@ class Model(object):
     def get_postheaders(self):
         return None
 
-    def count(self, bamfile, stranded, coverage, uniq_only, rpkm, norm, multiple, whitelist, blacklist):
-        bam = pysam.Samfile(bamfile, 'rb')
+    def count(self, bam, stranded=False, coverage=False, uniq_only=False, rpkm=False, norm='', multiple='complete', whitelist=None, blacklist=None, out=sys.stdout, quiet=False):
+        # bam = pysam.Samfile(bamfile, 'rb')
 
         region_counts = []
         multireads = set()
@@ -64,8 +64,10 @@ class Model(object):
                     multireads.add(read.qname)
 
             if coverage:
-                mean, stdev, median = calc_coverage(bam, chrom, strand, starts, ends, whitelist, blacklist)
-                outcols.append(mean, stdev, median)
+                mean, stdev, median = calc_coverage(bam, chrom, strand if stranded else None, starts, ends, whitelist, blacklist)
+                outcols.append(mean)
+                outcols.append(stdev)
+                outcols.append(median)
 
             if callback:
                 for callback_cols in callback(bam, count, reads, outcols):
@@ -73,13 +75,14 @@ class Model(object):
             else:
                 region_counts.append((count, coding_len, outcols))
 
-        sys.stderr.write('Calculating normalization...')
+        if not quiet:
+            sys.stderr.write('Calculating normalization...')
 
         norm_val = None
         norm_val_orig = None
 
         if norm == 'all':
-            norm_val_orig = _find_mapped_count(bam, whitelist, blacklist)
+            norm_val_orig = _find_mapped_count(bam, whitelist, blacklist, quiet)
         elif norm == 'mapped':
             norm_val_orig = single_count + len(multireads)
         elif norm == 'quantile':
@@ -90,56 +93,59 @@ class Model(object):
         if norm_val_orig:
             norm_val = float(norm_val_orig) / 1000000
 
-        sys.stderr.write('\n')
+        if not quiet:
+            sys.stderr.write('\n')
 
-        sys.stdout.write('## input %s\n' % bamfile)
-        sys.stdout.write('## model %s %s\n' % (self.get_name(), self.get_source()))
-        sys.stdout.write('## stranded %s\n' % stranded)
-        sys.stdout.write('## multiple %s\n' % multiple)
+        out.write('## input%s%s\n' % (' ' if bam.filename else '', bam.filename))
+        out.write('## model %s %s\n' % (self.get_name(), self.get_source()))
+        out.write('## stranded %s\n' % stranded)
+        out.write('## multiple %s\n' % multiple)
         if norm_val:
-            sys.stdout.write('## norm %s %s\n' % (norm, norm_val_orig))
-            sys.stdout.write('## CPM-factor %s\n' % norm_val)
+            out.write('## norm %s %s\n' % (norm, norm_val_orig))
+            out.write('## CPM-factor %s\n' % norm_val)
 
-        sys.stdout.write('#')
-        sys.stdout.write('\t'.join(self.get_headers()))
-        sys.stdout.write('\tlength\tcount')
+        out.write('#')
+        out.write('\t'.join(self.get_headers()))
+        out.write('\tlength\tcount')
         if norm_val:
-            sys.stdout.write('\tcount (CPM)')
+            out.write('\tcount (CPM)')
             if rpkm:
-                sys.stdout.write('\tRPKM')
+                out.write('\tRPKM')
 
         if coverage:
-            sys.stdout.write('\tcoverage mean\tcoverage stdev\tcoverage median')
+            out.write('\tcoverage mean\tcoverage stdev\tcoverage median')
 
         if self.get_postheaders():
-            sys.stdout.write('\t')
-            sys.stdout.write('\t'.join(self.get_postheaders()))
+            out.write('\t')
+            out.write('\t'.join(self.get_postheaders()))
 
-        sys.stdout.write('\n')
+        out.write('\n')
 
         for count, coding_len, outcols in region_counts:
             first = True
             for col in outcols:
                 if not first:
-                    sys.stdout.write('\t')
+                    out.write('\t')
                 first = False
 
                 if col is None:  # this is the marker for the 'count' col
-                    sys.stdout.write('%s\t' % count)
+                    out.write('%s' % count)
 
                     if norm_val:
-                        sys.stdout.write(str(count / norm_val))
+                        out.write('\t')
+                        out.write(str(count / norm_val))
                         if rpkm:
-                            sys.stdout.write('\t')
-                            sys.stdout.write(str(count / (coding_len / 1000.0) / norm_val))
+                            out.write('\t')
+                            out.write(str(count / (coding_len / 1000.0) / norm_val))
 
                 else:
-                    sys.stdout.write(str(col))
+                    out.write(str(col))
 
-            sys.stdout.write('\n')
+            out.write('\n')
 
 
 def _calc_read_regions(read):
+    'Find regions of reference the read covers - breaking on long gaps (N)'
     regions = []
     start = read.pos
     end = read.pos
@@ -265,9 +271,9 @@ def _fetch_reads(bam, chrom, strand, starts, ends, multiple, exclusive, whitelis
                         start_pos.add(k)
                         reads.add(read)
 
-                        if read.tags and 'IH' in read.tags:
+                        try:
                             ih = int(read.opt('IH'))
-                        else:
+                        except:
                             ih = 1
 
                         if ih == 1 or multiple == 'complete':
@@ -281,7 +287,6 @@ def _fetch_reads(bam, chrom, strand, starts, ends, multiple, exclusive, whitelis
 
 def calc_coverage(bam, chrom, strand, starts, ends, whitelist, blacklist):
     coverage = []
-
     for start, end in zip(starts, ends):
         for pileup in bam.pileup(chrom, start, end):
             count = 0
@@ -301,25 +306,38 @@ def calc_coverage(bam, chrom, strand, starts, ends, whitelist, blacklist):
             coverage.append(count)
 
     mean, stdev = ngsutils.support.stats.mean_stdev(coverage)
-    coverage.sort()
+    median = ngsutils.support.stats.median(coverage)
 
-    if len(coverage) % 2 == 1:
-        median = coverage[len(coverage) / 2]
-    else:
-        a = coverage[(len(coverage) / 2) - 1]
-        b = coverage[(len(coverage) / 2)]
-        median = (a + b) / 2
     return mean, stdev, median
 
 
 def _find_mapped_count_median(counts):
-    counts.sort()
-    filtered = [x for x in counts if x > 0]
+    '''
+    >>> _find_mapped_count_median([10, 20, 30, 10, 30])
+    20
+    >>> _find_mapped_count_median([10, 20, 30, 10, 30, 0])
+    20
+    >>> _find_mapped_count_median([10, 20, 30, 10, 30, 22])
+    21.0
+    '''
 
-    return filtered[len(filtered) / 2]
+    return ngsutils.support.stats.median([x for x in counts if x > 0])
 
 
 def _find_mapped_count_pcts(counts, min_pct=0.0, max_pct=0.75):
+    '''
+    >>> _find_mapped_count_pcts([0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
+    280
+
+    >>> _find_mapped_count_pcts([0, 20, 30, 40, 50, 60, 70, 80, 90, 100, 0, 0, 10])
+    280
+
+    >>> _find_mapped_count_pcts([0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100], 0.1, 0.2)
+    20
+
+    >>> _find_mapped_count_pcts([0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100], 0.0, 1.0)
+    550
+    '''
     counts.sort()
     filtered = [x for x in counts if x > 0]
     acc = 0
@@ -332,8 +350,19 @@ def _find_mapped_count_pcts(counts, min_pct=0.0, max_pct=0.75):
     return acc
 
 
-def _find_mapped_count(bam, whitelist=None, blacklist=None):
-    sys.stderr.write('Finding number of mapped reads\n')
+def _find_mapped_count(bam, whitelist=None, blacklist=None, quiet=False):
+    '''
+    >>> _find_mapped_count(MockBam(['chr1']).add_read('foo1', tid=0, pos=100, cigar='50M').add_read('foo2', tid=0, pos=100, cigar='50M').add_read('foo3', tid=0, pos=100, cigar='50M').add_read('foo4'), quiet=True)
+    3
+    >>> _find_mapped_count(MockBam(['chr1']).add_read('foo1', tid=0, pos=100, cigar='50M').add_read('foo2', tid=0, pos=100, cigar='50M').add_read('foo3', tid=0, pos=100, cigar='50M').add_read('foo4'), whitelist=['foo1', 'foo2'], quiet=True)
+    2
+    >>> _find_mapped_count(MockBam(['chr1']).add_read('foo1', tid=0, pos=100, cigar='50M').add_read('foo2', tid=0, pos=100, cigar='50M').add_read('foo3', tid=0, pos=100, cigar='50M').add_read('foo4'), blacklist=['foo1', 'foo2'], quiet=True)
+    1
+    >>> _find_mapped_count(MockBam(['chr1']).add_read('foo1', tid=0, pos=100, cigar='50M', tags=[('IH', 2)]).add_read('foo1', tid=0, pos=200, cigar='50M', tags=[('IH', 2)]).add_read('foo2', tid=0, pos=100, cigar='50M').add_read('foo3', tid=0, pos=100, cigar='50M').add_read('foo4'), quiet=True)
+    3
+    '''
+    if not quiet:
+        sys.stderr.write('Finding number of mapped reads\n')
     bam.seek(0)
     mapped_count = 0
     multinames = set()
@@ -343,12 +372,13 @@ def _find_mapped_count(bam, whitelist=None, blacklist=None):
         if not whitelist or read.qname in whitelist:
             if not read.is_unmapped and not read.qname in multinames:
                 mapped_count += 1
-                if read.tags and 'IH' in read.tags:
+                try:
                     ih = int(read.opt('IH'))
-                else:
+                except:
                     ih = 1
                 if ih > 1:
                     multinames.add(read.qname)
     bam.seek(0)
-    sys.stderr.write("%s mapped reads\n" % mapped_count)
+    if not quiet:
+        sys.stderr.write("%s mapped reads\n" % mapped_count)
     return mapped_count

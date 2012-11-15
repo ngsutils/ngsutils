@@ -38,13 +38,13 @@ class ExtractTest(unittest.TestCase):
 
     def testExtractBED(self):
         outbam = MockBam(['chr1'])
-        ngsutils.bam.extract.bam_extract(testbam1, outbam, self.fname1)
+        ngsutils.bam.extract.bam_extract(testbam1, outbam, self.fname1, quiet=True)
         passed = [x.qname for x in outbam]
         self.assertTrue(_matches(['foo2', 'foo1', 'foo4'], passed))
 
     def testExtractBED3(self):
         outbam = MockBam(['chr1'])
-        ngsutils.bam.extract.bam_extract(testbam1, outbam, self.fname2)
+        ngsutils.bam.extract.bam_extract(testbam1, outbam, self.fname2, quiet=True)
         passed = [x.qname for x in outbam]
         self.assertTrue(_matches(['foo2', 'foo5', 'foo1', 'foo4'], passed))
 

@@ -55,7 +55,8 @@ import sys
 import math
 import collections
 import datetime
-from ngsutils.bam import bam_iter
+from ngsutils.bam import bam_iter, bam_open
+from ngsutils.bed import BedFile
 from eta import ETA
 import pysam
 
@@ -126,8 +127,8 @@ BasePosition = collections.namedtuple('BasePosition', 'tid pos total a c g t n d
 
 
 class BamBaseCaller(object):
-    def __init__(self, bam_fname, min_qual=0, min_count=0, regions=None, mask=1540, quiet=False):
-        self.bam = pysam.Samfile(bam_fname, 'rb')
+    def __init__(self, bam, min_qual=0, min_count=0, regions=None, mask=1540, quiet=False):
+        self.bam = bam
         self.min_qual = min_qual
         self.min_count = 0
 
@@ -146,23 +147,24 @@ class BamBaseCaller(object):
                 eta = None
 
             count = 0
-            for chrom, start, end in self.regions.regions:
+            for region in self.regions:
                 working_chrom = None
-                if chrom in self.bam.references:
-                    working_chrom = chrom
+                if region.chrom in self.bam.references:
+                    working_chrom = region.chrom
                 elif chrom[0:3] == 'chr':
-                        if chrom[3:] in self.bam.references:
-                            working_chrom = chrom[3:]
+                        if region.chrom[3:] in self.bam.references:
+                            working_chrom = region.chrom[3:]
 
                 if not working_chrom:
                     continue
 
-                self.cur_chrom = chrom
-                self.cur_start = start
-                self.cur_end = end
+                # for troubleshooting
+                self.cur_chrom = region.chrom
+                self.cur_start = region.start
+                self.cur_end = region.end
 
                 laststart = 0
-                for read in self.bam.fetch(working_chrom, start, end):
+                for read in self.bam.fetch(working_chrom, region.start, region.end):
                     if read.pos != laststart:
                         count += 1
                         laststart = read.pos
@@ -189,7 +191,7 @@ class BamBaseCaller(object):
         self.current_tid = None
 
     def close(self):
-        self.bam.close()
+        pass
 
     def _calc_pos(self, tid, pos, records):
         if self.cur_start and pos < self.cur_start:
@@ -304,11 +306,12 @@ class BamBaseCaller(object):
                 for i in xrange(length):
                     try:
                         if read.qual:
-                            qualval = read.qual[read_idx]
+                            qualval = ord(read.qual[read_idx]) - 33
                         else:
                             qualval = 0
                         self.buffer[buf_idx].records.append(MappingRecord(read_idx, op, read.seq[read_idx], qualval, read))
                     except Exception, e:
+                        print e
                         sys.stderr.write('\n%s\nIf there is a BED file, is it sorted and reduced?\n' % e)
                         sys.stderr.write('read: %s (%s:%s-%s)\n' % (read.qname, self.bam.references[read.tid], read.pos, read.aend))
                         sys.stderr.write('%s\n' % str(read))
@@ -327,7 +330,8 @@ class BamBaseCaller(object):
                         inqual += ord(read.qual[read_idx]) - 33
                     read_idx += 1
 
-                inqual = inqual / len(inseq)
+                inqual = inqual / len(inseq)  # use an average of the entire inserted bases
+                                              # as the quality for the whole insert
 
                 self.buffer[buf_idx].records.append(MappingRecord(read_idx, op, inseq, inqual, read))
 
@@ -402,23 +406,23 @@ def _calculate_heterozygosity(a, c, g, t):
     return float(minor - background) / (major - background + minor - background)
 
 
-def bam_basecall(bam_fname, ref_fname, min_qual=0, min_count=0, regions=None, mask=1540, quiet=False, showgaps=False, showstrand=False, minorpct=0.01, hettest=False, variants=False, profiler=None):
+def bam_basecall(bam, ref_fname, min_qual=0, min_count=0, regions=None, mask=1540, quiet=False, showgaps=False, showstrand=False, minorpct=0.01, hettest=False, variants=False, profiler=None, out=sys.stdout):
     if ref_fname:
         ref = pysam.Fastafile(ref_fname)
     else:
         ref = None
 
-    sys.stdout.write('chrom\tpos\tref\tcount\tconsensus call\tminor call\tave mappings')
+    out.write('chrom\tpos\tref\tcount\tconsensus call\tminor call\tave mappings')
     if hettest:
-        sys.stdout.write('\talt. allele freq')
-    sys.stdout.write('\tentropy\tA\tC\tG\tT\tN\tDeletions\tGaps\tInsertions\tInserts')
+        out.write('\talt. allele freq')
+    out.write('\tentropy\tA\tC\tG\tT\tN\tDeletions\tGaps\tInsertions\tInserts')
 
     if showstrand:
-        sys.stdout.write('\t+ strand %\tA minor %\tC minor %\tG minor %\tT minor %\tN minor %\tDeletion minor %\tInsertion minor %')
+        out.write('\t+ strand %\tA minor %\tC minor %\tG minor %\tT minor %\tN minor %\tDeletion minor %\tInsertion minor %')
 
-    sys.stdout.write('\n')
+    out.write('\n')
 
-    bbc = BamBaseCaller(bam_fname, min_qual, min_count, regions, mask, quiet)
+    bbc = BamBaseCaller(bam, min_qual, min_count, regions, mask, quiet)
     ebi_chr_convert = False
 
     for basepos in bbc.fetch():
@@ -515,57 +519,57 @@ def bam_basecall(bam_fname, ref_fname, min_qual=0, min_count=0, regions=None, ma
             cols.append(basepos.del_minor)
             cols.append(basepos.ins_minor)
 
-        sys.stdout.write('%s\n' % '\t'.join([str(x) for x in cols]))
+        out.write('%s\n' % '\t'.join([str(x) for x in cols]))
 
     bbc.close()
     if ref:
         ref.close()
 
 
-class SingleRegion(object):
-    def __init__(self, arg):
-        self.chrom, startend = arg.split(':')
-        if '-' in startend:
-            self.start, self.end = [int(x) for x in startend.split('-')]
-        else:
-            self.start = int(startend)
-            self.end = start
-        self.start = self.start - 1
+# class SingleRegion(object):
+#     def __init__(self, arg):
+#         self.chrom, startend = arg.split(':')
+#         if '-' in startend:
+#             self.start, self.end = [int(x) for x in startend.split('-')]
+#         else:
+#             self.start = int(startend)
+#             self.end = start
+#         self.start = self.start - 1
 
-    @property
-    def total(self):
-        return end - start
+#     @property
+#     def total(self):
+#         return end - start
 
-    @property
-    def regions(self):
-        yield (chrom, start, end)
+#     @property
+#     def regions(self):
+#         yield (chrom, start, end)
 
 
-class BEDRegions(object):
-    def __init__(self, fname):
-        self.fname = fname
-        self.__total = 0
+# class BEDRegions(object):
+#     def __init__(self, fname):
+#         self.fname = fname
+#         self.__total = 0
 
-    @property
-    def total(self):
-        if not self.__total:
-            self.__total = 0
-            with open(self.fname) as f:
-                for line in f:
-                    if line[0] == '#':
-                        continue
-                    cols = line.strip().split('\t')
-                    self.__total += (int(cols[2]) - int(cols[1]))
-        return self.__total
+#     @property
+#     def total(self):
+#         if not self.__total:
+#             self.__total = 0
+#             with open(self.fname) as f:
+#                 for line in f:
+#                     if line[0] == '#':
+#                         continue
+#                     cols = line.strip().split('\t')
+#                     self.__total += (int(cols[2]) - int(cols[1]))
+#         return self.__total
 
-    @property
-    def regions(self):
-        with open(self.fname) as f:
-            for line in f:
-                if line[0] == '#':
-                    continue
-                cols = line.strip().split('\t')
-                yield (cols[0], int(cols[1]), int(cols[2]))
+#     @property
+#     def regions(self):
+#         with open(self.fname) as f:
+#             for line in f:
+#                 if line[0] == '#':
+#                     continue
+#                 cols = line.strip().split('\t')
+#                 yield (cols[0], int(cols[1]), int(cols[2]))
 
 
 class TimedProfiler(object):
@@ -615,7 +619,7 @@ if __name__ == '__main__':
                 last = None
             elif last == '-bed':
                 if os.path.exists(arg):
-                    regions = BEDRegions(arg)
+                    regions = BedFile(arg)
                 else:
                     print "BED file: %s not found!" % arg
                     usage()
@@ -656,7 +660,7 @@ if __name__ == '__main__':
                     print "Missing FAI index on %s" % arg
                     usage()
             elif not regions:
-                regions = SingleRegion(arg)
+                regions = BedFile(region=arg)
             else:
                 print "Unknown option or missing index: %s" % arg
                 usage()
@@ -667,12 +671,14 @@ if __name__ == '__main__':
     if not bam:
         usage()
     else:
+        bamobj = bam_open(bam)
         if profile:
             import cProfile
 
             def func():
-                bam_basecall(bam, ref, min_qual, min_count, regions, mask, quiet, showgaps, showstrand, minorpct, hettest, variants, TimedProfiler())
+                bam_basecall(bamobj, ref, min_qual, min_count, regions, mask, quiet, showgaps, showstrand, minorpct, hettest, variants, TimedProfiler())
             sys.stderr.write('Profiling...\n')
             cProfile.run('func()', profile)
         else:
-                bam_basecall(bam, ref, min_qual, min_count, regions, mask, quiet, showgaps, showstrand, minorpct, hettest, variants, None)
+                bam_basecall(bamobj, ref, min_qual, min_count, regions, mask, quiet, showgaps, showstrand, minorpct, hettest, variants, None)
+        bamobj.close()

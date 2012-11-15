@@ -3,7 +3,6 @@ from eta import ETA
 from ngsutils.gtf import GTF
 from ngsutils.bed import BedFile
 import ngsutils.support.ngs_utils
-import pysam
 import os
 import sys
 
@@ -143,14 +142,14 @@ class ExonModel(Model):
             yield (gene.chrom, starts, ends, gene.strand, [gene.gene_name, gene.gene_id, gene.isoform_id, gene.chrom, gene.strand, gene.start, gene.end], callback)
         eta.done()
 
-    def count(self, bamfile, stranded, coverage, uniq_only, rpkm, norm, multiple, whitelist, blacklist):
+    def count(self, bam, stranded=False, coverage=False, uniq_only=False, rpkm=False, norm='', multiple='complete', whitelist=None, blacklist=None, out=sys.stdout, quiet=False):
         self.stranded = stranded
         self.uniq_only = uniq_only
         self.multiple = multiple
         self.whitelist = whitelist
         self.blacklist = blacklist
 
-        Model.count(self, bamfile, stranded, coverage, uniq_only, rpkm, norm, multiple, whitelist, blacklist)
+        Model.count(self, bam, stranded, coverage, uniq_only, rpkm, norm, multiple, whitelist, blacklist, out, quiet)
 
 
 class BinModel(Model):
@@ -191,21 +190,23 @@ class BinModel(Model):
 
         eta.done()
 
-    def count(self, bamfile, stranded, coverage, uniq_only, rpkm, norm, multiple, whitelist, blacklist):
-        bam = pysam.Samfile(bamfile, 'rb')
+    def count(self, bam, stranded=False, coverage=False, uniq_only=False, rpkm=False, norm='', multiple='complete', whitelist=None, blacklist=None, out=sys.stdout, quiet=False):
         self.stranded = stranded
         self.chrom_lens = []
 
         for chrom, chrom_len in zip(bam.references, bam.lengths):
             self.chrom_lens.append((chrom, chrom_len))
-        bam.close()
-        Model.count(self, bamfile, stranded, coverage, uniq_only, rpkm, norm, multiple, whitelist, blacklist)
+        Model.count(self, bam, stranded, coverage, uniq_only, rpkm, norm, multiple, whitelist, blacklist, out, quiet)
 
 
 class BEDModel(Model):
-    def __init__(self, fname):
-        self.bed = BedFile(fname)
-        self.fname = fname
+    def __init__(self, fname=None, fileobj=None):
+        if fileobj:
+            self.bed = BedFile(fileobj=fileobj)
+            self.fname = '*fileobj*'
+        else:
+            self.bed = BedFile(fname)
+            self.fname = fname
 
     def get_source(self):
         return self.fname
@@ -280,7 +281,7 @@ class RepeatFamilyModel(Model):
         for family, member, chrom, start, end, strand in _repeatreader(self.fname):
             yield (chrom, [start], [end], strand, [family, member, chrom, start, end, strand], None)
 
-    def count(self, bamfile, stranded, coverage, uniq_only, rpkm, norm, multiple, whitelist, blacklist):
+    def count(self, bam, stranded=False, coverage=False, uniq_only=False, rpkm=False, norm='', multiple='complete', whitelist=None, blacklist=None, out=sys.stdout, quiet=False):
         # This is a separate count implementation because for repeat families,
         # we need to combine the counts from multiple regions in the genome,
         # so the usual chrom, starts, ends loop breaks down.
@@ -292,8 +293,6 @@ class RepeatFamilyModel(Model):
         if norm and norm not in ['all', 'mapped']:
             sys.stderr.write('Normalization "%s" not supported with repeatmasker family models\n' % norm)
             sys.exit(1)
-
-        bam = pysam.Samfile(bamfile, 'rb')
 
         multireads = set()
         single_count = 0
@@ -342,23 +341,23 @@ class RepeatFamilyModel(Model):
 
         sys.stderr.write('\n')
 
-        sys.stdout.write('## input %s\n' % bamfile)
-        sys.stdout.write('## model %s %s\n' % (self.get_name(), self.get_source()))
-        sys.stdout.write('## stranded %s\n' % stranded)
-        sys.stdout.write('## multiple %s\n' % multiple)
+        out.write('## input%s%s\n' % (' ' if bam.filename else '', bam.filename))
+        out.write('## model %s %s\n' % (self.get_name(), self.get_source()))
+        out.write('## stranded %s\n' % stranded)
+        out.write('## multiple %s\n' % multiple)
         if norm_val:
-            sys.stdout.write('## norm %s %s\n' % (norm, norm_val_orig))
-            sys.stdout.write('## CPM-factor %s\n' % norm_val)
+            out.write('## norm %s %s\n' % (norm, norm_val_orig))
+            out.write('## CPM-factor %s\n' % norm_val)
 
-        sys.stdout.write('#')
-        sys.stdout.write('\t'.join(self.get_headers()))
-        sys.stdout.write('\tlength\tcount')
+        out.write('#')
+        out.write('\t'.join(self.get_headers()))
+        out.write('\tlength\tcount')
         if norm_val:
-            sys.stdout.write('\tcount (CPM)')
+            out.write('\tcount (CPM)')
             if rpkm:
-                sys.stdout.write('\tRPKM')
+                out.write('\tRPKM')
 
-        sys.stdout.write('\n')
+        out.write('\n')
 
         sortedkeys = []
         for k in repeats:
@@ -379,4 +378,4 @@ class RepeatFamilyModel(Model):
                     if rpkm:
                         cols.append(repeats[k]['count'] / (repeats[k]['size'] / 1000.0) / norm_val)
 
-                sys.stdout.write('%s\n' % '\t'.join([str(x) for x in cols]))
+                out.write('%s\n' % '\t'.join([str(x) for x in cols]))

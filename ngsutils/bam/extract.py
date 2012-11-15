@@ -38,14 +38,19 @@ Options:
     sys.exit(1)
 
 
-def bam_extract(inbam, outbam, bedfile, nostrand=False):
+def bam_extract(inbam, outbam, bedfile, nostrand=False, quiet=False):
     bed = BedFile(bedfile)
-    eta = ETA(os.stat(bedfile).st_size, fileobj=bed)
+    if not quiet:
+        eta = ETA(os.stat(bedfile).st_size, fileobj=bed)
+    else:
+        eta = None
 
     passed = 0
 
     for region in bed:
-        eta.print_status(extra="extracted:%s" % (passed))
+        if eta:
+            eta.print_status(extra="extracted:%s" % (passed))
+
         if not region.chrom in inbam.references:
             continue
 
@@ -58,9 +63,9 @@ def bam_extract(inbam, outbam, bedfile, nostrand=False):
             outbam.write(read)
             passed += 1
 
-    eta.done()
-
-    sys.stderr.write("%s extracted\n" % (passed,))
+    if not quiet:
+        eta.done()
+        sys.stderr.write("%s extracted\n" % (passed,))
 
 
 def bam_extract_reads(bamfile, chrom, start, end, strand=None):
