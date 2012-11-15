@@ -49,46 +49,56 @@ Options:
     sys.exit(1)
 
 
-def insilico_pcr_tab(fasta,  db,  perfect=15,  good=15,  size=4000,  flip=False):
-    pairs = set()
+def insilico_pcr_tab(fname,  db,  perfect=15,  good=15,  size=4000,  flip=False, out=sys.stdout, quiet=False):
     with open(fasta) as f:
-        for line in f:
-            fwd,  rev = [x.strip().upper() for x in line.strip().split('\t')[0:2]]
-            if not (fwd,  rev) in pairs:
-                pairs.add((fwd,  rev))
-                insilico_pcr_pairs(fwd,  rev,  len(pairs),  db,  perfect,  good,  size,  flip)
+        _insilico_pcr_tab(f, db, perfect, good, size, flip, out, quiet)
 
 
-def insilico_pcr_fasta(tab,  db,  perfect=15,  good=15,  size=4000,  flip=False):
+def _insilico_pcr_tab(fileobj, db, perfect=15,  good=15,  size=4000,  flip=False, out=sys.stdout, quiet=False):
+    pairs = []
+    for line in fileobj:
+        fwd,  rev = [x.strip().upper() for x in line.strip().split('\t')[0:2]]
+        if not (fwd, rev) in pairs:
+            pairs.append((fwd,  rev))
+
+    for i, (fwd, rev) in enumerate(pairs):
+        insilico_pcr_pairs(fwd,  rev,  i + 1,  db,  perfect,  good,  size,  flip, out, quiet)
+
+
+def insilico_pcr_fasta(fname,  db,  perfect=15,  good=15,  size=4000,  flip=False, out=sys.stdout, quiet=False):
+    with open(fname) as f:
+        _insilico_pcr_fasta(f, db, perfect, good, size, flip, out)
+
+
+def _insilico_pcr_fasta(fileobj,  db,  perfect=15,  good=15,  size=4000,  flip=False, out=sys.stdout, quiet=False):
     primers = {}
     names = []
-    with open(tab) as f:
-        seq = ''
-        name = None
-        for line in f:
-            if line[0] == '>':
-                if seq:
-                    if not name in primers:
-                        primers[name] = [seq, ]
-                        names.append(name)
-                    else:
-                        primers[name].append(seq)
+    seq = ''
+    name = None
+    for line in fileobj:
+        if line[0] == '>':
+            if seq:
+                if not name in primers:
+                    primers[name] = [seq, ]
+                    names.append(name)
+                else:
+                    primers[name].append(seq)
 
-                name = line[1:].split('/')[0]
-                seq = ''
-            else:
-                seq += line.strip()
-
-        if not name in primers:
-            primers[name] = [seq, ]
+            name = line[1:].strip().split()[0].rsplit('/', 1)[0]
+            seq = ''
         else:
-            primers[name].append(seq)
+            seq += line.strip()
+
+    if not name in primers:
+        primers[name] = [seq, ]
+    else:
+        primers[name].append(seq)
 
     for name in names:
-        insilico_pcr_pairs(primers[name][0],  primers[name][1],  name,  db,  perfect,  good,  size,  flip)
+        insilico_pcr_pairs(primers[name][0],  primers[name][1],  name,  db,  perfect,  good,  size,  flip, out, quiet)
 
 
-def insilico_pcr_pairs(fwd,  rev,  name,  db,  perfect=15,  good=15,  size=4000,  flip=False):
+def insilico_pcr_pairs(fwd,  rev,  name,  db,  perfect=15,  good=15,  size=4000,  flip=False, out=sys.stdout, quiet=False):
         params = [
             ('db', db),
             ('wp_perfect', perfect),
@@ -106,7 +116,8 @@ def insilico_pcr_pairs(fwd,  rev,  name,  db,  perfect=15,  good=15,  size=4000,
         result = None
         while attempt < 5 and not result:
             try:
-                sys.stderr.write('>%s %s->%s (#%s) ' % (name,  fwd,  rev,  attempt + 1))
+                if not quiet:
+                    sys.stderr.write('>%s %s->%s (#%s) ' % (name,  fwd,  rev,  attempt + 1))
                 f = urllib2.urlopen('http://genome.ucsc.edu/cgi-bin/hgPcr?%s' % urllib.urlencode(params),  timeout=180)
                 if f:
                     result = f.read()
@@ -115,20 +126,22 @@ def insilico_pcr_pairs(fwd,  rev,  name,  db,  perfect=15,  good=15,  size=4000,
 
             if not result:
                 attempt += 1
-                sys.stderr.write("Timeout... waiting 30 sec\n")
+                if not quiet:
+                    sys.stderr.write("Timeout... waiting 30 sec\n")
                 time.sleep(30)
 
         if result:
             count = 0
             for m in re.finditer('><A HREF=".*">(.*):(\d+)([\+\-])(\d+)</A>', result):
                 if count == 0:
-                    print "%s\t%s\t%s\t%s\t0\t%s" % (m.group(1), int(m.group(2)) - 1, m.group(4), name, m.group(3))
+                    out.write("%s\t%s\t%s\t%s\t0\t%s\n" % (m.group(1), int(m.group(2)) - 1, m.group(4), name, m.group(3)))
                 else:
-                    print "%s\t%s\t%s\t%s.%s\t0\t%s" % (m.group(1), int(m.group(2)) - 1, m.group(4), name, count, m.group(3))
+                    out.write("%s\t%s\t%s\t%s.%s\t0\t%s" % (m.group(1), int(m.group(2)) - 1, m.group(4), name, count, m.group(3)))
                 m = re.search('<PRE>><A HREF=".*">(.*):(\d+)([\+\-])(\d+)</A>', result)
                 count += 1
-            sys.stderr.write(" %s match%s\n" % (count,  'es' if count != 1 else ''))
-        else:
+            if not quiet:
+                sys.stderr.write(" %s match%s\n" % (count,  'es' if count != 1 else ''))
+        elif not quiet:
             sys.stderr.write("Error - skipping\n")
 
 

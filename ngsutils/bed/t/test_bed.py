@@ -36,6 +36,11 @@ chr1|100|150|foo|1|-
         regions = ['%s|%s|%s|%s|%s|%s' % (x.chrom, x.start, x.end, x.name, x.score, x.strand) for x in BedFile(fileobj=instr)]
         self.assertTrue(_matches(valid, regions))
 
+    def testBedRegion(self):
+        valid = ['chr1|100|150']
+
+        regions = ['%s|%s|%s' % (x.chrom, x.start, x.end) for x in BedFile(region="chr1:101-150")]
+        self.assertTrue(_matches(valid, regions))
 
 if __name__ == '__main__':
     unittest.main()

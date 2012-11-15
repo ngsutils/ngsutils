@@ -15,22 +15,35 @@ class BedFile(object):
 
     _bin_const = 100000
 
-    def __init__(self, fname=None, fileobj=None):
+    def __init__(self, fname=None, fileobj=None, region=None):
         self._bins = {}
         self._bin_list = []
         self._cur_bin_idx = 0
         self._cur_bin_pos = 0
+        self._total = 0
+        self._length = 0
 
-        if not fname and not fileobj:
-            raise ValueError("Must specify either filename or fileobj")
+        if not fname and not fileobj and not region:
+            raise ValueError("Must specify either filename, fileobj, or region")
 
         if fname:
             with ngsutils.support.ngs_utils.gzip_opener(fname) as fobj:
-                self._read(fobj)
-        else:
-            self._read(fileobj)
+                self.__readfile(fobj)
+        elif region:
+            chrom, startend = region.split(':')
+            if '-' in startend:
+                start, end = [int(x) for x in startend.split('-')]
+            else:
+                start = int(startend)
+                end = start
+            start -= 1
 
-    def _read(self, fobj):
+            self.__add_region(BedRegion(chrom, start, end))
+
+        else:
+            self.__readfile(fileobj)
+
+    def __readfile(self, fobj):
         for line in fobj:
             line = line.strip()
             if line and line[0] != '#':
@@ -39,17 +52,24 @@ class BedFile(object):
                     cols.append('')
 
                 region = BedRegion(*cols)
-                startbin = region.start / BedFile._bin_const
-                endbin = region.end / BedFile._bin_const
+                self.__add_region(region)
 
-                for bin in xrange(startbin, endbin + 1):
-                    if not (region.chrom, bin) in self._bins:
-                        self._bin_list.append((region.chrom, bin))
-                        self._bins[(region.chrom, bin)] = []
-                self._bins[(region.chrom, bin)].append(region)
         self._bin_list.sort()
         for bin in self._bins:
             self._bins[bin].sort()
+
+    def __add_region(self, region):
+        self._total += region.end - region.start
+        self._length += 1
+
+        startbin = region.start / BedFile._bin_const
+        endbin = region.end / BedFile._bin_const
+
+        for bin in xrange(startbin, endbin + 1):
+            if not (region.chrom, bin) in self._bins:
+                self._bin_list.append((region.chrom, bin))
+                self._bins[(region.chrom, bin)] = []
+        self._bins[(region.chrom, bin)].append(region)
 
     def fetch(self, chrom, start, end, strand=None):
         ''' For non-TABIX indexed BED files, find all regions w/in a range '''
@@ -77,6 +97,14 @@ class BedFile(object):
     def close(self):
         pass
 
+    @property
+    def length(self):
+        return self._length
+
+    @property
+    def total(self):
+        return self._total
+
     def next(self):
         if self._cur_bin_idx >= len(self._bin_list):
             raise StopIteration
@@ -93,7 +121,7 @@ class BedFile(object):
 
 
 class BedRegion(object):
-    def __init__(self, chrom, start, end, name, score, strand):
+    def __init__(self, chrom, start, end, name='', score='', strand=''):
         self.chrom = chrom
         self.start = int(start)
         self.end = int(end)
@@ -119,7 +147,10 @@ class BedRegion(object):
     def __eq__(self, other):
         return self.__key() == other.__key()
 
+    def write(self, out):
+        out.write('%s\n' % self)
+
     def __repr__(self):
-        if self.score and self.name and self.strand:
+        if self.name and self.strand:
             return '\t'. join([str(x) for x in [self.chrom, self.start, self.end, self.name, self.score, self.strand]])
         return '\t'. join([str(x) for x in [self.chrom, self.start, self.end]])

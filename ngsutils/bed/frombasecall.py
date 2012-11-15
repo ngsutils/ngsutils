@@ -13,15 +13,22 @@ def bed_frombasecall(fname):
         f = sys.stdin
     else:
         f = open(fname)
-    for line in f:
-        if line[0] == '#':
-            continue
-        cols = line.strip('\n').split('\t')
-        chrom = cols[0]
-        pos = int(cols[1]) - 1
-        sys.stdout.write('%s\t%s\t%s\n' % (chrom, pos, pos + 1,))
+
+    _bed_frombasecall(f)
+
     if fname != '-':
         f.close()
+
+
+def _bed_frombasecall(fileobj, out=sys.stdout):
+    for line in fileobj:
+        line = line.strip()
+        if not line or line[0] == '#':
+            continue
+        cols = line.split('\t')
+        chrom = cols[0]
+        pos = int(cols[1]) - 1
+        out.write('%s\t%s\t%s\n' % (chrom, pos, pos + 1,))
 
 
 def usage():
