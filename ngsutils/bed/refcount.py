@@ -25,7 +25,6 @@ import sys
 from eta import ETA
 import ngsutils.support.ngs_utils
 import pysam
-import ngsutils.support.stats
 
 
 def usage():
@@ -38,9 +37,7 @@ Usage: bedutils refcount {-ns} ref.bed sample1.bed sample2.bed ...
 Where the sample BED files are Tabix indexed (sample1.bed.tgz.tbi exists).
 The sample names are calculated using the names of the files.
 
-The reference BED file shouldn't be Tabix indexed (it is read directly)/
-
-If you have only two sample groups a Fisher Test p-value will be calculated.
+The reference BED file doesn't need to be Tabix indexed (it is read directly).
 
 Options:
   -ns   Ignore strandedness in counts
@@ -85,8 +82,6 @@ def bed_refcount(refname, group_files, group_names, stranded=True):
         sys.stdout.write('\t')
         sys.stdout.write('\t'.join(samples))
         sys.stdout.write('\tpresent')
-    if len(groups) == 2:
-        sys.stdout.write('\tfisher p-value\tenriched sample')
     sys.stdout.write('\n')
 
     with open(refname) as f:
@@ -114,14 +109,6 @@ def bed_refcount(refname, group_files, group_names, stranded=True):
                     group_pres_notpres.append(notpresent)
                     sys.stdout.write('\t')
                     sys.stdout.write(str(present))
-                if len(groups) == 2:
-                    sys.stdout.write('\t')
-                    sys.stdout.write(str(ngsutils.support.stats.fisher_test(*group_pres_notpres)))
-                    sys.stdout.write('\t')
-                    if group_pres_notpres[0] > group_pres_notpres[2]:
-                        sys.stdout.write(groups[0][0])
-                    else:
-                        sys.stdout.write(groups[1][0])
 
                 sys.stdout.write('\n')
         eta.done()
