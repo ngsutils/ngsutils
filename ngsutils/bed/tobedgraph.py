@@ -11,10 +11,10 @@ can optionally normalize the counts by a given factor.
 
 import sys
 import os
-from eta import ETA
+from ngsutils.bed import BedFile
 
 
-def write_regions(regions, normalize=None):
+def write_regions(regions, normalize=None, out=sys.stdout):
     while regions:
         regions.sort()
         fragment = None
@@ -40,42 +40,33 @@ def write_regions(regions, normalize=None):
                 new_regions.append((chrom, start, end))
 
         if normalize:
-            sys.stdout.write('%s\t%s\t%s\t%s\n' % (chrom, fragment[0], fragment[1], int(normalize * count)))
+            out.write('%s\t%s\t%s\t%s\n' % (chrom, fragment[0], fragment[1], int(normalize * count)))
         else:
-            sys.stdout.write('%s\t%s\t%s\t%s\n' % (chrom, fragment[0], fragment[1], count))
+            out.write('%s\t%s\t%s\t%s\n' % (chrom, fragment[0], fragment[1], count))
 
         regions = new_regions
 
-    pass
 
+def bed_tobedgraph(bed, only_strand=None, normalize=None, out=sys.stdout):
+    regions = []
+    last_end = 0
+    last_chrom = None
 
-def bed_tobedgraph(fname, only_strand=None, normalize=None):
-    with open(fname) as f:
-        eta = ETA(os.stat(fname).st_size, fileobj=f)
+    for region in bed:
+        if only_strand and only_strand != region.strand:
+            continue
 
-        regions = []
-        last_end = 0
-        last_chrom = None
+        if last_chrom != region.chrom or region.start > last_end:
+            write_regions(regions, normalize, out)
+            last_chrom = region.chrom
+            regions = []
 
-        for line in f:
-            chrom, start, end, name, score, strand = line.strip().split('\t')
-            eta.print_status(extra='%s:%s' % (chrom, start))
+        regions.append((region.chrom, region.start, region.end))
+        if region.end > last_end:
+            last_end = region.end
 
-            if only_strand and only_strand != strand:
-                continue
-
-            if last_chrom != chrom or start > last_end:
-                write_regions(regions, normalize)
-                last_chrom = chrom
-                regions = []
-
-            regions.append((chrom, start, end))
-            if end > last_end:
-                last_end = end
-
-        if regions:
-            write_regions(regions, normalize)
-    eta.done()
+    if regions:
+        write_regions(regions, normalize, out)
 
 
 def usage():
@@ -120,4 +111,4 @@ if __name__ == "__main__":
     if not bed:
         usage()
 
-    bed_tobedgraph(bed, strand, norm)
+    bed_tobedgraph(BedFile(bed), strand, norm)
