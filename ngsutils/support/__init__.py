@@ -10,3 +10,30 @@ class Symbolize(object):
         return self.__cache[k]
 
 symbols = Symbolize()
+
+
+class Counts(object):
+    '''
+    Setup simple binning.  Bins are continuous 0->max.  Values are added to
+    bins and then means / distributions can be calculated.
+    '''
+    def __init__(self):
+        self.bins = []
+
+    def add(self, val):
+        while len(self.bins) <= val:
+            self.bins.append(0)
+        self.bins[val] += 1
+
+    def mean(self):
+        acc = 0
+        count = 0
+
+        for i, val in enumerate(self.bins):
+            acc += (i * val)
+            count += val
+
+        return float(acc) / count
+
+    def max(self):
+        return len(self.bins) - 1

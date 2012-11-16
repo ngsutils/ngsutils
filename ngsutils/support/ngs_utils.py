@@ -11,7 +11,26 @@ import re
 import collections
 
 
+def format_number(n):
+    '''
+    >>> format_number(1000)
+    '1,000'
+    >>> format_number(1234567)
+    '1,234,567'
+    '''
+    ar = list(str(n))
+    for i in range(len(ar))[::-3][1:]:
+        ar.insert(i + 1, ',')
+    return ''.join(ar)
+
+
 def natural_sort(ar):
+    '''
+    >>> natural_sort('1 3 4 2 5'.split())
+    ['1', '2', '3', '4', '5']
+    >>> natural_sort('1 10 20 2 3 4'.split())
+    ['1', '2', '3', '4', '10', '20']
+    '''
     to_sort = []
     for item in ar:
         spl = re.split('(\d+)', item)
@@ -109,6 +128,11 @@ def filenames_to_uniq(names, new_delim='.'):
         AA.BB.foo.txt
         CC.foo.txt
         returns: ['AA.BB','CC']
+
+    >>> filenames_to_uniq('a.foo.bar.txt b.foo.bar.txt'.split())
+    ['a', 'b']
+    >>> filenames_to_uniq('a.b.foo.txt c.foo.txt'.split())
+    ['a.b', 'c']
 
     '''
     name_words = []

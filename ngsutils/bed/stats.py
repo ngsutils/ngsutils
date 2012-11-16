@@ -8,8 +8,10 @@ Calculate a number of summary statistics / distribution for a BED file
 import os
 import sys
 
-from eta import ETA
 from ngsutils.support.regions import RegionTagger
+from ngsutils.support.ngs_utils import format_number
+from ngsutils.support import Counts
+from ngsutils.bed import BedFile
 import ngsutils.support.ngs_utils
 
 
@@ -24,101 +26,53 @@ junctions, intergenic, and mitochondrial regions will be calculated.
     sys.exit(1)
 
 
-def format_number(n):
-    ar = list(str(n))
-    for i in range(len(ar))[::-3][1:]:
-        ar.insert(i + 1, ',')
-    return ''.join(ar)
+class BedStats(object):
+    def __init__(self, bed, gtf_file=None):
+        self.regiontagger = None
+        if gtf_file:
+            self.regiontagger = RegionTagger(gtf_file)
+
+        self.total = 0
+        self.size = 0
+        self.lengths = Counts()
+        self.refs = {}
+        for region in bed:
+            self.total += 1
+            self.size += (region.end - region.start)
+            self.lengths.add(region.end - region.start)
+
+            if not region.chrom in self.refs:
+                self.refs[region.chrom] = 0
+            self.refs[region.chrom] += 1
+
+            if self.regiontagger:
+                self.regiontagger.add_region(region.chrom, region.start, region.end, region.strand)
+
+    def write(self, out=sys.stdout):
+        out.write("Regions:\t%s\n" % format_number(self.total))
+        out.write("Total coverage:\t%s bases\n" % format_number(self.size))
+        out.write("Average size:\t%s bases\n" % self.lengths.mean())
+        out.write("\n")
+        out.write("Reference distribution\n")
+        out.write("ref\tcount\n")
+        for refname in ngsutils.support.ngs_utils.natural_sort([x for x in self.refs]):
+            out.write("%s\t%s\n" % (refname, format_number(self.refs[refname])))
+
+        if self.regiontagger:
+            out.write("\n")
+            out.write("Mapping regions\n")
+            sorted_keys = [x for x in self.regiontagger.counts]
+            sorted_keys.sort()
+            for k in sorted_keys:
+                out.write("%s\t%s\n" % (k, self.regiontagger.counts[k]))
 
 
-class Bins(object):
-    '''
-    Setup simple binning.  Bins are continuous 0->max.  Values are added to
-    bins and then means / distributions can be calculated.
-    '''
-    def __init__(self):
-        self.bins = []
+def bed_stats(infile, gtf_file=None, out=sys.stdout, quiet=False):
+    if not quiet:
+        sys.stderr.write('Calculating BED region stats...\n')
 
-    def add(self, val):
-        while len(self.bins) <= val:
-            self.bins.append(0)
-        self.bins[val] += 1
-
-    def mean(self):
-        acc = 0
-        count = 0
-
-        for i, val in enumerate(self.bins):
-            acc += (i * val)
-            count += val
-
-        return float(acc) / count
-
-    def max(self):
-        return len(self.bins) - 1
-
-
-def bed_stats(infile, gtf_file=None):
-    regiontagger = None
-    if gtf_file:
-        regiontagger = RegionTagger(gtf_file)
-
-    total = 0
-    size = 0
-    lengths = Bins()
-    refs = {}
-
-    sys.stderr.write('Calculating BED region stats...\n')
-
-    with open(infile) as f:
-        eta = ETA(os.stat(infile).st_size, fileobj=f)
-
-        try:
-            for line in f:
-                if line[0] == '#':
-                    continue
-                cols = line.strip().split('\t')
-                chrom = cols[0]
-                start = int(cols[1])
-                end = int(cols[2])
-                #name = cols[3]
-                #score = cols[4]
-                strand = cols[5]
-                eta.print_status(extra="%s:%s-%s" % (chrom, start, end))
-                lengths.add(end - start)
-                total += 1
-
-                size += (end - start)
-
-                if not chrom in refs:
-                    refs[chrom] = 0
-                refs[chrom] += 1
-
-                if regiontagger:
-                    regiontagger.add_region(chrom, start, end, strand)
-
-        except KeyboardInterrupt:
-            pass
-
-        eta.done()
-
-    print "Regions:\t%s" % format_number(total)
-    print "Total coverage:\t%s bases" % format_number(size)
-    print "Average size:\t%s bases" % lengths.mean()
-    print ""
-    print "Reference distribution"
-    print "ref\tcount"
-    for refname in ngsutils.support.ngs_utils.natural_sort([x for x in refs]):
-        print "%s\t%s" % (refname, format_number(refs[refname]))
-
-    if regiontagger:
-        print ""
-        print "Mapping regions"
-        sorted_keys = [x for x in regiontagger.counts]
-        sorted_keys.sort()
-        for k in sorted_keys:
-            print "%s\t%s" % (k, regiontagger.counts[k])
-
+    stats = BedStats(BedFile(infile), gtf_file)
+    stats.write(out)
 
 if __name__ == '__main__':
     infile = None
