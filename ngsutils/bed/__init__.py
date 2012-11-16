@@ -1,16 +1,19 @@
+import os
 import ngsutils.support.ngs_utils
-
+import pysam
+import sys
 
 class BedFile(object):
     '''
-    For non-Tabix indexed BED files, read in the entire file, allowing for
-    iteration from region to region.
-
-    This reads the entire file into memory, in a series of bins. Each bin
+    BED files are read in their entirety memory, in a series of bins. Each bin
     is ~100K in size. Each bin can then be iterated over.
 
-    This is less efficient than using a proper Tree, but in reality, this
-    usually isn't an issue.
+    This is less efficient than using a proper index, but in reality, this
+    usually isn't an issue. However, if the BED file has been Tabix indexed,
+    that index will be used for random access.
+
+    NOTE: This isn't very efficient, so perhaps this can be remodeled into a BedFile
+    and a BedFileIndex where the file is indexed only if random access is requested.
     '''
 
     _bin_const = 100000
@@ -22,11 +25,16 @@ class BedFile(object):
         self._cur_bin_pos = 0
         self._total = 0
         self._length = 0
+        self.__tabix = None
 
-        if not fname and not fileobj and not region:
-            raise ValueError("Must specify either filename, fileobj, or region")
+        self.filename = fname
 
-        if fname:
+        if os.path.exists('%s.tbi' % fname):
+            self.__tabix = pysam.Tabixfile(fname)
+
+        if fileobj:
+            self.__readfile(fileobj)
+        elif fname:
             with ngsutils.support.ngs_utils.gzip_opener(fname) as fobj:
                 self.__readfile(fobj)
         elif region:
@@ -39,9 +47,8 @@ class BedFile(object):
             start -= 1
 
             self.__add_region(BedRegion(chrom, start, end))
-
         else:
-            self.__readfile(fileobj)
+            raise ValueError("Must specify either filename, fileobj, or region")
 
     def __readfile(self, fobj):
         for line in fobj:
@@ -72,24 +79,33 @@ class BedFile(object):
         self._bins[(region.chrom, bin)].append(region)
 
     def fetch(self, chrom, start, end, strand=None):
-        ''' For non-TABIX indexed BED files, find all regions w/in a range '''
-        startbin = start / BedFile._bin_const
-        endbin = end / BedFile._bin_const
+        '''
+        For TABIX indexed BED files, find all regions w/in a range
 
-        for bin in xrange(startbin, endbin + 1):
-            if (chrom, bin) in self._bins:
-                for region in self._bins[(chrom, bin)]:
-                    if strand and strand != region.strand:
-                        continue
-                    if start <= region.start <= end or start <= region.end <= end:
-                        yield region
-                    elif region.start < start and region.end > end:
-                        yield region
+        For non-TABIX index BED files, use the calculated bins, and
+        output matching regions
+        '''
 
-    def __iter__(self):
-        self._cur_bin_idx = 0
-        self._cur_bin_pos = 0
-        return self
+        if self.__tabix:
+            for match in self.__tabix(chrom, start, end):
+                region = BedRegion(*match.split('\t'))
+                if not strand or (strand and region.strand == region):
+                    yield region
+        else:
+            startbin = start / BedFile._bin_const
+            endbin = end / BedFile._bin_const
+
+            for bin in xrange(startbin, endbin + 1):
+                if (chrom, bin) in self._bins:
+                    for region in self._bins[(chrom, bin)]:
+                        if strand and strand != region.strand:
+                            continue
+                        if start <= region.start <= end or start <= region.end <= end:
+                            yield region
+                        elif region.start <= start <= region.end or region.start <= end <= region.end:
+                            yield region
+                        elif region.start < start and region.end > end:
+                            yield region
 
     def tell(self):
         return self._cur_bin_idx
@@ -104,6 +120,11 @@ class BedFile(object):
     @property
     def total(self):
         return self._total
+
+    def __iter__(self):
+        self._cur_bin_idx = 0
+        self._cur_bin_pos = 0
+        return self
 
     def next(self):
         if self._cur_bin_idx >= len(self._bin_list):
