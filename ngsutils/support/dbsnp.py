@@ -5,6 +5,7 @@ Support package for processing a dbSNP tabix dump from UCSC.
 import pysam
 import collections
 import sys
+from ngsutils.support import revcomp
 
 
 class SNPRecord(collections.namedtuple('SNPRecord', '''bin
@@ -41,7 +42,7 @@ bitfields
         alts = []
         for alt in self.observed.split('/'):
             if alt != '-' and self.strand == '-':
-                alt = _revcomp(alt)
+                alt = revcomp(alt)
 
             alts.append(alt)
 
@@ -138,21 +139,3 @@ class DBSNP(object):
                         return True
 
         return False
-
-
-__revcomp_mapping = {'A': 'T', 'T': 'A', 'C': 'G', 'G': 'C'}
-
-
-def _revcomp(seq):
-    if len(seq) == 1:
-        if seq.upper() in __revcomp_mapping:
-            return __revcomp_mapping[seq.upper()]
-        return seq
-
-    ret = []
-    for base in seq.upper()[::-1]:
-        if base in __revcomp_mapping:
-            ret.append(__revcomp_mapping[base])
-        else:
-            ret.append(base)
-    return ''.join(ret)

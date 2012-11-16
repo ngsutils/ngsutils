@@ -11,6 +11,33 @@ class Symbolize(object):
 
 symbols = Symbolize()
 
+_compliments = {
+'a': 't',
+'A': 'T',
+'c': 'g',
+'C': 'G',
+'g': 'c',
+'G': 'C',
+'t': 'a',
+'T': 'A',
+'n': 'n',
+'N': 'N'
+}
+
+
+def revcomp(seq):
+    '''
+    >>> revcomp('ATCGatcg')
+    'cgatCGAT'
+    '''
+    ret = []
+
+    for s in seq:
+        ret.append(_compliments[s])
+
+    ret.reverse()
+    return ''.join(ret)
+
 
 class Counts(object):
     '''

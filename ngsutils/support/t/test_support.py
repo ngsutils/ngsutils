@@ -10,6 +10,7 @@ import ngsutils.support.ngs_utils
 
 
 def load_tests(loader, tests, ignore):
+    tests.addTests(doctest.DocTestSuite(ngsutils.support))
     tests.addTests(doctest.DocTestSuite(ngsutils.support.ngs_utils))
     return tests
 

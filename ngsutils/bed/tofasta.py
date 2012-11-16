@@ -7,11 +7,12 @@ Extract BED regions from a reference FASTA file
 
 import sys
 import os
-from eta import ETA
+from ngsutils.bed import BedFile
+from ngsutils.support import revcomp
 import pysam
 
 
-def bed_tofasta(fname, ref_fasta, min_size=50, stranded=True):
+def bed_tofasta(bed, ref_fasta, min_size=50, stranded=True, out=sys.stdout):
     if not os.path.exists('%s.fai' % ref_fasta):
         pysam.faidx(ref_fasta)
 
@@ -22,56 +23,17 @@ def bed_tofasta(fname, ref_fasta, min_size=50, stranded=True):
         for line in f:
             refs.add(line.split('\t')[0].strip())
 
-    with open(fname) as f:
-        fsize = os.stat(fname).st_size
-        eta = ETA(fsize, fileobj=f, modulo=1000)
+    for region in bed:
+        if region.end - region.start >= min_size and region.chrom in refs:
+            seq = fasta.fetch(region.chrom, region.start, region.end)
+            if stranded and region.strand:
+                if region.strand == '-':
+                    seq = revcomp(seq)
+                out.write('>%s:%d-%d[%s]\n%s\n' % (region.chrom, region.start, region.end, region.strand, seq))
+            else:
+                out.write('>%s:%d-%d\n%s\n' % (region.chrom, region.start, region.end, seq))
 
-        for line in f:
-            if line[0] == '#':
-                continue
-            eta.print_status()
-
-            cols = line.strip().split('\t')
-
-            ref = cols[0]
-            start = int(cols[1])
-            end = int(cols[2])
-            strand = cols[5]
-
-            if end - start >= min_size and ref in refs:
-                seq = fasta.fetch(ref, start, end)
-                if stranded:
-                    if strand == '-':
-                        seq = revcomp(seq)
-                    print '>%s:%d-%d[%s]\n%s' % (ref, start, end, strand, seq)
-                else:
-                    print '>%s:%d-%d\n%s' % (ref, start, end, seq)
-
-        eta.done()
     fasta.close()
-
-_compliments = {
-'a': 't',
-'A': 'T',
-'c': 'g',
-'C': 'G',
-'g': 'c',
-'G': 'C',
-'t': 'a',
-'T': 'A',
-'n': 'n',
-'N': 'N'
-}
-
-
-def revcomp(seq):
-    ret = []
-
-    for s in seq:
-        ret.append(_compliments[s])
-
-    ret.reverse()
-    return ''.join(ret)
 
 
 def usage():
@@ -111,4 +73,4 @@ if __name__ == "__main__":
         usage()
         sys.exit(1)
 
-    bed_tofasta(bed, ref, min_size=min_size, stranded=stranded)
+    bed_tofasta(BedFile(bed), ref, min_size=min_size, stranded=stranded)
