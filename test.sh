@@ -12,8 +12,12 @@ if [ "$1" == "" ]; then
    	cd $DIR
     python -m unittest discover ngsutils 'test_*py' -v
 else
-    coverage run $1
-    if [ $? -eq 0 ]; then
-        coverage report
-    fi
+    while [ "$1" != "" ]; do
+        echo "$1"
+        coverage run $1
+        if [ $? -eq 0 ]; then
+            coverage report
+        fi
+        shift
+    done
 fi
