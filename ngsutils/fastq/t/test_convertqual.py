@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 '''
-Tests for bedutils reduce
+Tests for fastqutils convertqual
 '''
 
 import unittest
