@@ -5,13 +5,18 @@
 Merges a (cs)fasta file and a qual file into a FASTQ file (on stdout)
 
 This assumes that the fasta and qual files have the same reads in the same
-order (so we don't have to load all the data and merge it).
+order (so we don't have to load all the data and merge it). If there is a
+constant quality value, this will automatically determine if a FASTA file is
+in base-space or color-space. If the FASTA file is in color-space, the read
+sequence will be examined to determine if there is a base-space prefix and the
+length of the quality string adjusted accordingly.
+
+Any '_F3' or '_R3' suffixes at the end of the read names will be removed.
 """
 
 import sys
 import os
-import gzip
-from eta import ETA
+from ngsutils.support import FASTAFile
 
 
 def usage():
@@ -21,124 +26,100 @@ Usage: fastqutils fromfasta {opts} filename.[cs]fasta [filename.qual]
 
 Options:
   -q val       Use a constant value for quality (Phred char; e.g. '*' = 10)
-  -tag tag     add a tag as a suffix to all read names like: readname:suffix
+  -tag tag     add a tag as a suffix to all read names
+
+                 Example:
+                    -tag '_foo'
+
+                 Yields:
+                    @read1_foo
+                    @read2_foo
+                    etc...
 """
     sys.exit(-1)
 
 
 def qual_to_phred(qual):
-    if type(qual) is str:
-        qual = qual.strip().split()
-    elif type(qual) is not type([]):
-        qual = [qual, ]
-
-    quals = []
+    vals = []
     for q in qual:
         if not q:
             q = 0
         else:
             try:
                 q = int(q)
-            except ValueError, e:
-                print e
-                print "Line: %s" % qual
-                sys.exit(2)
+            except:
+                raise ValueError('Error converting %s to a quality value (Line: %s)' % (q, qual))
             if q > 93:
                 q = 93
             elif q < 0:
                 q = 0
-        quals.append(q)
+        vals.append(q)
 
-    return ''.join(['%c' % (q + 33) for q in quals])
-
-
-def getline(fs):
-    line = fs.readline()
-    while line and line.startswith('#'):
-        line = fs.readline()
-    if line:
-        line = line.strip()
-    return line
+    return ''.join(['%c' % (q + 33) for q in vals])
 
 
-def merge_files(fasta, qual, suffix=None, common_qual=None):
-    sys.stderr.write('Merging %s and %s\n' % (os.path.basename(fasta), os.path.basename(qual) if qual else common_qual))
-    if fasta.lower()[-3:] == '.gz':
-        f = gzip.open(fasta)
-    else:
-        f = open(fasta)
-
-    if qual:
-        if qual.lower()[-3:] == '.gz':
-            q = gzip.open(qual)
-        else:
-            q = open(qual)
-    elif common_qual:
-        q = None
-    else:
-        sys.stderr.write('Must specify a common qual value or a qual file!')
-        sys.exit(-1)
-
-    f_line = getline(f)
-    if q:
-        q_line = getline(q)
-    else:
-        q_line = None
-
-    if ETA:
-        eta = ETA(os.stat(fasta).st_size, fileobj=f)
-    else:
-        eta = None
-
+def merge_files(fasta, qual, suffix=None, common_qual=None, out=sys.stdout):
     colorspace = None
 
-    while f_line and (not q or q_line):
-        if q:
-            assert f_line == q_line
+    if qual is None:
+        qual = NullFile()
 
-        name = trim_name(f_line[1:])
+    for frec, qrec in zip(fasta.read(), qual.read()):
+        if qrec:
+            if frec.name != qrec.name:
+                raise ValueError("Mismatched names in FASTA and Qual files! (%s, %s)" % (frec.name, qrec.name))
 
-        if eta:
-            eta.print_status(extra=name)
+        name = trim_name(frec.name)
 
         if suffix:
-            name = "%s:%s" % (name, suffix)
-        seq = getline(f)
+            name = "%s%s" % (name, suffix)
 
-        if colorspace is None:
+        if common_qual and colorspace is None:
             colorspace = False
-            for base in seq[1:]:
+            for base in frec.seq[1:]:
                 if base in "01234":
                     colorspace = True
                     break
 
-        if q:
-            qual = qual_to_phred(getline(q))
+        if qrec:
+            qual = qual_to_phred(qrec.seq.strip().split())
         elif colorspace:
-            qual = common_qual * (len(seq) - 1)
+            qual = common_qual * (len(frec.seq) - 1)
         else:
-            qual = common_qual * len(seq)
+            qual = common_qual * len(frec.seq)
 
-        sys.stdout.write('@%s\n%s\n+\n%s\n' % (name, seq, qual))
-        f_line = getline(f)
-        if q:
-            q_line = getline(q)
-
-    if eta:
-        eta.done()
-
-    f.close()
-    if q:
-        q.close()
+        out.write('@%s\n%s\n+\n%s\n' % (name, frec.seq, qual))
 
 
 def trim_name(name):
-    ''' remove trailing _F3 / _R3 (to match bfast solid2fastq script) '''
+    '''
+    remove trailing _F3 / _R3 (to match bfast solid2fastq script)
+
+    >>> trim_name('foo_F3')
+    'foo'
+
+    >>> trim_name('foo_R3')
+    'foo'
+
+    '''
     if '_F3' in name:
         return name[:name.rindex('_F3')]
     elif '_R3' in name:
             return name[:name.rindex('_R3')]
     return name
+
+
+class NullFile(object):
+    '''
+    This object will act like a FASTAFile, but keep returning 'None'. This
+    lets this object be used with 'zip', just like a normal FASTAFile iterator
+    '''
+
+    def read(self, *args, **kwargs):
+        yield None
+
+    def close(self):
+        pass
 
 if __name__ == '__main__':
     last = None
@@ -173,4 +154,16 @@ if __name__ == '__main__':
     if not fasta:
         usage()
 
-    merge_files(fasta, qual, tag, common_qual)
+    if not qual and not common_qual:
+        sys.stderr.write('You must specify a quality input file or common qual value')
+        usage()
+
+    sys.stderr.write('Merging %s and %s\n' % (os.path.basename(fasta), os.path.basename(qual) if qual else common_qual))
+
+    f = FASTAFile(fasta)
+    q = FASTAFile(qual) if qual else None
+
+    merge_files(f, q, tag, common_qual)
+    f.close()
+    if q:
+        q.close()

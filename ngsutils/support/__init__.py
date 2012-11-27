@@ -1,3 +1,79 @@
+import collections
+import gzip
+import os
+import sys
+import re
+from eta import ETA
+
+
+class FASTARecord(collections.namedtuple('FASTARecord', 'name comment seq')):
+    def __repr__(self):
+        if self.comment:
+            return '>%s %s\n%s\n' % (self.name, self.comment, self.seq)
+        return '>%s\n%s\n' % (self.name, self.seq)
+
+
+class FASTAFile(object):
+    def __init__(self, fname=None, fileobj=None):
+        self.fname = fname
+        if fileobj:
+            self.fileobj = fileobj
+        else:
+            if self.fname == '-':
+                self.fileobj = sys.stdin
+            elif self.fname[-3:] == '.gz' or self.fname[-4:] == '.bgz':
+                self.fileobj = gzip.open(os.path.expanduser(self.fname))
+            else:
+                self.fileobj = open(os.path.expanduser(self.fname))
+
+        if not self.fileobj:
+            raise ValueError("Missing valid filename or fileobj")
+
+    def close(self):
+        if self.fileobj != sys.stdout:
+            self.fileobj.close()
+
+    def read(self, quiet=False):
+        name = ''
+        comment = ''
+        seq = ''
+
+        if not quiet and self.fname and self.fname != '-':
+            eta = ETA(os.stat(self.fname).st_size, fileobj=self.fileobj)
+        else:
+            eta = None
+
+        for line in self.fileobj:
+            line = line.strip()
+            if line[0] == '#':
+                continue
+
+            if line[0] == '>':
+                if name and seq:
+                    if eta:
+                        eta.print_status(name)
+                    yield FASTARecord(name, comment, seq)
+
+                spl = re.split(r'[ \t]', line[1:], maxsplit=1)
+                name = spl[0]
+                if len(spl) > 1:
+                    comment = spl[1]
+                else:
+                    comment = ''
+                seq = ''
+
+            else:
+                seq += line
+
+        if name and seq:
+            if eta:
+                eta.print_status(name)
+            yield FASTARecord(name, comment, seq)
+
+        if eta:
+            eta.done()
+
+
 class Symbolize(object):
     'Converts strings to symbols - basically a cache of strings'
     def __init__(self):
