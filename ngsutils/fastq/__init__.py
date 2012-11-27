@@ -1,7 +1,61 @@
 
+import sys
 import os
+import gzip
+import collections
 import ngsutils.support.ngs_utils
 from eta import ETA
+
+
+FASTQRead = collections.namedtuple('FASTQRead', 'name seq qual')
+
+
+class FASTQ(object):
+    def __init__(self, fname=None, fileobj=None):
+        self.fname = fname
+
+        if fileobj:
+            self.fileobj = fileobj
+        elif fname:
+            if fname == '-':
+                self.fileobj = sys.stdin
+            elif fname[-3:] == '.gz' or fname[-4:] == '.bgz':
+                self.fileobj = gzip.open(os.path.expanduser(fname))
+            else:
+                self.fileobj = open(os.path.expanduser(fname))
+        else:
+            raise ValueError("Must pass either a fileobj or fname!")
+
+    def seek(self, pos, whence=0):
+        self.seek(pos, whence)
+
+    def fetch(self, quiet=False):
+        if self.fname and not quiet:
+            eta = ETA(os.stat(self.fname).st_size, fileobj=self.fileobj)
+        else:
+            eta = None
+
+        while True:
+            try:
+                name = self.fileobj.next().strip()[1:]
+                seq = self.fileobj.next().strip()
+                self.fileobj.next()
+                qual = self.fileobj.next().strip()
+
+                if eta:
+                    eta.print_status(name)
+
+                yield FASTQRead(name, seq, qual)
+
+            except:
+                break
+
+        if eta:
+            eta.done()
+
+    def close(self):
+        if self.fileobj != sys.stdout:
+            self.fileobj.close()
 
 
 def read_fastq(fname, quiet=False, eta_callback=None):
