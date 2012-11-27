@@ -8,7 +8,7 @@ Converts Illumina Qual values to Sanger scale.
 import os
 import sys
 
-from ngsutils.fastq import read_fastq
+from ngsutils.fastq import FASTQ, convert_illumina_qual
 
 
 def usage():
@@ -17,9 +17,18 @@ def usage():
     sys.exit(1)
 
 
-def fastq_convertqual(fname):
-    for name, seq, qual in read_fastq(fname):
-        sys.stdout.write('@%s\n%s\n+\n%s\n' % (name, seq, ''.join([chr(ord(q) - 31) for q in qual])))
+def fastq_convertqual(fname, out=sys.stdout):
+    fq = FASTQ(fname)
+    _fastq_convertqual(fq, out)
+    fq.close()
+
+
+def _fastq_convertqual(fastq, out=sys.stdout):
+    if fastq.check_qualtype() != "Illumina":
+        sys.stderr.write("\nWarning: Unable to verify that FASTQ file contains Illumia scaled quality values!\n\n")
+
+    for read in fastq.fetch():
+        out.write('@%s\n%s\n+\n%s\n' % (read.name, read.seq, convert_illumina_qual(read.qual)))
 
 if __name__ == '__main__':
     fname = None

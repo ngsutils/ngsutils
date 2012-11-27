@@ -2,6 +2,7 @@
 import sys
 import os
 import gzip
+import math
 import collections
 import ngsutils.support.ngs_utils
 from eta import ETA
@@ -27,7 +28,7 @@ class FASTQ(object):
             raise ValueError("Must pass either a fileobj or fname!")
 
     def seek(self, pos, whence=0):
-        self.seek(pos, whence)
+        self.fileobj.seek(pos, whence)
 
     def fetch(self, quiet=False):
         if self.fname and not quiet:
@@ -44,7 +45,6 @@ class FASTQ(object):
 
                 if eta:
                     eta.print_status(name)
-
                 yield FASTQRead(name, seq, qual)
 
             except:
@@ -56,6 +56,60 @@ class FASTQ(object):
     def close(self):
         if self.fileobj != sys.stdout:
             self.fileobj.close()
+
+    def check_qualtype(self, num_to_check=10000):
+        '''
+        Checks a FASTQ file's quality score to see what encoding/scaling is used:
+        Sanger, Solexa, or Illumina
+
+        returns "Sanger", "Solexa", "Illumina", or "Unknown"
+        '''
+
+        # these are the differential values, unscaled from chr()
+        sanger = (33, 73)
+        solexa = (59, 104)
+        illumina = (64, 104)
+
+        sanger_count = 0
+        solexa_count = 0
+        illumina_count = 0
+        unknown_count = 0
+
+        checked = 0
+        for read in self.fetch(quiet=True):
+            if checked > num_to_check:
+                break
+            qmax = None
+            qmin = None
+            for q in [ord(x) for x in read.qual]:
+                if qmin is None or q < qmin:
+                    qmin = q
+                if qmax is None or q > qmax:
+                    qmax = q
+
+            if sanger[0] <= qmin <= qmax <= sanger[1]:
+                sanger_count += 1
+            elif illumina[0] <= qmin <= qmax <= illumina[1]:
+                illumina_count += 1
+            elif solexa[0] <= qmin <= qmax <= solexa[1]:
+                solexa_count += 1
+            else:
+                unknown_count += 1
+            checked += 1
+
+        self.seek(0)
+
+        if unknown_count > 0:
+            return 'Unknown'  # We don't have any idea about at least one of these reads
+
+        if solexa_count > 0:
+            # If there are any reads that fall in the Solexa range,
+            # this must be a Solexa scale file. This should be rare.
+            return 'Solexa'
+
+        if sanger_count > illumina_count:
+            return 'Sanger'
+        return 'Illumina'
 
 
 def read_fastq(fname, quiet=False, eta_callback=None):
@@ -185,3 +239,32 @@ def is_paired_fastq(fname):
         count += 1
         if count > 10:
             return max(frag_counts)
+
+
+def convert_illumina_qual(qual):
+    '''
+    Illumina char: QPhred + 64
+    Phred char: QPhred + 33
+    '''
+
+    return ''.join([chr(ord(q) - 31) for q in qual])
+
+
+def convert_solexa_qual(qual):
+    '''
+    Illumina char: QSolexa + 64  (note: this is for very old samples)
+    Phred char: QPhred + 33
+
+    QPhred = -10 * log10 (1/error)
+    QSolexa = -10 * log10 (error/(1-error))
+
+    QPhred = 10 * log10 (10 ^ (QSolexa/10) + 1)
+
+    '''
+
+    rv = []
+    for q in qual:
+        val = ord(q) - 64
+        qp = 10 * math.log10(10 ** (val / 10) + 1)
+        rv.append(chr(qp + 33))
+    return ''.join(rv)
