@@ -12,43 +12,61 @@ Based on: http://www.cassj.co.uk/blog/?p=490
 '''
 
 import sys
-import math
 import os
-import gzip
+import collections
+from ngsutils.support import gzip_reader
+from ngsutils.fastq import convert_solexa_qual, convert_illumina_qual
 
-from eta import ETA
+QseqConversionResults = collections.namedtuple('QseqConversionResults', 'reads qcfailed lenfailed passed lengths')
 
 
-def read_illumina_export(filename, solexa_quals=True, min_length=0, trim=False, tag=None, qc_remove=True):
-    if filename[-3:] == '.gz':
-        f = gzip.open(filename)
+class QseqRecord(collections.namedtuple('QseqRecord', 'machine run lane tile x y index read_num seq qual hidden_qcpass')):
+    @property
+    def qcpass(self):
+        if self.hidden_qcpass == '0' or self.hidden_qcpass == 'QC':
+            return False
+        return True
+
+    @property
+    def name(self):
+        name = '%s #%s/%s' % (':'.join([self.machine, self.run, self.lane, self.tile, self.x, self.y]), self.index, self.read_num)
+        if not self.qcpass:
+            name += ' QCFAIL'
+        return name
+
+
+def qseq_reader(fname=None, fileobj=None):
+    if not fileobj:
+        if not fname:
+            raise ValueError('Must pass fname or fileobj!')
+
+        for line in gzip_reader(fname):
+            yield QseqRecord(*line.strip().split('\t')[:11])
     else:
-        f = open(filename)
+        for line in fileobj:
+            yield QseqRecord(*line.strip().split('\t')[:11])
 
-    fsize = os.stat(filename).st_size
-    eta = ETA(fsize, fileobj=f, modulo=5000)
 
+def read_illumina_export(qseqreader, solexa_quals=False, min_length=0, trim=False, tag=None, qc_remove=True, out=sys.stdout):
     lengths = {}
     reads = 0
     passed = 0
     lenfailed = 0
     qcfailed = 0
-    for line in f:
+    for line in qseqreader:
         reads += 1
-        cols = line.strip().split('\t')
-        name = '%s #%s/%s' % (':'.join(cols[0:6]), cols[6], cols[7])
-        if cols[10] == 'QC':
-            if qc_remove:
-                qcfailed += 1
-                continue
-            else:
-                name = '%s QCFAIL' % name
+
+        if qc_remove and not line.qcpass:
+            qcfailed += 1
+            continue
 
         if tag:
-            name = "%s_%s" % (tag, name)
+            name = "%s%s" % (tag, line.name)
+        else:
+            name = line.name
 
-        seq = cols[8]
-        il_qual = cols[9]
+        seq = line.seq
+        il_qual = line.qual
 
         if trim:
             # Trim trailing 'B's
@@ -65,7 +83,7 @@ def read_illumina_export(filename, solexa_quals=True, min_length=0, trim=False, 
         else:
             qual = convert_illumina_qual(il_qual)
 
-        sys.stdout.write('@%s\n%s\n+\n%s\n' % (name, seq, qual))
+        out.write('@%s\n%s\n+\n%s\n' % (name, seq, qual))
 
         passed += 1
         if not len(seq) in lengths:
@@ -73,57 +91,7 @@ def read_illumina_export(filename, solexa_quals=True, min_length=0, trim=False, 
         else:
             lengths[len(seq)] += 1
 
-        if eta:
-            eta.print_status()
-
-    eta.done()
-    f.close()
-
-    sys.stderr.write('Reads processed     : %s\n' % reads)
-    sys.stderr.write('Failed QC filter    : %s\n' % qcfailed)
-    if trim:
-        sys.stderr.write('Failed length filter: %s\n' % lenfailed)
-        sys.stderr.write('Passed length filter: %s\n' % passed)
-    else:
-        sys.stderr.write('Passed              : %s\n' % passed)
-
-    sys.stderr.write('Summary of read lengths\n')
-    sortedar = []
-    for length in lengths:
-        sortedar.append((lengths[length], length))
-    sortedar.sort()
-
-    for count, length in sortedar:
-        sys.stderr.write('Length %s: %s\n' % (length, count))
-
-
-def convert_solexa_qual(qual):
-    '''
-    Illumina char: QSolexa + 64  (note: this is for very old samples)
-    Phred char: QPhred + 33
-
-    QPhred = -10 * log10 (1/error)
-    QSolexa = -10 * log10 (error/(1-error))
-
-    QPhred = 10 * log10 (10 ^ (QSolexa/10) + 1)
-
-    '''
-
-    rv = []
-    for q in qual:
-        val = ord(q) - 64
-        qp = 10 * math.log10(10 ** (val / 10) + 1)
-        rv.append(chr(qp + 33))
-    return ''.join(rv)
-
-
-def convert_illumina_qual(qual):
-    '''
-    Illumina char: QPhred + 64
-    Phred char: QPhred + 33
-    '''
-
-    return ''.join([chr(ord(q) - 31) for q in qual])
+    return QseqConversionResults(reads, qcfailed, lenfailed, passed, lengths)
 
 
 def usage():
@@ -181,4 +149,18 @@ if __name__ == '__main__':
         usage()
 
     sys.stderr.write("Converting file: %s\n(using %s scaling)\n%s" % (fname, 'Solexa' if solexa_quals else 'Illumina', '(min-length %d)\n' % min_length if min_length else ''))
-    read_illumina_export(fname, solexa_quals, min_length, trim, tag, qc_remove)
+    results = read_illumina_export(qseq_reader(fname), solexa_quals, min_length, trim, tag, qc_remove)
+
+    sys.stderr.write('Reads processed     : %s\n' % results.reads)
+    sys.stderr.write('Failed QC filter    : %s\n' % results.qcfailed)
+    sys.stderr.write('Failed length filter: %s\n' % results.lenfailed)
+    sys.stderr.write('Passed              : %s\n' % results.passed)
+    sys.stderr.write('\n')
+    sys.stderr.write('Summary of read lengths\n')
+    sortedar = []
+    for length in results.lengths:
+        sortedar.append((results.lengths[length], length))
+    sortedar.sort()
+
+    for count, length in sortedar:
+        sys.stderr.write('Length %s: %s\n' % (length, count))
