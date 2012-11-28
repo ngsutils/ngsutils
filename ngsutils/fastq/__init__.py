@@ -65,7 +65,7 @@ class FASTQ(object):
         '''
 
         # these are the differential values, unscaled from chr()
-        sanger = (33, 73)
+        sanger = (33, 74)  # default sanger is 0->40, but some newer illumina on this scale is 0->41
         solexa = (59, 104)
         illumina = (64, 104)
 
@@ -220,6 +220,6 @@ def convert_solexa_qual(qual):
     rv = []
     for q in qual:
         val = ord(q) - 64
-        qp = 10 * math.log10(10 ** (val / 10) + 1)
+        qp = int(10 * math.log10(10 ** (val / 10) + 1))
         rv.append(chr(qp + 33))
     return ''.join(rv)
