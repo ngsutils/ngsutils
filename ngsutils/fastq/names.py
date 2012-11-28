@@ -8,7 +8,12 @@ Writes out the read names present in the FASTQ file.
 import os
 import sys
 
-from ngsutils.fastq import read_fastq
+from ngsutils.fastq import FASTQ
+
+
+def export_names(fastq, out=sys.stdout):
+    for read in fastq.fetch():
+        out.write('%s\n' % read.name.split()[0])
 
 
 def usage():
@@ -26,5 +31,4 @@ if __name__ == '__main__':
     if not fname:
         usage()
 
-    for name, seq, qual in read_fastq(fname):
-        sys.stdout.write('%s\n' % name.split()[0][1:])
+    export_names(FASTQ(fname))
