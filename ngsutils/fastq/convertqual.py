@@ -17,11 +17,11 @@ def usage():
     sys.exit(1)
 
 
-def fastq_convertqual(fastq, out=sys.stdout):
-    if fastq.check_qualtype() != "Illumina":
+def fastq_convertqual(fastq, out=sys.stdout, quiet=False):
+    if fastq.check_qualtype() != "Illumina" and not quiet:
         sys.stderr.write("\nWarning: Unable to verify that FASTQ file contains Illumia scaled quality values!\n\n")
 
-    for read in fastq.fetch():
+    for read in fastq.fetch(quiet=quiet):
         out.write('@%s\n%s\n+\n%s\n' % (read.name, read.seq, convert_illumina_qual(read.qual)))
 
 if __name__ == '__main__':
