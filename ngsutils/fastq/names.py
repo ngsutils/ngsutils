@@ -31,4 +31,6 @@ if __name__ == '__main__':
     if not fname:
         usage()
 
-    export_names(FASTQ(fname))
+    fq = FASTQ(fname)
+    export_names(fq)
+    fq.close()

@@ -19,7 +19,7 @@ ACGTacgtACGT
 CDEFGHIJKLMN
 ''')
         out = StringIO.StringIO('')
-        ngsutils.fastq.convertqual._fastq_convertqual(FASTQ(fileobj=fq), out=out)
+        ngsutils.fastq.convertqual.fastq_convertqual(FASTQ(fileobj=fq), out=out)
 
         out.seek(0)
         fqout = FASTQ(fileobj=out)

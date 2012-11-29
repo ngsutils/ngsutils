@@ -81,3 +81,6 @@ if __name__ == '__main__':
     fastqs = [FASTQ(x) for x in fnames]
 
     fastq_merge(fastqs, split_slashes)
+
+    for fq in fastqs:
+        fq.close()

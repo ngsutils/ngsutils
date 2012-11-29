@@ -39,14 +39,8 @@ def encoded_seq(seq):
     return ''.join(ret)
 
 
-def fastq_csencode(fname, out=sys.stdout):
-    fq = FASTQ(fname)
-    _fastq_csencode(fq, out)
-    fq.close()
-
-
-def _fastq_csencode(fastq, out=sys.stdout):
-    for read in fastq.fetch():
+def fastq_csencode(fastq, out=sys.stdout, quiet=False):
+    for read in fastq.fetch(quiet=quiet):
         if read.seq[0] in 'ATCG':  # linker prefix
             # skip 2 bases, unable to determine the proper convertion for
             # the first colorspace base
@@ -76,4 +70,6 @@ if __name__ == '__main__':
     if not fname:
         usage()
 
-    fastq_csencode(fname)
+    fq = FASTQ(fname)
+    fastq_csencode(fq)
+    fq.close()

@@ -62,6 +62,8 @@ def fastq_split(fname, outbase, chunks, ignore_pairs=False, gz=False, count_fnam
     for out in outs:
         out.close()
 
+    fastq.close()
+
     for tmp, fname in fnames:
         os.rename(tmp, fname)
 

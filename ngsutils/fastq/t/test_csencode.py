@@ -24,7 +24,7 @@ T0000111122223333....
 ....................
 ''')
         out = StringIO.StringIO('')
-        ngsutils.fastq.csencode._fastq_csencode(FASTQ(fileobj=fq), out=out)
+        ngsutils.fastq.csencode.fastq_csencode(FASTQ(fileobj=fq), out=out)
 
         self.assertEqual('''@foo
 AAACCCCGGGGTTTTNNNN

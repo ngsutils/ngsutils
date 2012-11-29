@@ -17,13 +17,7 @@ def usage():
     sys.exit(1)
 
 
-def fastq_convertqual(fname, out=sys.stdout):
-    fq = FASTQ(fname)
-    _fastq_convertqual(fq, out)
-    fq.close()
-
-
-def _fastq_convertqual(fastq, out=sys.stdout):
+def fastq_convertqual(fastq, out=sys.stdout):
     if fastq.check_qualtype() != "Illumina":
         sys.stderr.write("\nWarning: Unable to verify that FASTQ file contains Illumia scaled quality values!\n\n")
 
@@ -40,4 +34,6 @@ if __name__ == '__main__':
     if not fname:
         usage()
 
-    fastq_convertqual(fname)
+    fq = FASTQ(fname)
+    fastq_convertqual(fq)
+    fq.close()
