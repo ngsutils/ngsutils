@@ -9,11 +9,11 @@ s/w alignments with the linker sequences
 import os
 import sys
 
-from ngsutils.fastq import read_fastq, is_colorspace_fastq
+from ngsutils.fastq import FASTQ
 import swalign
 
 
-def fastq_trim(fname, linker_5=None, linker_3=None, out=sys.stdout, pct_identity=0.8, min_trim=4, min_len=25, verbose=False):
+def fastq_trim(fastq, linker_5=None, linker_3=None, out=sys.stdout, pct_identity=0.8, min_trim=4, min_len=25, verbose=False, quiet=False):
     '''
     fname - the fastq filename
     linker_5 - the 5' linker to remove
@@ -23,36 +23,29 @@ def fastq_trim(fname, linker_5=None, linker_3=None, out=sys.stdout, pct_identity
     min_trim - the distance away from the edges that the linkers much match w/in
     '''
 
-    cs = is_colorspace_fastq(fname)
     sw = swalign.LocalAlignment(swalign.NucleotideScoringMatrix(2, -1), -1)
     removed = 0
     trimmed = 0
-    for name, seq, qual in read_fastq(fname):
-        retval = seq_trim(name, seq, qual, cs, sw, pct_identity, min_trim, min_len, verbose)
+    for read in fastq.fetch(quiet=quiet):
+        retval = seq_trim(read.name, read.seq, read.qual, linker_5, linker_3, fastq.is_colorspace, sw, pct_identity, min_trim, min_len, verbose)
         if not retval:
             removed += 1
         else:
             n_name, n_seq, n_qual = retval
 
-            if len(qual) != n_qual:
+            if len(read.qual) != n_qual:
                 trimmed += 1
 
-            out.write('%s\n%s\n+\n%s\n' % (n_name, n_seq, n_qual))
+            out.write('@%s\n%s\n+\n%s\n' % (n_name, n_seq, n_qual))
 
-    sys.stderr.write('Trimmed: %s\n' % trimmed)
-    sys.stderr.write('Removed: %s (len)\n' % removed)
+    if not quiet:
+        sys.stderr.write('Trimmed: %s\n' % trimmed)
+        sys.stderr.write('Removed: %s (len)\n' % removed)
 
 
 def seq_trim(name, seq, qual, linker_5, linker_3, cs, sw, pct_identity, min_trim, min_len, verbose):
-    '''
-    TODO: Add doctest
-    >> sw = swalign.LocalAlignment(swalign.NucleotideScoringMatrix(2, -1), -1)
-    >> print "foo"
-    foos
-    '''
-
     if verbose:
-        sys.stderr.write('Read: %s\n    : %s\n' % (name, seq))
+        sys.stderr.write('\nRead: %s\n    : %s\n' % (name, seq))
     left = 0
     right = len(seq)
 
@@ -61,7 +54,7 @@ def seq_trim(name, seq, qual, linker_5, linker_3, cs, sw, pct_identity, min_trim
         if verbose:
             sys.stderr.write("5' alignment:\n")
             aln.dump(sys.stderr)
-        if aln.r_pos < min_trim and aln.identity > pct_identity:
+        if aln.r_pos < min_trim and aln.identity >= pct_identity:
             left = aln.r_end
 
     if linker_3:
@@ -69,7 +62,7 @@ def seq_trim(name, seq, qual, linker_5, linker_3, cs, sw, pct_identity, min_trim
         if verbose:
             sys.stderr.write("3' alignment:\n")
             aln.dump(sys.stderr)
-        if aln.r_end > len(seq) - min_trim and aln.identity > pct_identity:
+        if aln.r_end > len(seq) - min_trim and aln.identity >= pct_identity:
             right = aln.r_pos
 
     s = seq[left:right]
@@ -147,4 +140,6 @@ if __name__ == '__main__':
         if linker_3:
             sys.stderr.write("Removing %s from 3' end\n" % linker_3)
 
-        fastq_trim(fastq, linker_5, linker_3, min_len=min_len, pct_identity=pct_identity, min_trim=min_trim, verbose=verbose)
+        fq = FASTQ(fastq)
+        fastq_trim(fq, linker_5, linker_3, min_len=min_len, pct_identity=pct_identity, min_trim=min_trim, verbose=verbose)
+        fq.close()
