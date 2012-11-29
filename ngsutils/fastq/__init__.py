@@ -28,6 +28,10 @@ class FASTQ(object):
         else:
             raise ValueError("Must pass either a fileobj or fname!")
 
+    def tell(self):
+        # always relative to uncompressed...
+        return self.fileobj.tell()
+
     def seek(self, pos, whence=0):
         self.fileobj.seek(pos, whence)
 
@@ -125,6 +129,7 @@ class FASTQ(object):
         if self._is_colorspace is not None:
             return self._is_colorspace
 
+        pos = self.tell()
         self.seek(0)
         self._is_colorspace = None
 
@@ -145,7 +150,7 @@ class FASTQ(object):
             if self._is_colorspace is not None:
                 break
 
-        self.seek(0)
+        self.seek(pos)
         return self._is_colorspace
 
     @property
@@ -158,6 +163,7 @@ class FASTQ(object):
         if self._is_paired is not None:
             return self._is_paired
 
+        pos = self.tell()
         self.seek(0)
         last_name = None
         count = 0
@@ -169,7 +175,7 @@ class FASTQ(object):
                     count += 1
                 else:
                     self._is_paired = count > 1
-                    self.seek(0)
+                    self.seek(pos)
 
                     return self._is_paired
             else:
@@ -178,7 +184,7 @@ class FASTQ(object):
 
         # if there are only 2 reads...
         self._is_paired = count > 1
-        self.seek(0)
+        self.seek(pos)
         return self._is_paired
 
 
