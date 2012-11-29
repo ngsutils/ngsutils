@@ -13,6 +13,8 @@ FASTQRead = collections.namedtuple('FASTQRead', 'name seq qual')
 class FASTQ(object):
     def __init__(self, fname=None, fileobj=None):
         self.fname = fname
+        self._is_paired = None
+        self._is_colorspace = None
 
         if fileobj:
             self.fileobj = fileobj
@@ -110,7 +112,8 @@ class FASTQ(object):
             return 'Sanger'
         return 'Illumina'
 
-    def is_colorspace(self, num_to_check=10):
+    @property
+    def is_colorspace(self):
         '''
         This works by scanning the first 10 reads that have sequences (aren't Ns
         or 4s). If there are any colorspace values, the entire file is called as
@@ -119,56 +122,58 @@ class FASTQ(object):
         It's a bit overkill...
         '''
 
-        seqs_checked = 0
-        is_colorspace = False
+        if self._is_colorspace is not None:
+            return self._is_colorspace
+
+        self.seek(0)
+        self._is_colorspace = False
 
         valid_basespace = "atcgATCG"
         valid_colorspace = "0123456"
 
         for read in self.fetch(quiet=True):
-            if seqs_checked > num_to_check:
-                break
-            checked = False
-            for base in read.seq:
+            if len(read.seq) < 2:
+                continue
+
+            for base in read.seq[1:]:  # skip the first base, in case there is a linker prefix
                 if base in valid_colorspace:
-                    is_colorspace = True
-                    checked = True
+                    self._is_colorspace = True
+                    return self._is_colorspace
                 elif base in valid_basespace:
-                    checked = True
-            if checked:
-                seqs_checked += 1
+                    self._is_colorspace = False
+                    return self._is_colorspace
 
-        return is_colorspace
+        return self._is_colorspace
 
-    def is_paired(self, num_to_check=10):
+    @property
+    def is_paired(self):
         '''
         Determines if a FASTQ file has paired reads. This returns True is the file has
         paired reads with the same name in consecutive order.
         '''
 
-        last_name = None
-        last_count = 0
-        count = 0
+        if self._is_paired is not None:
+            return self._is_paired
 
-        frag_counts = []
+        self.seek(0)
+        last_name = None
+        count = 0
 
         for read in self.fetch(quiet=True):
             name = read.name.split()[0]
-            if name != last_name:
-                if last_count == 1:
-                    return 0
+            if last_name:
+                if name == last_name:
+                    count += 1
                 else:
-                    if last_name:
-                        frag_counts.append(last_count)
-                    last_count = 1
-                    last_name = name
+                    self._is_paired = count > 1
+                    return self._is_paired
             else:
-                last_count += 1
+                last_name = name
+                count = 1
 
-            count += 1
-
-            if count > num_to_check:
-                return max(frag_counts) > 1
+        # if there are only 2 reads...
+        self._is_paired = count > 1
+        return self._is_paired
 
 
 # def read_fastq(fname, quiet=False, eta_callback=None):

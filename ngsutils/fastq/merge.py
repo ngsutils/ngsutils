@@ -22,46 +22,40 @@ The merged file is written to stdout.
 import os
 import sys
 
-from ngsutils.fastq import read_fastq
+from ngsutils.fastq import FASTQ
 
 
-def fastq_merge(fnames, split_slashes=False):
-    infiles = []
-
-    first = True
-    for fname in fnames:
-        gen = read_fastq(fname, quiet=not first)
-        infiles.append((fname, gen))
-        first = False
-
+def generator_fetch(generators):
     while True:
-        lastname = None
-
         try:
-            for fname, generator in infiles:
-                name, seq, qual = generator.next()
+            yield [gen.next() for gen in generators]
+        except StopIteration:
+            return
 
-                if split_slashes and '/' in name:
-                    spl = name.split('/', 1)
-                    name = spl[0]
-                    desc = ' /%s' % spl[1]
-                else:
-                    cols = name.split()
-                    name = cols[0]
-                    if len(cols) > 1:
-                        desc = cols[1]
-                    else:
-                        desc = ''
 
-                if not lastname:
-                    lastname = name
-                elif name != lastname:
-                    sys.stderr.write('Files are not paired! (error in: %s)\nExpected: %s\nGot     : %s\n' % (fname, lastname, name))
-                    sys.exit(1)
+def fastq_merge(fastqs, split_slashes=False, out=sys.stdout, quiet=True):
+    for reads in generator_fetch([fq.fetch(quiet=quiet if i == 0 else False) for i, fq in enumerate(fastqs)]):
+        cur_name = None
+        for read in reads:
+            name = read.name
+            desc = ''
+            if split_slashes and '/' in name:
+                spl = name.split('/', 1)
+                name = spl[0]
+                desc = ' /%s' % spl[1]
+            else:
+                spl = name.split(None, 1)
+                name = spl[0]
+                if len(spl) > 1:
+                    desc = ' %s' % spl[1]
 
-                sys.stdout.write('%s %s\n%s\n+\n%s\n' % (name, desc, seq, qual))
-        except:
-            break
+            if not cur_name:
+                cur_name = name
+            else:
+                if name != cur_name:
+                    raise ValueError('Files are not paired! Expected: "%s", got "%s"!' % (cur_name, name))
+
+            out.write('@%s%s\n%s\n+\n%s\n' % (name, desc, read.seq, read.qual))
 
 
 def usage():
@@ -81,7 +75,9 @@ if __name__ == '__main__':
         elif os.path.exists(arg):
             fnames.append(arg)
 
-    if not fnames:
+    if len(fnames) < 2:
         usage()
 
-    fastq_merge(fnames, split_slashes)
+    fastqs = [FASTQ(x) for x in fnames]
+
+    fastq_merge(fastqs, split_slashes)
