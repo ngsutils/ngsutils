@@ -10,17 +10,15 @@ Same format as SOLiD csfasta / qual files.
 import os
 import sys
 
-from ngsutils.fastq import read_fastq
+from ngsutils.fastq import FASTQ
 
 
-def export_seq(fname):
-    for name, seq, quals in read_fastq(fname, quiet=False):
-        sys.stdout.write('>%s\n%s\n' % (name[1:], seq))
-
-
-def export_qual(fname):
-    for name, seq, quals in read_fastq(fname, quiet=False):
-        sys.stdout.write('>%s\n%s\n' % (name[1:], ' '.join([str(ord(x) - 33) for x in quals])))
+def export_fasta(fastq, qual=False, out=sys.stdout, quiet=False):
+    for read in fastq.fetch(quiet=quiet):
+        if not qual:
+            out.write('>%s\n%s\n' % (read.name, read.seq))
+        else:
+            out.write('>%s\n%s\n' % (read.name, ' '.join([str(ord(x) - 33) for x in read.qual])))
 
 
 def usage():
@@ -43,7 +41,6 @@ if __name__ == '__main__':
     if not fname:
         usage()
 
-    if qual:
-        export_qual(fname)
-    else:
-        export_seq(fname)
+    fq = FASTQ(fname)
+    export_fasta(fq, qual)
+    fq.close()
