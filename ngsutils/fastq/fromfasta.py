@@ -58,13 +58,13 @@ def qual_to_phred(qual):
     return ''.join(['%c' % (q + 33) for q in vals])
 
 
-def merge_files(fasta, qual, suffix=None, common_qual=None, out=sys.stdout):
+def merge_files(fasta, qual, suffix=None, common_qual=None, out=sys.stdout, quiet=False):
     colorspace = None
 
     if qual is None:
         qual = NullFile()
 
-    for frec, qrec in zip(fasta.read(), qual.read()):
+    for frec, qrec in zip(fasta.read(quiet=quiet), qual.read(quiet=False)):
         if qrec:
             if frec.name != qrec.name:
                 raise ValueError("Mismatched names in FASTA and Qual files! (%s, %s)" % (frec.name, qrec.name))

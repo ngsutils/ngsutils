@@ -23,7 +23,7 @@ ACGTACGT
 ;;;;;;;;
 ''')
         out = StringIO.StringIO('')
-        ngsutils.fastq.names.export_names(FASTQ(fileobj=fq), out=out)
+        ngsutils.fastq.names.export_names(FASTQ(fileobj=fq), out=out, quiet=True)
         self.assertEqual(out.getvalue(), 'foo\nbar\n')
 
 if __name__ == '__main__':

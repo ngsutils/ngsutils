@@ -33,7 +33,7 @@ def generator_fetch(generators):
             return
 
 
-def fastq_merge(fastqs, split_slashes=False, out=sys.stdout, quiet=True):
+def fastq_merge(fastqs, split_slashes=False, out=sys.stdout, quiet=False):
     for reads in generator_fetch([fq.fetch(quiet=quiet if i == 0 else False) for i, fq in enumerate(fastqs)]):
         cur_name = None
         for read in reads:

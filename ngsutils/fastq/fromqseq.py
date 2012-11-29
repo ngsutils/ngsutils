@@ -35,12 +35,12 @@ class QseqRecord(collections.namedtuple('QseqRecord', 'machine run lane tile x y
         return name
 
 
-def qseq_reader(fname=None, fileobj=None):
+def qseq_reader(fname=None, fileobj=None, quiet=False):
     if not fileobj:
         if not fname:
             raise ValueError('Must pass fname or fileobj!')
 
-        for line in gzip_reader(fname):
+        for line in gzip_reader(fname, quiet=quiet):
             yield QseqRecord(*line.strip().split('\t')[:11])
     else:
         for line in fileobj:

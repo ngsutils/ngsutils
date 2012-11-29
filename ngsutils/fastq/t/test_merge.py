@@ -33,7 +33,7 @@ acgtacgt
 AAAAAAAA
 ''')
         out = StringIO.StringIO('')
-        ngsutils.fastq.merge.fastq_merge([FASTQ(fileobj=fq1), FASTQ(fileobj=fq2)], out=out)
+        ngsutils.fastq.merge.fastq_merge([FASTQ(fileobj=fq1), FASTQ(fileobj=fq2)], out=out, quiet=True)
         self.assertEqual(out.getvalue(), '''\
 @foo
 ACGTACGT
@@ -67,7 +67,7 @@ acgtacgt
 AAAAAAAA
 ''')
         out = StringIO.StringIO('')
-        ngsutils.fastq.merge.fastq_merge([FASTQ(fileobj=fq1), FASTQ(fileobj=fq2)], split_slashes=True, out=out)
+        ngsutils.fastq.merge.fastq_merge([FASTQ(fileobj=fq1), FASTQ(fileobj=fq2)], split_slashes=True, out=out, quiet=True)
         self.assertEqual(out.getvalue(), '''\
 @foo /1 comment1
 ACGTACGT
@@ -93,7 +93,7 @@ acgtacgt
 AAAAAAAA
 ''')
         out = StringIO.StringIO('')
-        self.assertRaises(ValueError, ngsutils.fastq.merge.fastq_merge, *[[FASTQ(fileobj=fq1), FASTQ(fileobj=fq2)], ], **{'out': out})
+        self.assertRaises(ValueError, ngsutils.fastq.merge.fastq_merge, *[[FASTQ(fileobj=fq1), FASTQ(fileobj=fq2)], ], **{'out': out, 'quiet': True})
 
 
 if __name__ == '__main__':

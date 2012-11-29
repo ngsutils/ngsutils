@@ -11,8 +11,8 @@ import sys
 from ngsutils.fastq import FASTQ
 
 
-def export_names(fastq, out=sys.stdout):
-    for read in fastq.fetch():
+def export_names(fastq, out=sys.stdout, quiet=False):
+    for read in fastq.fetch(quiet=quiet):
         out.write('%s\n' % read.name.split()[0])
 
 
