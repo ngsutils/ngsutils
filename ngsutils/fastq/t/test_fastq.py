@@ -3,6 +3,7 @@
 Tests for fastqutils / docutils
 '''
 
+import os
 import unittest
 import doctest
 import StringIO
@@ -12,6 +13,11 @@ import ngsutils.fastq.fromfasta
 
 
 class FASTQTest(unittest.TestCase):
+    def testSimpleFile(self):
+                fastq = ngsutils.fastq.FASTQ(os.path.join(os.path.dirname(__file__), 'test.fastq'))
+                names = [x.name.split()[0] for x in fastq.fetch(quiet=True)]
+                self.assertEqual(names, ['foo', 'foo', 'bar', 'bar', 'baz', 'baz'])
+
     def testSimple(self):
         fq = StringIO.StringIO('''\
 @foo

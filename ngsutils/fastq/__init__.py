@@ -126,7 +126,7 @@ class FASTQ(object):
             return self._is_colorspace
 
         self.seek(0)
-        self._is_colorspace = False
+        self._is_colorspace = None
 
         valid_basespace = "atcgATCG"
         valid_colorspace = "0123456"
@@ -138,11 +138,14 @@ class FASTQ(object):
             for base in read.seq[1:]:  # skip the first base, in case there is a linker prefix
                 if base in valid_colorspace:
                     self._is_colorspace = True
-                    return self._is_colorspace
+                    break
                 elif base in valid_basespace:
                     self._is_colorspace = False
-                    return self._is_colorspace
+                    break
+            if self._is_colorspace is not None:
+                break
 
+        self.seek(0)
         return self._is_colorspace
 
     @property
@@ -166,6 +169,8 @@ class FASTQ(object):
                     count += 1
                 else:
                     self._is_paired = count > 1
+                    self.seek(0)
+
                     return self._is_paired
             else:
                 last_name = name
@@ -173,6 +178,7 @@ class FASTQ(object):
 
         # if there are only 2 reads...
         self._is_paired = count > 1
+        self.seek(0)
         return self._is_paired
 
 

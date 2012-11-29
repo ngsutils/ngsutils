@@ -1,0 +1,24 @@
+@foo /1
+ACGTACGT
++
+;;;;;;;;
+@foo /2
+ACGTACGT
++
+;;;;;;;;
+@bar /1
+ACGTACGT
++
+;;;;;;;;
+@bar /2
+ACGTACGT
++
+;;;;;;;;
+@baz /1
+ACGTACGT
++
+;;;;;;;;
+@baz /2
+ACGTACGT
++
+;;;;;;;;
