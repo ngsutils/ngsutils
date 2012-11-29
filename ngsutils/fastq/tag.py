@@ -10,17 +10,18 @@ Writes output to stdout
 import os
 import sys
 
-from ngsutils.fastq import read_fastq
+from ngsutils.fastq import FASTQ
 
 
-def fastq_tag(fname, prefix, suffix):
-    for name, seq, qual in read_fastq(fname):
-        spl = name[1:].split(None, 1)
-        nname = ''
+def fastq_tag(fastq, prefix='', suffix='', out=sys.stdout, quiet=False):
+    if not prefix and not suffix:
+        raise ValueError('Must pass at least one of: prefix, suffix.')
+    for read in fastq.fetch(quiet):
+        spl = read.name.split(None, 1)
         if len(spl) > 1:
-            desc = spl[1]
+            desc = ' %s' % spl[1]
         else:
-            desc = None
+            desc = ''
 
         if prefix and suffix:
             nname = '%s%s%s' % (prefix, spl[0], suffix)
@@ -29,10 +30,7 @@ def fastq_tag(fname, prefix, suffix):
         elif suffix:
             nname = '%s%s' % (spl[0], suffix)
 
-        if desc:
-            nname = '%s %s' % (nname, desc)
-
-        sys.stdout.write('@%s\n%s\n+\n%s\n' % (nname, seq, qual))
+        out.write('@%s%s\n%s\n+\n%s\n' % (nname, desc, read.seq, read.qual))
 
 
 def usage():
@@ -60,4 +58,6 @@ if __name__ == '__main__':
     if not (prefix or suffix) or not fname:
         usage()
 
-    fastq_tag(fname, prefix, suffix)
+    fq = FASTQ(fname)
+    fastq_tag(fq, prefix, suffix)
+    fq.close()
