@@ -38,7 +38,11 @@ def mean_stdev(l):
     for el in l:
         acc += (el - mean) ** 2
 
-    stdev = math.sqrt(float(acc) / (len(l) - 1))
+    if len(l) > 2:
+        stdev = math.sqrt(float(acc) / (len(l) - 1))
+    else:
+        stdev = 0.0
+
     return (mean, stdev)
 
 
