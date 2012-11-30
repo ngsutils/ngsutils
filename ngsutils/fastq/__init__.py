@@ -70,6 +70,8 @@ class FASTQ(object):
         returns "Sanger", "Solexa", "Illumina", or "Unknown"
         '''
 
+        pos = self.tell()
+
         # these are the differential values, unscaled from chr()
         sanger = (33, 74)  # default sanger is 0->40, but some newer illumina on this scale is 0->41
         solexa = (59, 104)
@@ -102,7 +104,7 @@ class FASTQ(object):
                 unknown_count += 1
             checked += 1
 
-        self.seek(0)
+        self.seek(pos)
 
         if unknown_count > 0:
             return 'Unknown'  # We don't have any idea about at least one of these reads
@@ -154,6 +156,12 @@ class FASTQ(object):
         return self._is_colorspace
 
     @property
+    def pair_count(self):
+        if self.is_paired:  # this actually does the calculation and is cached
+            return self._is_paired
+        return 1
+
+    @property
     def is_paired(self):
         '''
         Determines if a FASTQ file has paired reads. This returns True is the file has
@@ -161,7 +169,7 @@ class FASTQ(object):
         '''
 
         if self._is_paired is not None:
-            return self._is_paired
+            return (self._is_paired > 1)
 
         pos = self.tell()
         self.seek(0)
@@ -174,18 +182,18 @@ class FASTQ(object):
                 if name == last_name:
                     count += 1
                 else:
-                    self._is_paired = count > 1
+                    self._is_paired = count
                     self.seek(pos)
 
-                    return self._is_paired
+                    return (self._is_paired > 1)
             else:
                 last_name = name
                 count = 1
 
         # if there are only 2 reads...
-        self._is_paired = count > 1
+        self._is_paired = count
         self.seek(pos)
-        return self._is_paired
+        return (self._is_paired > 1)
 
 
 # def read_fastq(fname, quiet=False, eta_callback=None):

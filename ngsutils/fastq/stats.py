@@ -11,125 +11,153 @@ what encoding is used for the quality values (Sanger or Illumina).
 
 import os
 import sys
+import collections
 
-from ngsutils.fastq import read_fastq, is_colorspace_fastq, is_paired_fastq, fastq_qualtype
+from ngsutils.fastq import FASTQ
+
+StatsValues = collections.namedtuple('StatsValues', 'mean stdev min_val pct25 pct50 pct75 max_val total')
 
 
-def fastq_stats(fname, verbose=False):
-    cs = is_colorspace_fastq(fname)
-    if cs:
-        print "Space:\tcolorspace"
-    else:
-        print "Space:\tnucleotide"
+class FASTQStats(collections.namedtuple('FASTQStats', 'fastq total_reads totals lengths qualities pos_qualities')):
+    @classmethod
+    def _make(cls, iterable):
+        result = FASTQStats(*iterable)
+        result._lengthstats = None
+        result._qualitystats = None
+        return result
 
-    pairs = is_paired_fastq(fname)
-    if pairs > 0:
-        print "Pairing:\tPaired-end (%s)" % pairs
-    else:
-        print "Pairing:\tFragmented"
+    def dump(self, out=sys.stdout, verbose=False):
+        if self.fastq.is_colorspace:
+            out.write("Space:\tcolorspace\n")
+        else:
+            out.write("Space:\tbasespace\n")
 
-    qual_totals = fastq_qualtype(fname)
+        if self.fastq.is_paired:
+            out.write("Pairing:\tPaired-end (%s)\n" % self.fastq.pair_count)
+        else:
+            out.write("Pairing:\tFragmented\n")
 
-    print "Quality scale:\t%s" % qual_totals[-1][1]
-    if verbose:
-        print ' '.join(['(%s,%s)' % (q[1], q[0]) for q in qual_totals])
+        out.write("Quality scale:\t%s\n" % self.fastq.check_qualtype())
+        out.write("Number of reads:\t%s\n" % self.total_reads)
 
-    lengths = []
-    posquals = []
-    qualities = []
-    total = []
+        out.write('\nLength distribution\n')
+        out.write('Mean:\t%s\n' % self.length_stats.mean)
+        out.write('StdDev:\t%s\n' % self.length_stats.stdev)
+        out.write('Min:\t%s\n' % self.length_stats.min_val)
+        out.write('25 percentile:\t%s\n' % self.length_stats.pct25)
+        out.write('Median:\t%s\n' % self.length_stats.pct50)
+        out.write('75 percentile:\t%s\n' % self.length_stats.pct75)
+        out.write('Max:\t%s\n' % self.length_stats.max_val)
+        out.write('Total:\t%s\n' % self.length_stats.total)
+
+        if verbose:
+            out.write('\n')
+            tmp = []
+            for idx, count in enumerate(self.lengths):
+                idx += 1
+                if count:
+                    tmp.append((idx, count))
+
+            for idx, count in sorted(tmp)[::-1]:
+                    out.write("%s\t%s\n" % (idx, count))
+
+        out.write('\nQuality distribution\n')
+        out.write('pos\tmean\tstdev\tmin\t25pct\t50pct\t75pct\tmax\tcount\n')
+
+        for pos, stats in enumerate(self.quality_stats):
+            if not stats:
+                continue
+            out.write('%s\t' % (pos + 1))
+            out.write('\t'.join([str(x) for x in stats]))
+            out.write('\n')
+
+        out.write('\nAverage quality string\n')
+
+        for i, x in enumerate(self.qualities):
+            q = x / self.totals[i]
+            if q > 0:
+                out.write(chr(q + 33))
+            else:
+                out.write('~')
+
+        if verbose:
+            out.write('\n\nPosition\tAverage\n')
+            for i, q in enumerate(self.qualities):
+                out.write('%s\t%s\n' % (i + 1, (q / self.totals[i])))
+
+        out.write('\n')
+
+    @property
+    def length_stats(self):
+        if not self._lengthstats:
+            self._lengthstats = stats_counts(self.lengths)
+        return self._lengthstats
+
+    @property
+    def quality_stats(self):
+        if not self._qualitystats:
+            self._qualitystats = []
+            for pos, quals in enumerate(self.pos_qualities):
+                if not quals:
+                    self._qualitystats.append(None)
+                else:
+                    self._qualitystats.append(stats_counts(quals))
+        return self._qualitystats
+
+
+def fastq_stats(fastq, quiet=False):
+    lengths = []    # how many reads are exactly this length?
+    posquals = []   # accumulator of quality values for each position
+                    # (not all the values, but an accumulator for each value at each position)
+    qualities = []  # quality accumulator for each position
+
+    total = []  # how many reads are at least this length?
+                # (used for dividing an accumulator later)
+
     total_reads = 0
     line = 0
     try:
-        for name, seq, qual in read_fastq(fname):
-            if not name[0] == '@':
-                print 'Invalid formatted record [line %s]' % line
-                break
-
-            if cs:
-                if len(seq) != len(qual) + 1:
-                    print 'Seq / qual mismatch [line %s]' % line
-                    break
-            else:
-                if len(seq) != len(qual):
-                    print 'Seq / qual mismatch [line %s]' % line
-                    break
+        for read in fastq.fetch(quiet=quiet):
+            # Note: all lengths are based on the FASTQ quality score, which
+            # will be the correct length for base- and color-space files. The
+            # sequence may have a prefix in color-space files
 
             line += 4
             total_reads += 1
 
-            while len(total) < len(qual) + 1:
+            while len(total) < len(read.qual):
                 total.append(0)
-            for x in xrange(len(qual) + 1):
+
+            for x in xrange(len(read.qual)):
                 total[x] += 1
 
-            while len(qual) > len(lengths) - 1:
+            while len(read.qual) > len(lengths):
                 lengths.append(0)
                 qualities.append(0)
                 posquals.append([])
 
-            lengths[len(qual)] += 1
+            lengths[len(read.qual) - 1] += 1
 
-            for idx, q in enumerate([ord(x) for x in qual]):
+            for idx, q in enumerate([ord(x) - 33 for x in read.qual]):
                 qualities[idx] += q
-                while len(posquals[idx]) < (q - 32):
+                while len(posquals[idx]) < q:
                     posquals[idx].append(0)
-                posquals[idx][q - 33] += 1
+                posquals[idx][q - 1] += 1
 
     except KeyboardInterrupt:
         pass
 
-    print "Number of reads:\t%s" % total_reads
-    print ""
-
-    mean, stdev, min_val, pct25, pct50, pct75, max_val = stats_counts(lengths)
-
-    print "Length distribution"
-    print 'Mean:\t%s' % mean
-    print 'StdDev:\t%s' % stdev
-    print 'Min:\t%s' % min_val
-    print '25 percentile:\t%s' % pct25
-    print 'Median:\t%s' % pct50
-    print '75 percentile:\t%s' % pct75
-    print 'Max:\t%s' % max_val
-
-    if verbose:
-        print ''
-        for idx, count in enumerate(lengths[::-1]):
-            if count:
-                print "%s\t%s" % (len(lengths) - idx - 1, count)
-
-    print "Quality distribution"
-    print "pos\tmean\tstdev\tmin\t25pct\t50pct\t75pct\tmax"
-
-    for pos, quals in enumerate(posquals):
-        if not quals:
-            continue
-        mean, stdev, min_val, pct25, pct50, pct75, max_val = stats_counts(quals)
-
-        sys.stdout.write('%s\t' % (pos + 1))
-        sys.stdout.write('\t'.join([str(x) for x in stats_counts(quals)]))
-        sys.stdout.write('\n')
-
-    print ""
-    print "Quality by position"
-
-    for i, x in enumerate(qualities):
-        q = x / total[i]
-        if q > 33:
-            sys.stdout.write(chr(q))
-        else:
-            sys.stdout.write('~')
-
-    if verbose:
-        print ''
-        for i, q in enumerate(qualities):
-            print '[%s] %s' % (i, (q / total[i]) - 33)
-
-    print ''
+    return FASTQStats._make([fastq, total_reads, total, lengths, qualities, posquals])
 
 
 def stats_counts(counts):
+    '''
+    Takes a list of counts and calculates stats
+
+    For example:
+        [1, 2, 3, 4, 5, 6] would mean:
+        there was (1) one, (2) twos, (3) threes, etc...
+    '''
     acc = 0.0
     pct25 = None
     pct50 = None
@@ -141,6 +169,7 @@ def stats_counts(counts):
     total = 0
 
     for idx, count in enumerate(counts):
+        idx += 1
         if not min_val and count:
             min_val = idx
 
@@ -155,7 +184,8 @@ def stats_counts(counts):
     sdacc = 0.0
 
     for idx, count in enumerate(counts):
-        sdacc += ((idx - mean) ** 2)
+        idx += 1
+        sdacc += ((count * (idx - mean)) ** 2)
         acc += count
         if not pct25 and acc / total > 0.25:
             pct25 = idx
@@ -164,8 +194,11 @@ def stats_counts(counts):
         if not pct75 and acc / total > 0.75:
             pct75 = idx
 
-    stdev = (sdacc / (total - 1)) ** 0.5
-    return (mean, stdev, min_val, pct25, pct50, pct75, max_val)
+    if total > 2:
+        stdev = (sdacc / (total - 1)) ** 0.5
+    else:
+        stdev = 0.0
+    return StatsValues(mean, stdev, min_val, pct25, pct50, pct75, max_val, total)
 
 
 def usage():
@@ -189,4 +222,8 @@ if __name__ == '__main__':
     if not fname:
         usage()
 
-    fastq_stats(fname, verbose)
+    fq = FASTQ(fname)
+    stats = fastq_stats(fq)
+    fq.close()
+
+    stats.dump(verbose)
