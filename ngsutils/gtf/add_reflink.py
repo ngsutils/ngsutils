@@ -15,69 +15,56 @@ This will add the following attributes:
 
 import sys
 import os
-from eta import ETA
-from ngsutils.support.ngs_utils import gzip_opener
+from ngsutils.support import gzip_reader
 
 
-def gtf_addreflink(gtf, reflink):
+def gtf_addreflink(gtf, reflink, out=sys.stdout, quiet=False):
     link_values = {}
 
-    sys.stderr.write('Reading refLink...\n')
-    with gzip_opener(reflink) as f:
-        if reflink != '-':
-            eta = ETA(os.stat(reflink).st_size, fileobj=f)
-        for line in f:
-            cols = line.rstrip().split('\t')
-            link_values[cols[2]] = (cols[0], cols[6])
-            if reflink != '-':
-                eta.print_status()
-        if reflink != '-':
-            eta.done()
+    if not quiet:
+        sys.stderr.write('Reading refLink...\n')
 
-    sys.stderr.write('Reading GTF...\n')
-    with gzip_opener(gtf) as f:
-        if gtf != '-':
-            eta = ETA(os.stat(gtf).st_size, fileobj=f)
+    for line in gzip_reader(reflink):
+        cols = line.rstrip().split('\t')
+        link_values[cols[2]] = (cols[0], cols[6])
 
-        for line in f:
-            try:
-                comment = None
-                idx = line.find('#')
-                if idx > -1:
-                    if idx == 0:
-                        sys.stdout.write(line)
-                        continue
-                    comment = line[idx:]
-                    line = line[:-idx]
-                chrom, source, feature, start, end, score, strand, frame, attrs = line.rstrip().split('\t')
-                transcript_id = None
-                for key, val in [x.split(' ') for x in [x.strip() for x in attrs.split(';')] if x]:
-                    if val[0] == '"' and val[-1] == '"':
-                        val = val[1:-1]
-                    if key == 'transcript_id':
-                        transcript_id = val
+    if not quiet:
+        sys.stderr.write('Reading GTF...\n')
 
-                if attrs[-1] != ';':
-                    attrs = '%s;' % attrs
+    for line in gzip_reader(gtf):
+        try:
+            comment = None
+            idx = line.find('#')
+            if idx > -1:
+                if idx == 0:
+                    sys.stdout.write(line)
+                    continue
+                comment = line[idx:]
+                line = line[:-idx]
+            chrom, source, feature, start, end, score, strand, frame, attrs = line.rstrip().split('\t')
+            transcript_id = None
+            for key, val in [x.split(' ') for x in [x.strip() for x in attrs.split(';')] if x]:
+                if val[0] == '"' and val[-1] == '"':
+                    val = val[1:-1]
+                if key == 'transcript_id':
+                    transcript_id = val
 
-                if transcript_id in link_values:
-                    extra = 'gene_name "%s"; isoform_id "%s";' % link_values[transcript_id]
-                    attrs = '%s %s' % (attrs, extra)
+            if attrs[-1] != ';':
+                attrs = '%s;' % attrs
 
-                sys.stdout.write('\t'.join([chrom, source, feature, start, end, score, strand, frame, attrs]))
-                if comment:
-                    sys.stdout.write('\t%s' % comment)
-                sys.stdout.write('\n')
-                if gtf != '-':
-                    eta.print_status()
-            except:
-                import traceback
-                sys.stderr.write('Error parsing line:\n%s\n' % line)
-                traceback.print_exc()
-                sys.exit(1)
+            if transcript_id in link_values:
+                extra = 'gene_name "%s"; isoform_id "%s";' % link_values[transcript_id]
+                attrs = '%s %s' % (attrs, extra)
 
-        if gtf != '-':
-            eta.done()
+            out.write('\t'.join([chrom, source, feature, start, end, score, strand, frame, attrs]))
+            if comment:
+                out.write('\t%s' % comment)
+            out.write('\n')
+        except:
+            import traceback
+            sys.stderr.write('Error parsing line:\n%s\n' % line)
+            traceback.print_exc()
+            sys.exit(1)
 
 
 def usage(msg=None):
