@@ -1,0 +1,4 @@
+txpt1	foo	bar	baz	gene1  
+txpt2	foo	bar	baz	gene1
+txpt3	foo	bar	baz	gene2
+txpt4	foo	bar	baz	gene3
