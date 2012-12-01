@@ -345,10 +345,38 @@ class _GTFTranscript(object):
     def __init__(self, transcript_id, strand):
         self.transcript_id = transcript_id
         self.strand = strand
-        self.exons = []
-        self.cds = []
-        self.start_codon = None
-        self.stop_codon = None
+        self._exons = []
+        self._cds = []
+        self._start_codon = None
+        self._stop_codon = None
 
         self.start = None
         self.end = None
+
+    @property
+    def exons(self):
+        if self._exons:
+            return self._exons
+        else:
+            return [(self._start, self._end)]
+
+    @property
+    def cds(self):
+        if self._cds:
+            return self._cds
+        else:
+            return [(self._start, self._end)]
+
+    @property
+    def start_codon(self):
+        if self._start_codon:
+            return self._start_codon
+        else:
+            return (self._start, self._start + 3)
+
+    @property
+    def stop_codon(self):
+        if self._stop_codon:
+            return self._stop_codon
+        else:
+            return (self._end - 3, self._end)
