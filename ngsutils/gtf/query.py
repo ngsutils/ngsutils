@@ -46,4 +46,4 @@ if __name__ == '__main__':
     start, end = [int(x) for x in startend.split('-', 1)]
 
     for gene in gtf_query(filename, chrom, start, end):
-        print  ' %s %s:%s-%s[%s]' % (gene.gene_name, gene.chrom, gene.start, gene.end, gene.strand)
+        print gene

@@ -205,7 +205,7 @@ class _GTFGene(object):
         self.strand = None
 
     def __repr__(self):
-        return '<GTFGene gid="%s" gene_id="%s" gene_name="%s" isoform_id="%s" chrom="%s" source="%s" start="%s" end="%s" strand="%s">' % (self.gid, self.gene_id, self.gene_name, self.isoform_id, self.chrom, self.source, self.start, self.end, self.strand)
+        return '%s(%s) %s:%s-%s[%s]' % (self.gene_name, self.gid, self.chrom, self.start, self.end, self.strand)
 
     @property
     def transcripts(self):
