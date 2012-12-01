@@ -1,0 +1,4 @@
+1	txpt1
+1	txpt2
+2	txpt3
+3	txpt4

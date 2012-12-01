@@ -1,0 +1,4 @@
+chr1	test	gene	1001	1100	0	+	.	gene_id "foo1"; transcript_id "txpt1";
+chr1	test	gene	1051	1100	0	+	.	gene_id "foo1"; transcript_id "txpt2";
+chr1	test	gene	2001	2100	0	+	.	gene_id "foo2"; transcript_id "txpt3";
+chr1	test	gene	3001	3100	0	+	.	gene_id "foo3"; transcript_id "txpt4";

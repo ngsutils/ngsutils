@@ -20,70 +20,57 @@ This will add the following attributes:
 
 import sys
 import os
-from eta import ETA
-from ngsutils.support.ngs_utils import gzip_opener
+from ngsutils.support import gzip_reader
 
 
-def gtf_add_isoform(gtf, iso):
+def gtf_add_isoform(gtf, iso, out=sys.stdout, quiet=False):
     isoforms = {}
 
-    sys.stderr.write('Reading isoforms...\n')
-    with gzip_opener(iso) as f:
-        if iso != '-':
-            eta = ETA(os.stat(iso).st_size, fileobj=f)
+    if not quiet:
+        sys.stderr.write('Reading isoforms...\n')
 
-        for line in f:
-            if line[0] == '#':
-                continue
-            cols = line.rstrip().split('\t')
-            isoforms[cols[1]] = cols[0]
-            if iso != '-':
-                eta.print_status()
-        if iso != '-':
-            eta.done()
+    for line in gzip_reader(iso):
+        if line[0] == '#':
+            continue
+        cols = line.rstrip().split('\t')
+        isoforms[cols[1]] = cols[0]
 
-    sys.stderr.write('Reading/Writing GTF...\n')
-    with gzip_opener(gtf) as f:
-        if gtf != '-':
-            eta = ETA(os.stat(gtf).st_size, fileobj=f)
-        for line in f:
-            try:
-                comment = None
-                idx = line.find('#')
-                if idx > -1:
-                    if idx == 0:
-                        sys.stdout.write(line)
-                        continue
-                    comment = line[idx:]
-                    line = line[:-idx]
-                chrom, source, feature, start, end, score, strand, frame, attrs = line.rstrip().split('\t')
-                transcript_id = None
-                for key, val in [x.split(' ') for x in [x.strip() for x in attrs.split(';')] if x]:
-                    if val[0] == '"' and val[-1] == '"':
-                        val = val[1:-1]
-                    if key == 'transcript_id':
-                        transcript_id = val
+    if not quiet:
+        sys.stderr.write('Reading/Writing GTF...\n')
 
-                if attrs[-1] != ';':
-                    attrs = '%s;' % attrs
+    for line in gzip_reader(gtf):
+        try:
+            comment = None
+            idx = line.find('#')
+            if idx > -1:
+                if idx == 0:
+                    sys.stdout.write(line)
+                    continue
+                comment = line[idx:]
+                line = line[:-idx]
+            chrom, source, feature, start, end, score, strand, frame, attrs = line.rstrip().split('\t')
+            transcript_id = None
+            for key, val in [x.split(' ') for x in [x.strip() for x in attrs.split(';')] if x]:
+                if val[0] == '"' and val[-1] == '"':
+                    val = val[1:-1]
+                if key == 'transcript_id':
+                    transcript_id = val
 
-                if transcript_id in isoforms:
-                    attrs = '%s isoform_id "%s";' % (attrs, isoforms[transcript_id])
+            if attrs[-1] != ';':
+                attrs = '%s;' % attrs
 
-                sys.stdout.write('\t'.join([chrom, source, feature, start, end, score, strand, frame, attrs]))
-                if comment:
-                    sys.stdout.write('\t%s' % comment)
-                sys.stdout.write('\n')
-                if gtf != '-':
-                    eta.print_status()
-            except:
-                import traceback
-                sys.stderr.write('Error parsing line:\n%s\n' % line)
-                traceback.print_exc()
-                sys.exit(1)
+            if transcript_id in isoforms:
+                attrs = '%s isoform_id "%s";' % (attrs, isoforms[transcript_id])
 
-        if gtf != '-':
-            eta.done()
+            out.write('\t'.join([chrom, source, feature, start, end, score, strand, frame, attrs]))
+            if comment:
+                out.write('\t%s' % comment)
+            out.write('\n')
+        except:
+            import traceback
+            sys.stderr.write('Error parsing line:\n%s\n' % line)
+            traceback.print_exc()
+            sys.exit(1)
 
 
 def usage(msg=None):
