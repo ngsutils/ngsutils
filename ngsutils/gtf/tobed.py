@@ -23,30 +23,30 @@ def usage(msg=None):
     sys.exit(1)
 
 
-def gtf_genes_tobed(fname):
-    gtf = GTF(fname)
+def gtf_genes_tobed(gtf, out=sys.stdout):
     for gene in gtf.genes:
-        sys.stdout.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, gene.start, gene.end, gene.gene_name, 0, gene.strand]]))
+        out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, gene.start, gene.end, gene.gene_name, 0, gene.strand]]))
 
 
-def gtf_exons_tobed(fname):
+def gtf_exons_tobed(gtf, out=sys.stdout):
     'Outputs all exons (from all transcripts)'
-    gtf = GTF(fname)
     for gene in gtf.genes:
         exons = set()
         for txscr in gene.transcripts:
             exons.update(txscr.exons)
 
         for i, (start, end) in enumerate(sorted(exons)):
-            sys.stdout.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, start, end, '%s.%s' % (gene.gene_name, i + 1), 0, gene.strand]]))
+            out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, start, end, '%s.%s' % (gene.gene_name, i + 1), 0, gene.strand]]))
 
 
-def gtf_regions_tobed(fname):
+def gtf_regions_tobed(gtf, out=sys.stdout):
     'Outputs all regions (from all transcripts)'
-    gtf = GTF(fname)
     for gene in gtf.genes:
         for i, start, end, const, names in gene.regions:
-            sys.stdout.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, start, end, '%s.%s.%s' % (gene.gene_name, 'const' if const else 'alt', i), len(names), gene.strand]]))
+            source_count = 0
+            for n in names.split(','):
+                source_count += 1
+            out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, start, end, '%s.%s.%s' % (gene.gene_name, 'const' if const else 'alt', i), source_count, gene.strand]]))
 
 
 if __name__ == '__main__':
@@ -72,9 +72,11 @@ if __name__ == '__main__':
     elif not filename:
         usage('Missing input file')
 
+    gtf = GTF(filename)
+
     if genes:
-        gtf_genes_tobed(filename)
+        gtf_genes_tobed(gtf)
     elif exons:
-        gtf_exons_tobed(filename)
+        gtf_exons_tobed(gtf)
     elif regions:
-        gtf_regions_tobed(filename)
+        gtf_regions_tobed(gtf)

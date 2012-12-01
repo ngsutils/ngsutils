@@ -3,7 +3,6 @@
 Tests for gtfutils / docutils
 '''
 
-import os
 import unittest
 import doctest
 import StringIO
