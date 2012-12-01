@@ -18,10 +18,8 @@ Usage: gtfutils genesize filename.gtf
     sys.exit(1)
 
 
-def gtf_genesize(fname):
-    gtf = GTF(fname)
-
-    sys.stdout.write('#gene\tgenomic-size\ttranscript-size\n')
+def gtf_genesize(gtf, out=sys.stdout):
+    out.write('#gene\tgenomic-size\ttranscript-size\n')
     for gene in gtf.genes:
         cols = [gene.gene_name]
         cols.append((gene.end - gene.start))
@@ -34,7 +32,7 @@ def gtf_genesize(fname):
             maxsize = max(size, maxsize)
 
         cols.append(maxsize)
-        sys.stdout.write('%s\n' % '\t'.join([str(x) for x in cols]))
+        out.write('%s\n' % '\t'.join([str(x) for x in cols]))
 
 
 if __name__ == '__main__':
@@ -50,4 +48,5 @@ if __name__ == '__main__':
     if not fname:
         usage()
 
-    gtf_genesize(fname)
+    gtf = GTF(fname)
+    gtf_genesize(gtf)
