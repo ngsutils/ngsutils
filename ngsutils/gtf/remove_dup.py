@@ -9,52 +9,46 @@ transciptid_dup1. This program will remove all _dup? entries from a GTF file.
 
 import sys
 import os
-from eta import ETA
-from ngsutils.support.ngs_utils import gzip_opener
+from ngsutils.support import gzip_reader
 
 
-def gtf_remove_dup(gtf):
-    sys.stderr.write('Reading GTF...\n')
+def gtf_remove_dup(fname, out=sys.stdout, quiet=False):
+    if not quiet:
+        sys.stderr.write('Reading GTF...\n')
     dup_count = 0
     good_count = 0
-    with gzip_opener(gtf) as f:
-        if gtf != '-':
-            eta = ETA(os.stat(gtf).st_size, fileobj=f)
+    for line in gzip_reader(fname, quiet=quiet):
+        try:
+            if line[0] == '#':
+                out.write(line)
+                continue
 
-        for line in f:
-            try:
-                if line[0] == '#':
-                    sys.stdout.write(line)
-                    continue
+            chrom, source, feature, start, end, score, strand, frame, attrs = line.rstrip().split('\t')
+            transcript_id = None
+            for key, val in [x.split(' ') for x in [x.strip() for x in attrs.split(';')] if x]:
+                if val[0] == '"' and val[-1] == '"':
+                    val = val[1:-1]
+                if key == 'transcript_id':
+                    transcript_id = val
 
-                chrom, source, feature, start, end, score, strand, frame, attrs = line.rstrip().split('\t')
-                transcript_id = None
-                for key, val in [x.split(' ') for x in [x.strip() for x in attrs.split(';')] if x]:
-                    if val[0] == '"' and val[-1] == '"':
-                        val = val[1:-1]
-                    if key == 'transcript_id':
-                        transcript_id = val
+            if '_dup' in transcript_id:
+                dup_count += 1
+                continue
 
-                if '_dup' in transcript_id:
-                    dup_count += 1
-                    continue
+            good_count += 1
+            out.write(line)
 
-                good_count += 1
-                sys.stdout.write(line)
+        except:
+            import traceback
+            sys.stderr.write('Error parsing line:\n%s\n' % line)
+            traceback.print_exc()
+            sys.exit(1)
 
-                if gtf != '-':
-                    eta.print_status()
-            except:
-                import traceback
-                sys.stderr.write('Error parsing line:\n%s\n' % line)
-                traceback.print_exc()
-                sys.exit(1)
+    if not quiet:
+        sys.stderr.write('Kept %s transcript/exon annotations\n' % good_count)
+        sys.stderr.write('Removed %s duplicate transcript/exon annotations\n' % dup_count)
 
-        if gtf != '-':
-            eta.done()
-
-    sys.stderr.write('Kept %s transcript/exon annotations\n' % good_count)
-    sys.stderr.write('Removed %s duplicate transcript/exon annotations\n' % dup_count)
+    return (good_count, dup_count)
 
 
 def usage(msg=None):

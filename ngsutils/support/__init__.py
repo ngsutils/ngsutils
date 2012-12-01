@@ -74,7 +74,7 @@ class FASTAFile(object):
             eta.done()
 
 
-def gzip_reader(fname):
+def gzip_reader(fname, quiet=False):
     if fname == '-':
         f = sys.stdin
     elif fname[-3:] == '.gz' or fname[-4:] == '.bgz':
@@ -82,7 +82,7 @@ def gzip_reader(fname):
     else:
         f = open(os.path.expanduser(fname))
 
-    if fname == '-':
+    if quiet or fname == '-':
         eta = None
     else:
         eta = ETA(os.stat(fname).st_size, fileobj=f)
@@ -93,8 +93,10 @@ def gzip_reader(fname):
         yield line
 
     if f != sys.stdout:
-        eta.done()
         f.close()
+
+    if eta:
+        eta.done()
 
 
 class Symbolize(object):
