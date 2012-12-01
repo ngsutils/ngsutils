@@ -20,8 +20,7 @@ def usage(msg=None):
     sys.exit(1)
 
 
-def gtf_query(fname, chrom, start, end, strand=None):
-    gtf = GTF(fname)
+def gtf_query(gtf, chrom, start, end, strand=None):
     for gene in gtf.find(chrom, start, end, strand):
         yield gene
 
@@ -45,5 +44,7 @@ if __name__ == '__main__':
     chrom, startend = region.split(':')
     start, end = [int(x) for x in startend.split('-', 1)]
 
-    for gene in gtf_query(filename, chrom, start, end):
+    gtf = GTF(filename)
+
+    for gene in gtf_query(gtf, chrom, start, end):
         print gene
