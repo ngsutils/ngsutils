@@ -3,17 +3,22 @@ GTF gene models
 
 See: http://mblab.wustl.edu/GTF22.html
 
-GTF/GFF is a 1-based format, meaning that start sites start counting at 1. We
+GTF is a 1-based format, meaning that start sites start counting at 1. We
 read in those start sites and subtract one so that the internal representation
 is 0-based.
 
-All positions returned are 0-based
+Notes:
+    All internal positions returned are 0-based.
+    If a transcript is missing a CDS or exon region, the (start, end) is used.
+    If a transcript is missing a start/stop codon the start/end is used (+/- 3 bases)
+
+    This class assumes a GTF format file. GFF3 isn't supported (yet).
 '''
 
 
 import sys
 import os
-from ngsutils.support.ngs_utils import gzip_opener
+from ngsutils.support.ngs_utils import gzip_aware_open
 from ngsutils.support import symbols
 from eta import ETA
 import datetime
@@ -27,73 +32,74 @@ except:
 class GTF(object):
     _version = 1
 
-    def __init__(self, filename):
+    def __init__(self, filename=None, cache_enabled=True, quiet=False, fileobj=None):
+        if not filename and not fileobj:
+            raise ValueError('Must pass either a filename or a fileobj')
+
+        if fileobj:
+            fobj = fileobj
+            cache_enabled = False
+            eta = None
+        else:
+            fobj = gzip_aware_open(filename)
+            eta = ETA(os.stat(filename).st_size, fileobj=fileobj)
+            cachefile = os.path.join(os.path.dirname(filename), '.%s.cache' % os.path.basename(filename))
+
         self._genes = {}
         self._pos = 0
         self._gene_order = {}
         warned = False
 
-        cachefile = os.path.join(os.path.dirname(filename), '.%s.cache' % os.path.basename(filename))
-
-        if os.path.exists(cachefile):
-            sys.stderr.write('Reading GTF file (cached)...')
-            started_t = datetime.datetime.now()
-            try:
-                with open(cachefile) as cache:
-                    version, genes, gene_order = pickle.load(cache)
-                    if version == GTF._version:
-                        self._genes, self._gene_order = genes, gene_order
-                        sys.stderr.write('(%s sec)\n' % (datetime.datetime.now() - started_t).seconds)
-                    else:
-                        sys.stderr.write('Error reading cached file... Processing original file.\n')
-            except:
-                self._genes = {}
-                self._gene_order = {}
-                sys.stderr.write('Failed reading cache! Processing original file.\n')
+        if cache_enabled and os.path.exists(cachefile):
+            self._load_cache(cachefile)
 
         if not self._genes:
-            sys.stderr.write('Reading GTF file...\n')
-            with gzip_opener(filename) as f:
-                eta = ETA(os.stat(filename).st_size, fileobj=f)
-                for line in f:
-                    try:
-                        idx = line.find('#')
-                        if idx > -1:
-                            if idx == 0:
-                                continue
-                            line = line[:-idx]
-                        chrom, source, feature, start, end, score, strand, frame, attrs = line.rstrip().split('\t')
-                        source = symbols[source]
-                        start = int(start) - 1  # Note: 1-based
-                        end = int(end)
-                        attributes = {}
-                        for key, val in [x.split(' ', 1) for x in [x.strip() for x in attrs.split(';')] if x]:
-                            if val[0] == '"' and val[-1] == '"':
-                                val = val[1:-1]
-                            attributes[key] = val
+            if not quiet:
+                sys.stderr.write('Reading GTF file...\n')
+            for line in fobj:
+                try:
+                    idx = line.find('#')
+                    if idx > -1:
+                        if idx == 0:
+                            continue
+                        line = line[:-idx]
+                    chrom, source, feature, start, end, score, strand, frame, attrs = line.rstrip().split('\t')
+                    source = symbols[source]
+                    start = int(start) - 1  # Note: 1-based
+                    end = int(end)
+                    attributes = {}
+                    for key, val in [x.split(' ', 1) for x in [x.strip() for x in attrs.split(';')] if x]:
+                        if val[0] == '"' and val[-1] == '"':
+                            val = val[1:-1]
+                        attributes[key] = val
 
-                        gid = None
-                        if 'isoform_id' in attributes:
-                            gid = attributes['isoform_id']
-                        else:
-                            gid = attributes['gene_id']
-                            if not warned:
-                                sys.stderr.write('\nGTF file missing isoform annotation! Each transcript will be treated separately. (%s)\n' % gid)
-                                warned = True
-
+                    gid = None
+                    if 'isoform_id' in attributes:
+                        gid = attributes['isoform_id']
+                    else:
+                        gid = attributes['gene_id']
+                        if not warned and not quiet:
+                            sys.stderr.write('\nGTF file missing isoform annotation! Each transcript will be treated separately. (%s)\n' % gid)
+                            warned = True
+                    if eta:
                         eta.print_status(extra=gid)
-                    except:
-                        import traceback
-                        sys.stderr.write('Error parsing line:\n%s\n' % line)
-                        traceback.print_exc()
-                        sys.exit(1)
+                except:
+                    import traceback
+                    sys.stderr.write('Error parsing line:\n%s\n' % line)
+                    traceback.print_exc()
+                    sys.exit(1)
 
-                    if not gid in self._genes or chrom != self._genes[gid].chrom:
-                        self._genes[gid] = _GTFGene(gid, chrom, source, **attributes)
+                if not gid in self._genes or chrom != self._genes[gid].chrom:
+                    self._genes[gid] = _GTFGene(gid, chrom, source, **attributes)
 
-                    self._genes[gid].add_feature(attributes['transcript_id'], feature, start, end, strand)
+                self._genes[gid].add_feature(attributes['transcript_id'], feature, start, end, strand)
 
+            if eta:
                 eta.done()
+
+            if filename and fobj != sys.stdin:
+                fobj.close()
+
             for gid in self._genes:
                 gene = self._genes[gid]
                 if not gene.chrom in self._gene_order:
@@ -103,10 +109,30 @@ class GTF(object):
             for chrom in self._gene_order:
                 self._gene_order[chrom].sort()
 
-            sys.stderr.write('(saving GTF cache)...')
-            with open(cachefile, 'w') as cache:
-                pickle.dump((GTF._version, self._genes, self._gene_order), cache)
-            sys.stderr.write('\n')
+            if cache_enabled:
+                self._write_cache(cachefile)
+
+    def _load_cache(self, cachefile):
+        sys.stderr.write('Reading GTF file (cached)...')
+        started_t = datetime.datetime.now()
+        try:
+            with open(cachefile) as cache:
+                version, genes, gene_order = pickle.load(cache)
+                if version == GTF._version:
+                    self._genes, self._gene_order = genes, gene_order
+                    sys.stderr.write('(%s sec)\n' % (datetime.datetime.now() - started_t).seconds)
+                else:
+                    sys.stderr.write('Error reading cached file... Processing original file.\n')
+        except:
+            self._genes = {}
+            self._gene_order = {}
+            sys.stderr.write('Failed reading cache! Processing original file.\n')
+
+    def _write_cache(self, cachefile):
+        sys.stderr.write('(saving GTF cache)...')
+        with open(cachefile, 'w') as cache:
+            pickle.dump((GTF._version, self._genes, self._gene_order), cache)
+        sys.stderr.write('\n')
 
     def fsize(self):
         return len(self._genes)
@@ -119,8 +145,7 @@ class GTF(object):
             return
 
         if end < start:
-            sys.stderr.write('[gtf.find] Error: End must be smaller than start!')
-            return
+            raise ValueError('[gtf.find] Error: End must be smaller than start!')
 
         if not end:
             end = start
@@ -134,8 +159,11 @@ class GTF(object):
                 continue
 
             if g_start <= start <= g_end or g_start <= end <= g_end:
+                # gene spans the query boundary
                 yield self._genes[gid]
-
+            elif start <= g_start <= end and start <= g_end <= end:
+                # gene is completely inside boundary
+                yield self._genes[gid]
         return
 
     @property
@@ -176,6 +204,9 @@ class _GTFGene(object):
         self.end = None
         self.strand = None
 
+    def __repr__(self):
+        return '<GTFGene gid="%s" gene_id="%s" gene_name="%s" isoform_id="%s" chrom="%s" source="%s" start="%s" end="%s" strand="%s">' % (self.gid, self.gene_id, self.gene_name, self.isoform_id, self.chrom, self.source, self.start, self.end, self.strand)
+
     @property
     def transcripts(self):
         for t in self._transcripts:
@@ -187,27 +218,29 @@ class _GTFGene(object):
 
         t = self._transcripts[transcript_id]
 
+        # this start/end will cover the entire transcript.
+        # this way if there is only a 'gene' annotation,
+        # we can still get a gene/exon start/end
+        if self.start is None or start < self.start:
+            self.start = start
+        if self.end is None or end > self.end:
+            self.end = end
+        if self.strand is None:
+            self.strand = strand
+
+        if t.start is None or start < t.start:
+            t.start = start
+        if t.end is None or end > t.end:
+            t.end = end
+
         if feature == 'exon':
-            t.exons.append((start, end))
-
-            if self.start is None or start < self.start:
-                self.start = start
-            if self.end is None or end > self.end:
-                self.end = end
-            if self.strand is None:
-                self.strand = strand
-
-            if t.start is None or start < t.start:
-                t.start = start
-            if t.end is None or end > t.end:
-                t.end = end
-
+            t._exons.append((start, end))
         elif feature == 'CDS':
-            t.cds.append((start, end))
+            t._cds.append((start, end))
         elif feature == 'start_codon':
-            t.start_codon = (start, end)
+            t._start_codon = (start, end)
         elif feature == 'stop_codon':
-            t.stop_codon = (start, end)
+            t._stop_codon = (start, end)
         else:
             # this is an unsupported feature - possibly add a debug message
             pass
@@ -239,6 +272,50 @@ class _GTFGene(object):
             yield (i, start, end, const, names)
 
 
+class _GTFTranscript(object):
+    def __init__(self, transcript_id, strand):
+        self.transcript_id = transcript_id
+        self.strand = strand
+        self._exons = []
+        self._cds = []
+        self._start_codon = None
+        self._stop_codon = None
+
+        self.start = None
+        self.end = None
+
+    def __repr__(self):
+        return '<transcript id="%s" strand="%s" start="%s" end="%s" exons="%s">' % (self.transcript_id, self.strand, self.start, self.end, ','.join(['%s->%s' % (s, e) for s, e in self.exons]))
+
+    @property
+    def exons(self):
+        if self._exons:
+            return self._exons
+        else:
+            return [(self.start, self.end)]
+
+    @property
+    def cds(self):
+        if self._cds:
+            return self._cds
+        else:
+            return [(self.start, self.end)]
+
+    @property
+    def start_codon(self):
+        if self._start_codon:
+            return self._start_codon
+        else:
+            return (self.start, self.start + 3)
+
+    @property
+    def stop_codon(self):
+        if self._stop_codon:
+            return self._stop_codon
+        else:
+            return (self.end - 3, self.end)
+
+
 def calc_regions(txStart, txEnd, kg_names, kg_starts, kg_ends):
     '''
         This takes a list of start/end positions (one set per isoform)
@@ -256,9 +333,42 @@ def calc_regions(txStart, txEnd, kg_names, kg_starts, kg_ends):
         (start,end,is_const,names) where names is a comma-separated string
                                    of accns that make up the region
 
+    Test:
+        foo: 100->110, 125->135, 150->160, 175->200
+        bar: 100->110, 125->135,           175->200
+        baz: 100->110,           150->160, 175->200
+
+    >>> list(calc_regions(100, 200, ['foo', 'bar', 'baz'], [[100, 125, 150, 175], [100, 125, 175], [100, 150, 175]], [[110, 135, 160, 200], [110, 135, 200], [110, 160, 200]]))
+    [(100, 110, True, 'foo,bar,baz'), (125, 135, False, 'foo,bar'), (150, 160, False, 'foo,baz'), (175, 200, True, 'foo,bar,baz')]
+
+    # overhangs...
+        baz: 100->120,           150->160, 170->200
+
+    >>> list(calc_regions(100, 200, ['foo', 'bar', 'baz'], [[100, 125, 150, 175], [100, 125, 175], [100, 150, 170]], [[110, 135, 160, 200], [110, 135, 200], [120, 160, 200]]))
+    [(100, 110, True, 'foo,bar,baz'), (110, 120, False, 'baz'), (125, 135, False, 'foo,bar'), (150, 160, False, 'foo,baz'), (170, 175, False, 'baz'), (175, 200, True, 'foo,bar,baz')]
+
+        foo: 100->110, 120->130, 140->150
+        bar: 100->110,           140->150
+
+    >>> list(calc_regions(100, 150, ['foo', 'bar'], [[100, 120, 140], [100, 140,]], [[110, 130, 150], [110, 150]]))
+    [(100, 110, True, 'foo,bar'), (120, 130, False, 'foo'), (140, 150, True, 'foo,bar')]
+
+        foo: 100->110, 120->130, 140->150
+        bar: 100->115,           140->150 # 3' overhang
+
+    >>> list(calc_regions(100, 150, ['foo', 'bar'], [[100, 120, 140], [100, 140,]], [[110, 130, 150], [115, 150]]))
+    [(100, 110, True, 'foo,bar'), (110, 115, False, 'bar'), (120, 130, False, 'foo'), (140, 150, True, 'foo,bar')]
+
+        foo: 100->110, 120->130, 140->150
+        bar: 100->110,           135->150 # 5' overhang
+
+    >>> list(calc_regions(100, 150, ['foo', 'bar'], [[100, 120, 140], [100, 135,]], [[110, 130, 150], [110, 150]]))
+    [(100, 110, True, 'foo,bar'), (120, 130, False, 'foo'), (135, 140, False, 'bar'), (140, 150, True, 'foo,bar')]
+
+
     '''
 
-    map = [0, ] * (txEnd - txStart + 1)
+    maskmap = [0, ] * (txEnd - txStart)
     mask = 1
 
     mask_start_end = {}
@@ -269,16 +379,22 @@ def calc_regions(txStart, txEnd, kg_names, kg_starts, kg_ends):
         mask_end = None
         mask_names[mask] = name
 
+        starts = [int(x) for x in starts]
+        ends = [int(x) for x in ends]
+
         for start, end in zip(starts, ends):
             if not mask_start:
                 mask_start = int(start)
             mask_end = int(end)
 
-            for i in xrange(int(start) - txStart, int(end) - txStart + 1):
-                map[i] = map[i] | mask
+            for i in xrange(start - txStart, end - txStart):
+                maskmap[i] = maskmap[i] | mask
 
         mask_start_end[mask] = (mask_start, mask_end)
         mask = mask * 2
+
+    # print mask_start_end
+    # print maskmap
 
     last_val = 0
     regions = []
@@ -312,6 +428,8 @@ def calc_regions(txStart, txEnd, kg_names, kg_starts, kg_ends):
         ## TODO: Add alt-5/alt-3 code
         '''
 
+        # this keeps track of which transcripts go into each region
+        # and if it is const or alt
         for mask in mask_start_end:
             mstart, mend = mask_start_end[mask]
             if rstart >= mstart and rend <= mend:
@@ -322,61 +440,20 @@ def calc_regions(txStart, txEnd, kg_names, kg_starts, kg_ends):
 
         regions.append((rstart, rend, const, ','.join(names)))
 
-    for i in xrange(0, len(map)):
-        if map[i] == last_val:
+    for i in xrange(0, len(maskmap)):
+        if maskmap[i] == last_val:
             continue
 
         if last_val:
-            _add_region(region_start, i - 1, last_val)
+            _add_region(region_start, i, last_val)
 
-            region_start = i - 1
+            region_start = i
         else:
             region_start = i
 
-        last_val = map[i]
+        last_val = maskmap[i]
 
     if last_val:
-        _add_region(region_start, i, last_val)  # extend by one...
+        _add_region(region_start, i + 1, last_val)  # extend by one...
 
     return regions
-
-
-class _GTFTranscript(object):
-    def __init__(self, transcript_id, strand):
-        self.transcript_id = transcript_id
-        self.strand = strand
-        self._exons = []
-        self._cds = []
-        self._start_codon = None
-        self._stop_codon = None
-
-        self.start = None
-        self.end = None
-
-    @property
-    def exons(self):
-        if self._exons:
-            return self._exons
-        else:
-            return [(self._start, self._end)]
-
-    @property
-    def cds(self):
-        if self._cds:
-            return self._cds
-        else:
-            return [(self._start, self._end)]
-
-    @property
-    def start_codon(self):
-        if self._start_codon:
-            return self._start_codon
-        else:
-            return (self._start, self._start + 3)
-
-    @property
-    def stop_codon(self):
-        if self._stop_codon:
-            return self._stop_codon
-        else:
-            return (self._end - 3, self._end)
