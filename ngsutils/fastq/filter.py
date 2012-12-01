@@ -9,12 +9,12 @@ batch, allowing you to use more than one criterion at a time.
 import sys
 import os
 
-from ngsutils.fastq import read_fastq
+from ngsutils.fastq import FASTQ
 
 
-def fastq_filter(filter_chain, stats_fname=None):
+def fastq_filter(filter_chain, stats_fname=None, out=sys.stdout, quiet=False):
     for name, seq, qual in filter_chain.filter():
-        sys.stdout.write("%s\n%s\n+\n%s\n" % (name, seq, qual))
+        out.write("@%s\n%s\n+\n%s\n" % (name, seq, qual))
 
     stats = []
     p = filter_chain
@@ -22,9 +22,10 @@ def fastq_filter(filter_chain, stats_fname=None):
         stats.insert(0, (p.__class__.__name__, p.kept, p.altered, p.removed))
         p = p.parent
 
-    sys.stderr.write('Criteria\tKept\tAltered\tRemoved\n')
-    for name, kept, altered, removed in stats:
-        sys.stderr.write('%s\t%s\t%s\t%s\n' % (name, kept, altered, removed))
+    if not quiet:
+        sys.stderr.write('Criteria\tKept\tAltered\tRemoved\n')
+        for name, kept, altered, removed in stats:
+            sys.stderr.write('%s\t%s\t%s\t%s\n' % (name, kept, altered, removed))
 
     if stats_fname:
         with open(stats_fname, 'w') as f:
@@ -34,9 +35,9 @@ def fastq_filter(filter_chain, stats_fname=None):
 
 
 class FASTQReader(object):
-    def __init__(self, fname, verbose=False, discard=None):
+    def __init__(self, fastq, verbose=False, discard=None):
         self.parent = None
-        self.fname = fname
+        self.fastq = fastq
         self.verbose = verbose
 
         self.altered = 0
@@ -46,17 +47,17 @@ class FASTQReader(object):
         self.discard = discard
 
     def filter(self):
-        for tup in read_fastq(fname, quiet=not self.verbose):
+        for read in self.fastq.fetch(quiet=not self.verbose):
             self.kept += 1
             if self.verbose:
-                sys.stderr.write('[FASTQ] Read: %s\n' % tup[0])
-            yield tup
+                sys.stderr.write('[FASTQ] Read: %s\n' % read.name)
+            yield read.name, read.seq, read.qual
 
 
 class TrimFilter(object):
     def __init__(self, parent, trim_seq, mismatch_pct, min_filter_len, verbose=False, discard=None):
         self.parent = parent
-        self.trim_seq = trim_seq
+        self.trim_seq = trim_seq.upper()
         self.mismatch_pct = mismatch_pct
         self.min_filter_len = min_filter_len
         self.verbose = verbose
@@ -71,32 +72,40 @@ class TrimFilter(object):
         for name, seq, qual in self.parent.filter():
             trimmed = False
 
+            upseq = seq.upper()
             for i in xrange(len(seq) - self.min_filter_len):
                 matches = 0.0
                 total = 0
-                for s, a in zip(seq[i:], self.trim_seq):
+                for s, a in zip(upseq[i:], self.trim_seq):
                     total += 1
                     if s == a:
                         matches += 1
 
                 if (matches / total) >= self.mismatch_pct:
                     trimmed = True
-                    if i < 10:
+                    orig_seq = seq
+
+                    if len(seq) == len(qual):  # if colorspace - could include a *single* prefix base
+                        seq = seq[:i]
+                        qual = qual[:i]
+                    else:
+                        seq = seq[:i]
+                        qual = qual[:i - 1]
+
+                    if len(qual) == 0:
                         self.removed += 1
                         if self.discard:
                             self.discard(name)
                         if self.verbose:
-                            sys.stderr.write('[Trim] %s (removed) seq:%s clipped at:%s (%s/%s)-> %s\n' % (name, seq, i, matches, total, seq[:i]))
+                            sys.stderr.write('[Trim] %s (removed) seq:%s clipped at:%s (%s/%s)-> %s\n' % (name, orig_seq, i, matches, total, seq[:i]))
                         break
                     else:
                         self.altered += 1
                         if self.verbose:
-                            sys.stderr.write('[Trim] %s (altered) seq:%s clipped at:%s (%s/%s)-> %s\n' % (name, seq, i, matches, total, seq[:i]))
+                            sys.stderr.write('[Trim] %s (altered) seq:%s clipped at:%s (%s/%s)-> %s\n' % (name, orig_seq, i, matches, total, seq[:i]))
 
-                        if len(seq) == len(qual):
-                            yield ('%s #trim' % name, seq[:i], qual[:i])
-                        else:
-                            yield ('%s #trim' % name, seq[:i], qual[:i - 1])
+                        yield(('%s #trim' % name, seq, qual))
+
                         break
 
             if not trimmed:
@@ -399,7 +408,9 @@ if __name__ == '__main__':
 
         discard = _callback
 
-    chain = FASTQReader(fname, verbose)
+    fq = FASTQ(fname)
+
+    chain = FASTQReader(fq, verbose)
     for config in filters_config:
         if verbose:
             sys.stderr.write(config[0].__name__)
@@ -416,3 +427,5 @@ if __name__ == '__main__':
     fastq_filter(chain)
     if _d_file:
         _d_file.close()
+
+    fq.close()

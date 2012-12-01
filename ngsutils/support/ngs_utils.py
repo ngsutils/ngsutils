@@ -91,6 +91,16 @@ def dictify(values, colnames):
     return d
 
 
+def gzip_aware_open(fname):
+    if fname == '-':
+        f = sys.stdin
+    elif fname[-3:] == '.gz' or fname[-4:] == '.bgz':
+        f = gzip.open(os.path.expanduser(fname))
+    else:
+        f = open(os.path.expanduser(fname))
+    return f
+
+
 class gzip_opener:
     '''
     A Python 2.6 class to handle 'with' opening of text files that may
@@ -100,12 +110,7 @@ class gzip_opener:
         self.fname = fname
 
     def __enter__(self):
-        if self.fname == '-':
-            self.f = sys.stdin
-        elif self.fname[-3:] == '.gz' or self.fname[-4:] == '.bgz':
-            self.f = gzip.open(os.path.expanduser(self.fname))
-        else:
-            self.f = open(os.path.expanduser(self.fname))
+        self.f = gzip_aware_open(self.fname)
         return self.f
 
     def __exit__(self, type, value, traceback):
