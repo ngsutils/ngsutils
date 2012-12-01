@@ -16,7 +16,7 @@ fname = os.path.join(os.path.dirname(__file__), 'test1.gtf')
 
 class GTFQueryTest(unittest.TestCase):
     def testQuery(self):
-        genes = list(ngsutils.gtf.query.gtf_query(GTF(fname), 'chr1', 1000, 2000))
+        genes = list(ngsutils.gtf.query.gtf_query(GTF(fname, cache_enabled=False), 'chr1', 1000, 2000))
         self.assertEquals(str(genes[0]), 'foo1(iso1) chr1:1000-2500[+]')
 
 if __name__ == '__main__':
