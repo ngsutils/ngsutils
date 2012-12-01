@@ -3,7 +3,6 @@ Commands
     basecall      - Base caller
 
   RNA-seq
-    cims          - Finds regions of unusual deletions (CLIP-seq)
     count         - Calculates counts/RPKM for genes/BED regions/repeats
 
   General
@@ -27,4 +26,3 @@ Commands
   Misc
     check         - Checks a BAM file for corruption
     cleancigar    - Fixes BAM files where the CIGAR alignment has a zero length element
-    readfilepos   - Finds the position of a read in a BAM file
