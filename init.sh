@@ -31,4 +31,5 @@ if [ $(uname -s) == "Darwin" ]; then
 fi
 
 echo "Installing required libraries"
+pip install cython==0.16
 pip install -r requirements.txt
