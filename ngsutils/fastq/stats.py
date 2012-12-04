@@ -224,6 +224,5 @@ if __name__ == '__main__':
 
     fq = FASTQ(fname)
     stats = fastq_stats(fq)
+    stats.dump(verbose=verbose)
     fq.close()
-
-    stats.dump(verbose)
