@@ -1,4 +1,3 @@
-from mock import *
 import ngsutils.bam
 import ngsutils.bam.export
 import ngsutils.bam.basecall
