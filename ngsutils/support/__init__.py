@@ -45,6 +45,8 @@ class FASTAFile(object):
 
         for line in self.fileobj:
             line = line.strip()
+            if not line:
+                continue
             if line[0] == '#':
                 continue
 
