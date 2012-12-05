@@ -9,6 +9,20 @@ PileupRecords = collections.namedtuple('PileupRecord', 'tid pos n pileups')
 PileupRead = collections.namedtuple('PileupRecord', 'alignment indel is_del is_head is_tail level qpos')
 
 
+def assertIn(foo, bar):
+    for el in bar:
+        if foo == el:
+            return True
+    return False
+
+
+def assertNotIn(foo, bar):
+    for el in bar:
+        if foo == el:
+            return False
+    return True
+
+
 def _matches(valid, queries):
     extra = False
     check = [False, ] * len(valid)

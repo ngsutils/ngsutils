@@ -4,7 +4,7 @@ Tests for bamutils tag
 '''
 
 import unittest
-from ngsutils.bam.t import MockRead
+from ngsutils.bam.t import MockRead, assertIn, assertNotIn
 
 import ngsutils.bam.tag
 
@@ -28,14 +28,14 @@ class TagTest(unittest.TestCase):
         chain = ngsutils.bam.tag.CufflinksXS(chain)
 
         for r in chain.filter():
-            self.assertIn(('ZZ', 1), r.tags)
+            assertIn(('ZZ', 1), r.tags)
             if r.qname == 'foo':
-                self.assertIn(('XS', '-'), r.tags)
+                assertIn(('XS', '-'), r.tags)
             elif r.qname == 'bar':
-                self.assertIn(('XS', '+'), r.tags)
+                assertIn(('XS', '+'), r.tags)
             elif r.qname == 'baz':
-                self.assertNotIn(('XS', '+'), r.tags)
-                self.assertNotIn(('XS', '-'), r.tags)
+                assertNotIn(('XS', '+'), r.tags)
+                assertNotIn(('XS', '-'), r.tags)
 
     def testTag(self):
         read = MockRead('foo', tags=[('ZZ', 'val')])

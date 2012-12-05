@@ -4,7 +4,7 @@ Tests for bamutils removeclipping
 '''
 
 import unittest
-from ngsutils.bam.t import MockRead
+from ngsutils.bam.t import MockRead, assertIn
 
 import ngsutils.bam
 import ngsutils.bam.removeclipping
@@ -17,7 +17,7 @@ class RemoveClippingTest(unittest.TestCase):
         code = ngsutils.bam.removeclipping.read_removeclipping(read)
         self.assertEqual(code, 1)
         self.assertEqual(read.qname, 'foo')  # update occurs in place
-        self.assertIn(('XA', 1), read.tags)  # added tag
+        assertIn(('XA', 1), read.tags)  # added tag
         self.assertEqual(read.seq, 'AAAATTTTCCCGGG')
         self.assertEqual(read.qual, 'AAAABBBBBBBCCC')
 
@@ -27,10 +27,10 @@ class RemoveClippingTest(unittest.TestCase):
         code = ngsutils.bam.removeclipping.read_removeclipping(read)
         self.assertEqual(code, 2)
         self.assertEqual(read.qname, 'foo')  # update occurs in place
-        self.assertIn(('XA', 1), read.tags)  # added tag
-        self.assertIn(('ZA', 4), read.tags)  # added tag
-        self.assertIn(('ZB', 3), read.tags)  # added tag
-        self.assertIn(('ZC', 0.5), read.tags)  # added tag
+        assertIn(('XA', 1), read.tags)  # added tag
+        assertIn(('ZA', 4), read.tags)  # added tag
+        assertIn(('ZB', 3), read.tags)  # added tag
+        assertIn(('ZC', 0.5), read.tags)  # added tag
         self.assertEqual(read.seq, 'TTTTCCC')
         self.assertEqual(read.qual, 'BBBBBBB')
 
@@ -40,7 +40,7 @@ class RemoveClippingTest(unittest.TestCase):
         code = ngsutils.bam.removeclipping.read_removeclipping(read)
         self.assertEqual(code, 0)
         self.assertEqual(read.qname, 'foo')  # update occurs in place
-        self.assertIn(('XA', 1), read.tags)  # added tag
+        assertIn(('XA', 1), read.tags)  # added tag
         self.assertEqual(read.seq, 'AAAATTTTCCCGGG')
         self.assertEqual(read.qual, 'AAAABBBBBBBCCC')
 
