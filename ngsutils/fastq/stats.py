@@ -7,6 +7,8 @@ Calculates summary statistics for a FASTQ file.
 It can calculate distribution of read lengths, average quality by base
 position, if a file is in colorspace, if it contains paired end data, and
 what encoding is used for the quality values (Sanger or Illumina).
+
+Note: Any quality values less than 0 are treated as 0.
 '''
 
 import os
@@ -67,13 +69,13 @@ class FASTQStats(collections.namedtuple('FASTQStats', 'fastq total_reads totals 
         for pos, stats in enumerate(self.quality_stats):
             if not stats:
                 continue
-            out.write('%s\t' % (pos + 1))
+            out.write('%s\t' % (pos))
             out.write('\t'.join([str(x) for x in stats]))
             out.write('\n')
 
         out.write('\nAverage quality string\n')
 
-        for i, x in enumerate(self.qualities):
+        for i, x in list(enumerate(self.qualities))[1:]:
             q = x / self.totals[i]
             if q > 0:
                 out.write(chr(q + 33))
@@ -83,7 +85,7 @@ class FASTQStats(collections.namedtuple('FASTQStats', 'fastq total_reads totals 
         if verbose:
             out.write('\n\nPosition\tAverage\n')
             for i, q in enumerate(self.qualities):
-                out.write('%s\t%s\n' % (i + 1, (q / self.totals[i])))
+                out.write('%s\t%s\n' % (i, (q / self.totals[i])))
 
         out.write('\n')
 
@@ -125,24 +127,26 @@ def fastq_stats(fastq, quiet=False):
             line += 4
             total_reads += 1
 
-            while len(total) < len(read.qual):
+            while len(total) <= len(read.qual):
                 total.append(0)
 
             for x in xrange(len(read.qual)):
-                total[x] += 1
+                total[x + 1] += 1
 
-            while len(read.qual) > len(lengths):
+            while len(lengths) <= len(read.qual):
                 lengths.append(0)
                 qualities.append(0)
                 posquals.append([])
 
-            lengths[len(read.qual) - 1] += 1
+            lengths[len(read.qual)] += 1
 
             for idx, q in enumerate([ord(x) - 33 for x in read.qual]):
-                qualities[idx] += q
-                while len(posquals[idx]) < q:
-                    posquals[idx].append(0)
-                posquals[idx][q - 1] += 1
+                if q < 0:
+                    q = 0
+                qualities[idx + 1] += q
+                while len(posquals[idx + 1]) <= q:
+                    posquals[idx + 1].append(0)
+                posquals[idx + 1][q] += 1
 
     except KeyboardInterrupt:
         pass
@@ -158,6 +162,7 @@ def stats_counts(counts):
         [1, 2, 3, 4, 5, 6] would mean:
         there was (1) one, (2) twos, (3) threes, etc...
     '''
+
     acc = 0.0
     pct25 = None
     pct50 = None
@@ -169,7 +174,6 @@ def stats_counts(counts):
     total = 0
 
     for idx, count in enumerate(counts):
-        idx += 1
         if not min_val and count:
             min_val = idx
 
@@ -184,7 +188,6 @@ def stats_counts(counts):
     sdacc = 0.0
 
     for idx, count in enumerate(counts):
-        idx += 1
         sdacc += ((count * (idx - mean)) ** 2)
         acc += count
         if not pct25 and acc / total > 0.25:
