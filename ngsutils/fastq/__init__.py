@@ -87,7 +87,7 @@ class FASTQ(object):
                 qual = self.fileobj.next().strip()
 
                 if eta:
-                    eta.print_status(name)
+                    eta.print_status(extra=name)
                 yield FASTQRead(name, comment, seq, qual)
 
             except:

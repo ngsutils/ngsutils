@@ -76,7 +76,7 @@ class FASTA(object):
             if line[0] == '>':
                 if name and seq:
                     if eta:
-                        eta.print_status(name)
+                        eta.print_status(extra=name)
                     yield FASTARead(name, comment, seq)
 
                 spl = re.split(r'[ \t]', line[1:], maxsplit=1)
@@ -92,7 +92,7 @@ class FASTA(object):
 
         if name and seq:
             if eta:
-                eta.print_status(name)
+                eta.print_status(extra=name)
             yield FASTARead(name, comment, seq)
 
         if eta:
