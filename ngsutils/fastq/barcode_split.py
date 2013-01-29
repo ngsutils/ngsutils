@@ -59,6 +59,7 @@ def fastx_barcode_split(reader, outtempl, barcodes, edits=0, pos=0, allow_revcom
             outs[tag] = open(outtempl % tag, 'w')
         tag_count[tag] = 0
 
+    matched = 0
     perfect = 0
     mismatched = 0
     mispositioned = 0
@@ -69,9 +70,10 @@ def fastx_barcode_split(reader, outtempl, barcodes, edits=0, pos=0, allow_revcom
 
         if not ismatch:
             missing += 1
-            comment = '#guess: %s, %s%s (%s, %s, %smm) %s' % (tag, barcodes[tag][0], '' if is_forward else 'rc', aln.q_pos, aln.cigar_str, aln.mismatches, reason)
+            comment = '#guess: %s, %s%s (%s, %s, %smm) %s' % (tag, barcodes[tag][0], '' if is_forward else 'rc', aln.q_pos, aln.extended_cigar_str, aln.mismatches, reason)
             record.subseq(None, None, comment).write(outs[''])
         else:
+            matched += 1
             if aln.mismatches == 0:
                 if aln.q_pos == 0 or aln.q_end == len(record.seq):
                     perfect += 1
@@ -103,10 +105,12 @@ def fastx_barcode_split(reader, outtempl, barcodes, edits=0, pos=0, allow_revcom
 
     if stats_fname:
         with open(stats_fname, 'w') as f:
-            f.write("Missing\t%s\n" % missing)
-            f.write("Perfect\t%s\n" % perfect)
-            f.write("Mismatched\t%s\n" % mismatched)
-            f.write("Mispositioned\t%s\n" % mispositioned)
+            f.write("Unmatched\t%s\n" % missing)
+            f.write("Matched\t%s\n" % matched)
+            f.write(" Perfect\t%s\n" % perfect)
+            f.write(" Mismatched\t%s\n" % mismatched)
+            f.write(" Mispositioned\t%s\n" % mispositioned)
+            f.write('\n')
             for tag in tag_count:
                 f.write("Tag\t%s\t%s\n" % (tag, tag_count[tag]))
 
