@@ -289,4 +289,4 @@ if __name__ == '__main__':
     else:
         stats_fname = None
 
-    fastx_barcode_split(reader, templ, outtempl, barcodes, edit, pos, allow_revcomp, gz, stats_fname)
+    fastx_barcode_split(reader, outtempl, barcodes, edit, pos, allow_revcomp, gz, stats_fname)
