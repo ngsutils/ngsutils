@@ -209,7 +209,7 @@ Options:
     sys.exit(1)
 
 
-def open_fastx_file(fname):
+def is_fasta_file(fname):
     '''
     Open a fileobj and read the first line
         If it starts with '>', it's FASTA
@@ -224,12 +224,13 @@ def open_fastx_file(fname):
     while True:
         line = f.next()
         if line[0] == '>':
-            f.seek(0)
-            return FASTA(fileobj=f)
+            f.close()
+            return True
         elif line[0] == '@':
-            f.seek(0)
-            return FASTQ(fileobj=f)
+            f.close()
+            return False
 
+    f.close()
     raise ValueError("Unknown type of file!")
 
 if __name__ == '__main__':
@@ -277,12 +278,12 @@ if __name__ == '__main__':
     if not barcodes or not fname or not templ:
         usage()
 
-    reader = open_fastx_file(fname)
-
-    if type(reader) == FASTA:
+    if is_fasta_file(fname):
         outtempl = '%s_%%s.fasta' % templ
+        reader = FASTA(fname)
     else:
         outtempl = '%s_%%s.fastq' % templ
+        reader = FASTQ(fname)
 
     if stats:
         stats_fname = '%s.stats.txt' % templ
