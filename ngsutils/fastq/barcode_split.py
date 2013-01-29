@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+## category General
+## desc Splits a FASTQ/FASTA file based on sequence barcodes
 '''
 Given a FASTA/FASTQ file and a list of barcodes (name and seq),
 the FASTA/FASTQ file is split into N number of new files representing
