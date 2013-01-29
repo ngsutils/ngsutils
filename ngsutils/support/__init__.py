@@ -6,14 +6,30 @@ import re
 from eta import ETA
 
 
-class FASTARecord(collections.namedtuple('FASTARecord', 'name comment seq')):
+class FASTARead(collections.namedtuple('FASTARecord', 'name comment seq')):
     def __repr__(self):
         if self.comment:
             return '>%s %s\n%s\n' % (self.name, self.comment, self.seq)
         return '>%s\n%s\n' % (self.name, self.seq)
 
+    def subseq(self, start, end, comment=None):
+        if self.comment:
+            comment = '%s %s' % (self.comment, comment)
 
-class FASTAFile(object):
+        return FASTARead(self.name, comment, self.seq[start:end])
+
+    def clone(self, name=None, comment=None, seq=None):
+        n = name if name else self.name
+        c = comment if comment else self.comment
+        s = seq if seq else self.seq
+
+        return FASTARead(n, c, s)
+
+    def write(self, out):
+        out.write(repr(self))
+
+
+class FASTA(object):
     def __init__(self, fname=None, fileobj=None):
         self.fname = fname
         if fileobj:
@@ -33,7 +49,14 @@ class FASTAFile(object):
         if self.fileobj != sys.stdout:
             self.fileobj.close()
 
-    def read(self, quiet=False):
+    def tell(self):
+        # always relative to uncompressed...
+        return self.fileobj.tell()
+
+    def seek(self, pos, whence=0):
+        self.fileobj.seek(pos, whence)
+
+    def fetch(self, quiet=False):
         name = ''
         comment = ''
         seq = ''
@@ -54,7 +77,7 @@ class FASTAFile(object):
                 if name and seq:
                     if eta:
                         eta.print_status(name)
-                    yield FASTARecord(name, comment, seq)
+                    yield FASTARead(name, comment, seq)
 
                 spl = re.split(r'[ \t]', line[1:], maxsplit=1)
                 name = spl[0]
@@ -70,7 +93,7 @@ class FASTAFile(object):
         if name and seq:
             if eta:
                 eta.print_status(name)
-            yield FASTARecord(name, comment, seq)
+            yield FASTARead(name, comment, seq)
 
         if eta:
             eta.done()

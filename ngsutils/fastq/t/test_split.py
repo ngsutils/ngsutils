@@ -23,10 +23,10 @@ class SplitTest(unittest.TestCase):
         fq1 = FASTQ('%s.1.fastq' % templ)
         fq2 = FASTQ('%s.2.fastq' % templ)
 
-        names1 = [x.name for x in fq1.fetch(quiet=True)]
+        names1 = [x.fullname for x in fq1.fetch(quiet=True)]
         self.assertEqual(names1, ['foo /1', 'foo /2', 'baz /1', 'baz /2'])
 
-        names2 = [x.name for x in fq2.fetch(quiet=True)]
+        names2 = [x.fullname for x in fq2.fetch(quiet=True)]
         self.assertEqual(names2, ['bar /1', 'bar /2'])
 
         fq1.close()
@@ -58,10 +58,10 @@ class SplitTest(unittest.TestCase):
         fq1 = FASTQ('%s.1.fastq' % templ)
         fq2 = FASTQ('%s.2.fastq' % templ)
 
-        names1 = [x.name.split()[0] for x in fq1.fetch(quiet=True)]
+        names1 = [x.name for x in fq1.fetch(quiet=True)]
         self.assertEqual(names1, ['foo', 'bar', 'baz'])
 
-        names2 = [x.name.split()[0] for x in fq2.fetch(quiet=True)]
+        names2 = [x.name for x in fq2.fetch(quiet=True)]
         self.assertEqual(names2, ['foo', 'bar', 'baz'])
 
         fq1.close()
@@ -83,13 +83,13 @@ class SplitTest(unittest.TestCase):
         fq2 = FASTQ('%s.2.fastq' % templ)
         fq3 = FASTQ('%s.3.fastq' % templ)
 
-        names1 = [x.name for x in fq1.fetch(quiet=True)]
+        names1 = [x.fullname for x in fq1.fetch(quiet=True)]
         self.assertEqual(names1, ['foo /1', 'bar /2'])
 
-        names2 = [x.name for x in fq2.fetch(quiet=True)]
+        names2 = [x.fullname for x in fq2.fetch(quiet=True)]
         self.assertEqual(names2, ['foo /2', 'baz /1'])
 
-        names3 = [x.name for x in fq3.fetch(quiet=True)]
+        names3 = [x.fullname for x in fq3.fetch(quiet=True)]
         self.assertEqual(names3, ['bar /1', 'baz /2'])
 
         fq1.close()

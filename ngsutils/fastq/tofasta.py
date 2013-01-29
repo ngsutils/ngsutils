@@ -11,14 +11,15 @@ import os
 import sys
 
 from ngsutils.fastq import FASTQ
+from ngsutils.support import FASTARead
 
 
 def export_fasta(fastq, qual=False, out=sys.stdout, quiet=False):
     for read in fastq.fetch(quiet=quiet):
         if not qual:
-            out.write('>%s\n%s\n' % (read.name, read.seq))
+            FASTARead(read.name, read.comment, read.seq).write(out)
         else:
-            out.write('>%s\n%s\n' % (read.name, ' '.join([str(ord(x) - 33) for x in read.qual])))
+            FASTARead(read.name, read.comment, ' '.join([str(ord(x) - 33) for x in read.qual])).write(out)
 
 
 def usage():

@@ -2,12 +2,42 @@
 import sys
 import os
 import gzip
+import re
 import math
 import collections
 from eta import ETA
 
 
-FASTQRead = collections.namedtuple('FASTQRead', 'name seq qual')
+class FASTQRead(collections.namedtuple('FASTQRead', 'name comment seq qual')):
+    @property
+    def fullname(self):
+        if self.comment:
+            return '%s %s' % (self.name, self.comment)
+        else:
+            return self.name
+
+    def __repr__(self):
+        if self.comment:
+            return '@%s %s\n%s\n+\n%s\n' % (self.name, self.comment, self.seq, self.qual)
+        else:
+            return '@%s\n%s\n+\n%s\n' % (self.name, self.seq, self.qual)
+
+    def subseq(self, start, end, comment=None):
+        if self.comment:
+            comment = '%s %s' % (self.comment, comment)
+
+        return FASTQRead(self.name, comment, self.seq[start:end], self.qual[start:end])
+
+    def clone(self, name=None, comment=None, seq=None, qual=None):
+        n = name if name else self.name
+        c = comment if comment else self.comment
+        s = seq if seq else self.seq
+        q = qual if qual else self.qual
+
+        return FASTQRead(n, c, s, q)
+
+    def write(self, out):
+        out.write(repr(self))
 
 
 class FASTQ(object):
@@ -44,13 +74,21 @@ class FASTQ(object):
         while True:
             try:
                 name = self.fileobj.next().strip()[1:]
+
+                spl = re.split(r'[ \t]', name, maxsplit=1)
+                name = spl[0]
+                if len(spl) > 1:
+                    comment = spl[1]
+                else:
+                    comment = ''
+
                 seq = self.fileobj.next().strip()
                 self.fileobj.next()
                 qual = self.fileobj.next().strip()
 
                 if eta:
                     eta.print_status(name)
-                yield FASTQRead(name, seq, qual)
+                yield FASTQRead(name, comment, seq, qual)
 
             except:
                 break

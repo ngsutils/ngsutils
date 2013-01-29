@@ -10,7 +10,7 @@ export HIDE_ETA="1"
 if [ "$1" == "" ]; then
     # run all tests...
     cd $DIR
-    if [ `which unit2` != "" ]; then
+    if [ "`which unit2`" != "" ]; then
         unit2 discover ngsutils 'test_*py' -v
     else
         python -m unittest2 discover ngsutils 'test_*py' -v

@@ -6,7 +6,7 @@ Tests for fastqutils fromfasta
 import unittest
 import StringIO
 
-from ngsutils.support import FASTAFile
+from ngsutils.support import FASTA
 import ngsutils.fastq.fromfasta
 
 
@@ -16,7 +16,7 @@ class FromFASTATest(unittest.TestCase):
 >foo_F3
 ACTGACTG
 ''')
-        fasta = FASTAFile(fileobj=fa)
+        fasta = FASTA(fileobj=fa)
         out = StringIO.StringIO('')
         ngsutils.fastq.fromfasta.merge_files(fasta, None, common_qual=';', out=out)
 
@@ -32,7 +32,7 @@ ACTGACTG
 >foo_F3
 ACTGACTG
 ''')
-        fasta = FASTAFile(fileobj=fa)
+        fasta = FASTA(fileobj=fa)
         out = StringIO.StringIO('')
         ngsutils.fastq.fromfasta.merge_files(fasta, None, common_qual=';', suffix='_bar', out=out)
 
@@ -52,8 +52,8 @@ ACTGACTG
 >bar_F3
 10 10 10 10 20 20 20 20
 ''')
-        fasta = FASTAFile(fileobj=fa)
-        qual = FASTAFile(fileobj=qa)
+        fasta = FASTA(fileobj=fa)
+        qual = FASTA(fileobj=qa)
         out = StringIO.StringIO('')
         self.assertRaises(ValueError, ngsutils.fastq.fromfasta.merge_files, *(fasta, qual), **{'out': out})
 
@@ -66,8 +66,8 @@ ACTGACTG
 >foo_F3
 10 10 10 20 20 20 20 A
 ''')
-        fasta = FASTAFile(fileobj=fa)
-        qual = FASTAFile(fileobj=qa)
+        fasta = FASTA(fileobj=fa)
+        qual = FASTA(fileobj=qa)
         out = StringIO.StringIO('')
         self.assertRaises(ValueError, ngsutils.fastq.fromfasta.merge_files, *(fasta, qual), **{'out': out})
 
@@ -80,8 +80,8 @@ ACTGACTG
 >foo_F3
 10 10 10 10 0 93 -5 99
 ''')
-        fasta = FASTAFile(fileobj=fa)
-        qual = FASTAFile(fileobj=qa)
+        fasta = FASTA(fileobj=fa)
+        qual = FASTA(fileobj=qa)
         out = StringIO.StringIO('')
         ngsutils.fastq.fromfasta.merge_files(fasta, qual, out=out)
 
@@ -101,8 +101,8 @@ T01230123
 >foo_F3
 10 10 10 10 20 20 20 20
 ''')
-        fasta = FASTAFile(fileobj=fa)
-        qual = FASTAFile(fileobj=qa)
+        fasta = FASTA(fileobj=fa)
+        qual = FASTA(fileobj=qa)
         out = StringIO.StringIO('')
         ngsutils.fastq.fromfasta.merge_files(fasta, qual, out=out)
 
@@ -118,7 +118,7 @@ T01230123
 >foo_F3
 T01230123
 ''')
-        fasta = FASTAFile(fileobj=fa)
+        fasta = FASTA(fileobj=fa)
         out = StringIO.StringIO('')
         ngsutils.fastq.fromfasta.merge_files(fasta, None, common_qual=';', out=out)
 

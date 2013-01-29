@@ -16,21 +16,16 @@ from ngsutils.fastq import FASTQ
 def fastq_tag(fastq, prefix='', suffix='', out=sys.stdout, quiet=False):
     if not prefix and not suffix:
         raise ValueError('Must pass at least one of: prefix, suffix.')
+
     for read in fastq.fetch(quiet):
-        spl = read.name.split(None, 1)
-        if len(spl) > 1:
-            desc = ' %s' % spl[1]
-        else:
-            desc = ''
-
         if prefix and suffix:
-            nname = '%s%s%s' % (prefix, spl[0], suffix)
+            nname = '%s%s%s' % (prefix, read.name, suffix)
         elif prefix:
-            nname = '%s%s' % (prefix, spl[0])
+            nname = '%s%s' % (prefix, read.name)
         elif suffix:
-            nname = '%s%s' % (spl[0], suffix)
+            nname = '%s%s' % (read.name, suffix)
 
-        out.write('@%s%s\n%s\n+\n%s\n' % (nname, desc, read.seq, read.qual))
+        read.clone(name=nname).write(out)
 
 
 def usage():

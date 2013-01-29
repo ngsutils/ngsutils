@@ -31,12 +31,12 @@ def fastq_trim(fastq, linker_5=None, linker_3=None, out=sys.stdout, pct_identity
         if not retval:
             removed += 1
         else:
-            n_name, n_seq, n_qual = retval
+            n_seq, n_qual = retval
 
             if len(read.qual) != n_qual:
                 trimmed += 1
 
-            out.write('@%s\n%s\n+\n%s\n' % (n_name, n_seq, n_qual))
+            read.clone(seq=n_seq, qual=n_qual).write(out)
 
     if not quiet:
         sys.stderr.write('Trimmed: %s\n' % trimmed)
@@ -44,6 +44,9 @@ def fastq_trim(fastq, linker_5=None, linker_3=None, out=sys.stdout, pct_identity
 
 
 def seq_trim(name, seq, qual, linker_5, linker_3, cs, sw, pct_identity, min_trim, min_len, verbose):
+    '''
+    Returns (newseq, newqual) if there is a match, otherwise: None
+    '''
     if verbose:
         sys.stderr.write('\nRead: %s\n    : %s\n' % (name, seq))
     left = 0
@@ -68,9 +71,9 @@ def seq_trim(name, seq, qual, linker_5, linker_3, cs, sw, pct_identity, min_trim
     s = seq[left:right]
     if len(s) >= min_len:
         if cs and len(seq) != len(qual) and left == 0:
-            return (name, s, qual[left:right - 1])
+            return (s, qual[left:right - 1])
         else:
-            return (name, s, qual[left:right])
+            return (s, qual[left:right])
     else:
         return None
 

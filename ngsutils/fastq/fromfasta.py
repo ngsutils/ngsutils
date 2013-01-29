@@ -16,7 +16,7 @@ Any '_F3' or '_R3' suffixes at the end of the read names will be removed.
 
 import sys
 import os
-from ngsutils.support import FASTAFile
+from ngsutils.support import FASTA
 
 
 def usage():
@@ -64,7 +64,7 @@ def merge_files(fasta, qual, suffix=None, common_qual=None, out=sys.stdout, quie
     if qual is None:
         qual = NullFile()
 
-    for frec, qrec in zip(fasta.read(quiet=quiet), qual.read(quiet=False)):
+    for frec, qrec in zip(fasta.fetch(quiet=quiet), qual.fetch(quiet=False)):
         if qrec:
             if frec.name != qrec.name:
                 raise ValueError("Mismatched names in FASTA and Qual files! (%s, %s)" % (frec.name, qrec.name))
@@ -111,11 +111,11 @@ def trim_name(name):
 
 class NullFile(object):
     '''
-    This object will act like a FASTAFile, but keep returning 'None'. This
-    lets this object be used with 'zip', just like a normal FASTAFile iterator
+    This object will act like a FASTA, but keep returning 'None'. This
+    lets this object be used with 'zip', just like a normal FASTA iterator
     '''
 
-    def read(self, *args, **kwargs):
+    def fetch(self, *args, **kwargs):
         yield None
 
     def close(self):
@@ -160,8 +160,8 @@ if __name__ == '__main__':
 
     sys.stderr.write('Merging %s and %s\n' % (os.path.basename(fasta), os.path.basename(qual) if qual else common_qual))
 
-    f = FASTAFile(fasta)
-    q = FASTAFile(qual) if qual else None
+    f = FASTA(fasta)
+    q = FASTA(qual) if qual else None
 
     merge_files(f, q, tag, common_qual)
     f.close()

@@ -38,16 +38,15 @@ def fastq_merge(fastqs, split_slashes=False, out=sys.stdout, quiet=False):
         cur_name = None
         for read in reads:
             name = read.name
-            desc = ''
+            comment = read.comment
+
             if split_slashes and '/' in name:
                 spl = name.split('/', 1)
                 name = spl[0]
-                desc = ' /%s' % spl[1]
-            else:
-                spl = name.split(None, 1)
-                name = spl[0]
-                if len(spl) > 1:
-                    desc = ' %s' % spl[1]
+                if read.comment:
+                    comment = '/%s %s' % (spl[1], read.comment)
+                else:
+                    comment = '/%s' % spl[1]
 
             if not cur_name:
                 cur_name = name
@@ -55,7 +54,7 @@ def fastq_merge(fastqs, split_slashes=False, out=sys.stdout, quiet=False):
                 if name != cur_name:
                     raise ValueError('Files are not paired! Expected: "%s", got "%s"!' % (cur_name, name))
 
-            out.write('@%s%s\n%s\n+\n%s\n' % (name, desc, read.seq, read.qual))
+            read.clone(name=name, comment=comment).write(out)
 
 
 def usage():

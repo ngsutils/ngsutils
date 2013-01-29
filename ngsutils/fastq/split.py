@@ -46,18 +46,17 @@ def fastq_split(fname, outbase, chunks, ignore_pairs=False, gz=False, count_fnam
     last_name = None
 
     for read in fastq.fetch(quiet=quiet):
-        sn = read.name.split()[0]
         if not is_paired:
             i += 1
-        elif sn != last_name:
+        elif read.name != last_name:
             i += 1
 
         if i >= len(outs):
             i = 0
 
-        last_name = sn
+        last_name = read.name
 
-        outs[i].write('@%s\n%s\n+\n%s\n' % (read.name, read.seq, read.qual))
+        read.write(outs[i])
 
     for out in outs:
         out.close()

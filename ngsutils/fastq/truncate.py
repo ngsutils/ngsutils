@@ -20,7 +20,7 @@ def fastq_truncate(fastq, max_len, out=sys.stdout, quiet=False):
             seq = read.seq[:max_len]
             qual = read.qual[:max_len]
 
-        out.write('@%s\n%s\n+\n%s\n' % (read.name, seq, qual))
+        read.clone(seq=seq, qual=qual).write(out)
 
 
 def usage():
