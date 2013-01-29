@@ -70,7 +70,7 @@ def fastx_barcode_split(reader, outtempl, barcodes, edits=0, pos=0, allow_revcom
 
         if not ismatch:
             missing += 1
-            comment = '#guess: %s, %s%s (%s, %s, %smm) %s' % (tag, barcodes[tag][0], '' if is_forward else 'rc', aln.q_pos, aln.extended_cigar_str, aln.mismatches, reason)
+            comment = '#guess: %s, %s%s (%s, %s, %smm) %s' % (tag, barcodes[tag][0], '' if is_forward else '[rc]', aln.q_pos, aln.extended_cigar_str, aln.mismatches, reason)
             record.subseq(None, None, comment).write(outs[''])
         else:
             matched += 1
