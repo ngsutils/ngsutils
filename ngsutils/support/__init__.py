@@ -30,8 +30,9 @@ class FASTARead(collections.namedtuple('FASTARecord', 'name comment seq')):
 
 
 class FASTA(object):
-    def __init__(self, fname=None, fileobj=None):
+    def __init__(self, fname=None, fileobj=None, qual=False):
         self.fname = fname
+        self.qual = qual
         if fileobj:
             self.fileobj = fileobj
         else:
@@ -88,7 +89,10 @@ class FASTA(object):
                 seq = ''
 
             else:
-                seq += line
+                if self.qual:
+                    seq = seq + ' ' + line
+                else:
+                    seq += line
 
         if name and seq:
             if eta:

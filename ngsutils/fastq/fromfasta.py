@@ -161,7 +161,7 @@ if __name__ == '__main__':
     sys.stderr.write('Merging %s and %s\n' % (os.path.basename(fasta), os.path.basename(qual) if qual else common_qual))
 
     f = FASTA(fasta)
-    q = FASTA(qual) if qual else None
+    q = FASTA(qual, qual=True) if qual else None
 
     merge_files(f, q, tag, common_qual)
     f.close()
