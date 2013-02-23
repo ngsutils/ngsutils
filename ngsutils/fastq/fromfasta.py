@@ -16,6 +16,7 @@ Any '_F3' or '_R3' suffixes at the end of the read names will be removed.
 
 import sys
 import os
+import itertools
 from ngsutils.support import FASTA
 
 
@@ -64,7 +65,7 @@ def merge_files(fasta, qual, suffix=None, common_qual=None, out=sys.stdout, quie
     if qual is None:
         qual = NullFile()
 
-    for frec, qrec in zip(fasta.fetch(quiet=quiet), qual.fetch(quiet=False)):
+    for frec, qrec in itertools.izip(fasta.fetch(quiet=quiet), qual.fetch(quiet=False)):
         if qrec:
             if frec.name != qrec.name:
                 raise ValueError("Mismatched names in FASTA and Qual files! (%s, %s)" % (frec.name, qrec.name))
