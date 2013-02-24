@@ -81,7 +81,30 @@ ACTGACTG
 10 10 10 10 0 93 -5 99
 ''')
         fasta = FASTA(fileobj=fa)
-        qual = FASTA(fileobj=qa)
+        qual = FASTA(fileobj=qa, qual=True)
+        out = StringIO.StringIO('')
+        ngsutils.fastq.fromfasta.merge_files(fasta, qual, out=out)
+
+        self.assertEqual(out.getvalue(), '''\
+@foo
+ACTGACTG
++
+++++!~!~
+''')
+
+    def testQualMultiLine(self):
+        fa = StringIO.StringIO('''\
+>foo_F3
+ACTG
+ACTG
+''')
+        qa = StringIO.StringIO('''\
+>foo_F3
+10 10 10 10
+0 93 -5 99
+''')
+        fasta = FASTA(fileobj=fa)
+        qual = FASTA(fileobj=qa, qual=True)
         out = StringIO.StringIO('')
         ngsutils.fastq.fromfasta.merge_files(fasta, qual, out=out)
 
