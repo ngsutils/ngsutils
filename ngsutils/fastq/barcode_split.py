@@ -139,13 +139,24 @@ def check_tags(barcodes, seq, edit, pos, allow_revcomp=False, verbose=False):
     it; otherwise, find the best match and return that.
 
     returns a multi-tuple:
-        valid, (tag, alignment, is_forward, reason_if_fail)
+        valid, (tag, valid_seq, edits, reason_if_fail)
 
     For the alignments, the reference is the barcode, the query is the subset of the read
     that is possibly the barcode (5'/3' subseq)
     '''
 
     best = None
+
+    # check perfect matches first...
+    # for tag in barcodes:
+    #     barcodeseq, orientation = barcodes[tag]
+    #     if orientation == '5':
+    #         if seq[:len(barcodeseq)] == barcodeseq:
+    #             return True, (tag, seq[len(barcodeseq):], 0, '')
+    #     else:
+    #         if seq[-len(barcodeseq):] == barcodeseq:
+    #             return True, (tag, seq[:-len(barcodeseq)], 0, '')
+
     for tag in barcodes:
         barcodeseq, orientation = barcodes[tag]
         if orientation == '5':
@@ -225,17 +236,18 @@ def is_fasta_file(fname):
     else:
         f = open(fname)
 
-    while True:
-        line = f.next()
-        if line[0] == '>':
-            f.close()
-            return True
-        elif line[0] == '@':
-            f.close()
-            return False
-
-    f.close()
-    raise ValueError("Unknown type of file!")
+    try:
+        while True:
+            line = f.next()
+            if line[0] == '>':
+                f.close()
+                return True
+            elif line[0] == '@':
+                f.close()
+                return False
+    except:
+        f.close()
+        raise ValueError("Unknown type of file!")
 
 if __name__ == '__main__':
     barcodes = None
