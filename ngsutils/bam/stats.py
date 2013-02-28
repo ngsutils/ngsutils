@@ -312,7 +312,7 @@ def bam_stats(infiles, gtf_file=None, region=None, delim=None, tags=[]):
                 validflags.add(flag)
                 maxsize = max(maxsize, len(flag_descriptions[flag]))
 
-    for flag in validflags:
+    for flag in sorted(validflags):
         sys.stdout.write("[0x%03x] %-*s" % (flag, maxsize, flag_descriptions[flag]))
         for stat in stats:
             sys.stdout.write('\t%s\t%0.2f%%' % (stat.flag_counts.counts[flag], (float(stat.flag_counts.counts[flag]) * 100 / stat.total)))
