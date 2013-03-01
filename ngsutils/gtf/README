@@ -8,4 +8,5 @@ Commands
     query       - Query a GTF file by coordinates
 
   Conversion
+    fromgff     - Convert a GFF file to GTF standardized fields
     tobed       - Convert a GFF/GTF file to BED format
