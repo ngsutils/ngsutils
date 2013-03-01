@@ -202,8 +202,8 @@ def check_tags(barcodes, seq, edit, pos, allow_revcomp=False, verbose=False):
 
 
 def usage():
-    sys.stderr.write('%s\n' % __doc__)
-    sys.stderr.write('''
+    sys.stdout.write('%s\n' % __doc__)
+    sys.stdout.write('''
 Usage: %s {options} barcodes.txt input.fastx{.gz} output_template
 
 Options:
