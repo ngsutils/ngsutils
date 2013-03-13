@@ -39,6 +39,8 @@ def fastq_unmerge(combined_fname, out_template, gz=False):
             outidx = 1
             read.write(outs[0])
 
+        last_read = read
+
     fq.close()
     for out in outs:
         out.close()
