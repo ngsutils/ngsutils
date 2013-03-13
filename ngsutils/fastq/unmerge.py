@@ -31,9 +31,9 @@ def fastq_unmerge(combined_fname, out_template, gz=False):
             outidx += 1
             if len(outs) < outidx:
                 if gz:
-                    outs.append(gzip.open('%s.%s.fastq.gz' % (combined_fname, outidx), 'w'))
+                    outs.append(gzip.open('%s.%s.fastq.gz' % (out_template, outidx), 'w'))
                 else:
-                    outs.append(open('%s.%s.fastq' % (combined_fname, outidx), 'w'))
+                    outs.append(open('%s.%s.fastq' % (out_template, outidx), 'w'))
             read.write(outs[outidx - 1])
         else:
             outidx = 1
