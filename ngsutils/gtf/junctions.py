@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 ## category General
-## desc Build a junction library from FASTA and GFF/GTF model
+## desc Build a junction library from FASTA and GTF model
 '''
 Takes a GTF gene model and a genome FASTA file and produces a splice-
 junction library in FASTA format.
@@ -44,7 +44,7 @@ def gtf_junctions(gtf, refname, fragment_size, min_size, max_exons=5, known=Fals
             continue
 
         if eta:
-            eta.print_status(extra='%s:%s %s #%s' % (gene.chrom, gene.start, gene.gene_name))
+            eta.print_status(extra='%s:%s %s' % (gene.chrom, gene.start, gene.gene_name))
 
         if known:
             for txpt in gene.transcripts:
