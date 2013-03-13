@@ -173,4 +173,4 @@ if __name__ == '__main__':
     if not gtf or not fasta:
         usage()
 
-    gtf_junctions(GTF(gtf), fasta, frag_size, min_size, known)
+    gtf_junctions(GTF(gtf), fasta, frag_size, min_size, known=known)
