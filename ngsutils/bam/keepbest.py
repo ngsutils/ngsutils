@@ -39,7 +39,7 @@ def _output_best(lastreads, outfile):
 
 def bam_keepbest(fname, outname, tag="AS"):
     bamfile = ngsutils.bam.bam_open(fname)
-    outfile = ngsutils.bam.bam_open(outname, "wb", template=bamfile)
+    outfile = ngsutils.bam.bam_open(outname, "w", template=bamfile)
 
     lastreads = []
     for read in ngsutils.bam.bam_iter(bamfile):
