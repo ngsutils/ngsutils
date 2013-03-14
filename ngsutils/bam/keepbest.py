@@ -43,10 +43,11 @@ def bam_keepbest(fname, outname, tag="AS"):
 
     lastreads = []
     for read in ngsutils.bam.bam_iter(bamfile):
-        if lastreads and read.name == lastreads[0][1].name:
+        if lastreads and read.qname == lastreads[0][1].qname:
             lastreads.append((get_read_tag_value(read, tag), read))
-        elif lastreads:
-            _output_best(lastreads, outfile)
+        else:
+            if lastreads:
+                _output_best(lastreads, outfile)
 
             lastreads = [(get_read_tag_value(read, tag), read), ]
 
@@ -85,7 +86,7 @@ if __name__ == "__main__":
             fname = arg
         elif not outname:
             if os.path.exists(arg):
-                sys.stderr.write("Output file: %s exists!")
+                sys.stderr.write("Output file: %s exists!" % arg)
                 usage()
 
             outname = arg
