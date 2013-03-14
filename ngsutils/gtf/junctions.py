@@ -96,15 +96,17 @@ class JunctionExporter(object):
             for j in xrange(len(exons) - i - 1):
                 # print '   [%s]' % (j+i+1),
                 # print '%s-%s' % exons[j+i+1]
-                for name, seq in self._extend_junction(seq3, '%s:%s-%s' % (chrom, frag_start, end), chrom, exons[j + i + 1:]):
+                for name, seq in self._extend_junction(seq3, '%s:%s-%s' % (chrom, frag_start, end), chrom, exons[j + i + 1:], frag_start):
                     if not name in self._junctions:
                         self._junctions.add(name)
                         self.out.write('>%s\n%s\n' % (name, seq))
 
-    def _extend_junction(self, seq, name, chrom, exons, counter=1):
+    def _extend_junction(self, seq, name, chrom, exons, frag_start, counter=1):
         if counter >= self.max_exons:
             return
         start, end = exons[0]
+        if start <= frag_start:
+            return
         frag_end = end
         if end - start > self.fragment_size:
             frag_end = start + self.fragment_size
@@ -117,7 +119,7 @@ class JunctionExporter(object):
             return
         elif len(exons) > 1 and counter + 1 < self.max_exons:
             for i in xrange(1, len(exons)):
-                for nn_name, nn_seq in self._extend_junction(newseq, newname, chrom, exons[i:], counter + 1):
+                for nn_name, nn_seq in self._extend_junction(newseq, newname, chrom, exons[i:], frag_start, counter + 1):
                     yield nn_name, nn_seq
 
 
