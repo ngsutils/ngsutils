@@ -96,4 +96,4 @@ if __name__ == "__main__":
     if not fname:
         usage()
 
-    bam_keepbest(fname, tag)
+    bam_keepbest(fname, outname, tag)
