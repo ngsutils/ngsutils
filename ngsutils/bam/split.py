@@ -56,6 +56,7 @@ def bam_split(infile, out_template, read_count=1000000, reference=False, quiet=F
                 fname = '%s.%s.bam' % (out_template, file_count)
 
             outfile = pysam.Samfile(fname, "wb", template=bamfile)
+            lastref = read.tif
 
         outfile.write(read)
         count += 1
