@@ -51,17 +51,27 @@ def bam_split(infile, out_template, read_count=1000000, reference=False, quiet=F
             file_count += 1
             count = 0
             if reference:
-                fname = '%s.%s.bam' % (out_template, bamfile.getrname(read.tid))
+                if read.tid >= 0:
+                    fname = '%s.%s.bam' % (out_template, bamfile.getrname(read.tid))
+                else:
+                    fname = None
             else:
                 fname = '%s.%s.bam' % (out_template, file_count)
 
-            outfile = pysam.Samfile(fname, "wb", template=bamfile)
-        outfile.write(read)
+            if fname:
+                outfile = pysam.Samfile(fname, "wb", template=bamfile)
+            else:
+                outfile = None
+
+        if outfile:
+            outfile.write(read)
+            count += 1
+
         lastref = read.tid
-        count += 1
 
     bamfile.close()
-    outfile.close()
+    if outfile:
+        outfile.close()
     if not quiet:
         sys.stderr.write("Split into %s files" % (file_count))
 
