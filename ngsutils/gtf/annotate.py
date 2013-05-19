@@ -14,6 +14,7 @@ Column counts start at 1.
 import sys
 import os
 from ngsutils.gtf import GTF
+import ngsutils.support
 
 
 def usage(msg=None):
@@ -40,7 +41,7 @@ def gtf_annotate(gtf, infile, ref_col=1, pos_col=2, gene_name=False, gene_locati
 
     numcols = 0
 
-    for line in open(infile):
+    for line in ngsutils.support.gzip_reader(infile):
         cols = line.strip().split('\t')
         if not numcols:
             numcols = len(cols)
