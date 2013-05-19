@@ -31,7 +31,7 @@ Options:
     -gene_name      Output gene_name (from GTF file)
     -gene_location  Output gene location (exon, inton, etc)
 
-    -header         The first line is a header (default: True)
+    -noheader       The first line is not a header (default: True)
 '''
     sys.exit(1)
 
@@ -112,7 +112,7 @@ if __name__ == '__main__':
     gene_name = False
     gene_location = False
 
-    header = False
+    header = True
 
     last = None
 
@@ -125,8 +125,8 @@ if __name__ == '__main__':
         elif last == '-pos':
             pos_col = int(arg) - 1
             last = None
-        elif arg == '-header':
-            header = True
+        elif arg == '-noheader':
+            header = False
 
         elif arg == '-gene_id':
             gene_id = True
