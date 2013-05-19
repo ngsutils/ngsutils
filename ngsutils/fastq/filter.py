@@ -295,6 +295,37 @@ class SizeFilter(object):
                     self.discard(name)
 
 
+class WhitelistFilter(object):
+    def __init__(self, parent, fname, verbose=False, discard=None):
+        self.parent = parent
+        self.fname = fname
+
+        self.altered = 0
+        self.removed = 0
+        self.kept = 0
+
+        self.verbose = verbose
+        self.discard = discard
+
+        self.whitelist = set()
+        with open(fname) as f:
+            for line in f:
+                self.whitelist.add(line.strip())
+
+    def filter(self):
+        for name, seq, qual in self.parent.filter():
+            if name in self.whitelist:
+                self.kept += 1
+                if self.verbose:
+                    sys.stderr.write('[Whitelist] %s (kept)\n' % (name,))
+                yield (name, seq, qual)
+            else:
+                if self.verbose:
+                    sys.stderr.write('[Whitelist] %s (removed)\n' % (name,))
+                self.removed += 1
+                if self.discard:
+                    self.discard(name)
+
 def usage():
     print __doc__
     print """Usage: fastqutils filter {opts} {filters} file.fastq{.gz}
@@ -323,6 +354,9 @@ Filters:
                               [mismatch] percentage (0.0-1.0)
 
   -paired                     Only keep reads that are correctly paired
+
+  -whitelist keeplist.txt     Only keep reads whose name is in the keeplist
+
 """
     sys.exit(1)
 
@@ -348,6 +382,9 @@ if __name__ == '__main__':
             last = None
         elif last == '-suffixqual':
             filters_config.append((SuffixQualFilter, arg))
+            last = None
+        elif last == '-whitelist':
+            filters_config.append((WhitelistFilter, arg))
             last = None
         elif last == '-qual':
             if not args:
@@ -380,7 +417,7 @@ if __name__ == '__main__':
         elif last == '-discard':
             discard_fname = arg
             last = None
-        elif arg in ['-wildcard', '-size', '-qual', '-suffixqual', '-trim', '-stats', '-discard']:
+        elif arg in ['-wildcard', '-size', '-qual', '-suffixqual', '-trim', '-stats', '-discard', '-whitelist']:
             last = arg
         elif arg == '-illumina':
             illumina = True
