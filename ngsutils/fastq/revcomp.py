@@ -32,7 +32,6 @@ def usage():
 
 if __name__ == '__main__':
     fname = None
-    maxlen = 0
 
     for arg in sys.argv[1:]:
         if arg == '-h':
@@ -45,5 +44,5 @@ if __name__ == '__main__':
         usage()
 
     fq = FASTQ(fname)
-    fastq_revcomp(fq, maxlen)
+    fastq_revcomp(fq)
     fq.close()
