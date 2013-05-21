@@ -121,7 +121,7 @@ def gzip_reader(fname, quiet=False, callback=None, done_callback=None):
             if callback:
                 extra = callback()
             else:
-                extra = None
+                extra = ''
 
             eta.print_status(extra=extra)
         yield line

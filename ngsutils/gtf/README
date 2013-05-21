@@ -3,10 +3,11 @@ Commands
     add_isoform - Appends isoform annotation from UCSC isoforms file
     add_reflink - Appends isoform/name annotation from RefSeq/refLink
     add_xref    - Appends name annotation from UCSC Xref file
+    annotate    - Annotate a tab-delimited file by chrom:pos
     genesize    - Extract genomic/transcript sizes for genes
-    junctions   - Build a junction library from FASTA and GFF/GTF model
+    junctions   - Build a junction library from FASTA and GTF model
     query       - Query a GTF file by coordinates
 
   Conversion
-    fromgff     - Convert a GFF file to GTF standardized fields
+    fromgff     - Converts GFF annotations to GTF
     tobed       - Convert a GFF/GTF file to BED format
