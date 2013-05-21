@@ -9,7 +9,7 @@ automatically. The barcode will be removed from read sequence (and quality
 score if FASTQ).
 
 barcode input format:
-tagname\tsequence\torientation (5 or 3)
+tagname\tsequence\torientation (5 or 3)\tstrip tag? (y/n, optional - default y)
 
 The output files will be named: out_template_tagname.fast[qa]
 
@@ -84,20 +84,25 @@ def fastx_barcode_split(reader, outtempl, barcodes, edits=0, pos=0, allow_revcom
 
             comment = '#%s%s (%s, %s)' % (tag, '' if is_forward else '[rc]', aln.q_pos, aln.mismatches,)
 
-            if is_forward:
-                if barcodes[tag][1] == '5':
-                    newrec = record.subseq(aln.q_end, None, comment)
-                else:
-                    subseqlen = len(barcodes[tag][0]) + edits + pos
-                    newrec = record.subseq(None, -1 * (subseqlen - aln.q_pos), comment)
-            else:
-                if barcodes[tag][1] == '5':
-                    subseqlen = len(barcodes[tag][0]) + edits + pos
-                    newrec = record.subseq(None, -1 * (subseqlen - aln.q_pos), comment)
-                else:
-                    newrec = record.subseq(aln.q_end, None, comment)
+            if not barcodes[tag][2]:
+                record.write(outs[tag])
 
-            newrec.write(outs[tag])
+            else:
+                if is_forward:
+                    if barcodes[tag][1] == '5':
+                        newrec = record.subseq(aln.q_end, None, comment)
+                    else:
+                        subseqlen = len(barcodes[tag][0]) + edits + pos
+                        newrec = record.subseq(None, -1 * (subseqlen - aln.q_pos), comment)
+                else:
+                    if barcodes[tag][1] == '5':
+                        subseqlen = len(barcodes[tag][0]) + edits + pos
+                        newrec = record.subseq(None, -1 * (subseqlen - aln.q_pos), comment)
+                    else:
+                        newrec = record.subseq(aln.q_end, None, comment)
+
+                newrec.write(outs[tag])
+
             tag_count[tag] += 1
 
     for tag in outs:
@@ -158,7 +163,7 @@ def check_tags(barcodes, seq, edit, pos, allow_revcomp=False, verbose=False):
     #             return True, (tag, seq[:-len(barcodeseq)], 0, '')
 
     for tag in barcodes:
-        barcodeseq, orientation = barcodes[tag]
+        barcodeseq, orientation, strip = barcodes[tag]
         if orientation == '5':
             testseq = seq[:len(barcodeseq) + edit + pos]
         else:
@@ -217,9 +222,10 @@ Options:
                     (non-strand specific sequencing) The read's orientation
                     will *not* be changed in the output file.
 
-  -gz               GZip compress the output files.
+  -gz               GZip compress the output files
 
   -stats            Output stats file (output_template.stats.txt)
+
 ''' % os.path.basename(sys.argv[0]))
     sys.exit(1)
 
@@ -285,7 +291,9 @@ if __name__ == '__main__':
                         first = False
                         continue
                     cols = line.strip().split('\t')
-                    barcodes[cols[0]] = (cols[1], cols[2])
+                    if len(cols) < 4:
+                        cols.append('y')
+                    barcodes[cols[0]] = (cols[1], cols[2], True if cols[3] in 'TtyY' else False)
         elif not fname and os.path.exists(arg):
             fname = arg
         elif not templ:
