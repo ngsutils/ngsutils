@@ -544,6 +544,9 @@ def region_pos_to_genomic_pos(name, start, cigar):
                         length -= (frag_end - cur_pos)
                     cur_pos = frag_end
                     frag_idx += 1
+                    if len(fragments) <= frag_idx:
+                        print 'ERROR converting: ', name, fragments 
+                        return (chrom, 0, chr_cigar)
                     frag_start, frag_end = fragments[frag_idx]
                     chr_cigar.append((3, frag_start - cur_pos))
                     cur_pos = frag_start
