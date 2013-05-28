@@ -144,11 +144,11 @@ class GTF(object):
         if chrom not in self._gene_order:
             return
 
-        if end < start:
-            raise ValueError('[gtf.find] Error: End must be smaller than start!')
-
         if not end:
             end = start
+
+        if end < start:
+            raise ValueError('[gtf.find] Error: End must be smaller than start!')
 
         for g_start, gid in self._gene_order[chrom]:
             g_start = self._genes[gid].start
