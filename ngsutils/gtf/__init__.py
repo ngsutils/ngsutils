@@ -42,12 +42,14 @@ class GTF(object):
             eta = None
         else:
             fobj = gzip_aware_open(filename)
-            eta = ETA(os.stat(filename).st_size, fileobj=fileobj)
+            eta = ETA(os.stat(filename).st_size, fileobj=fobj)
             cachefile = os.path.join(os.path.dirname(filename), '.%s.cache' % os.path.basename(filename))
 
         self._genes = {}
         self._pos = 0
         self._gene_order = {}
+        self._gene_names = {}
+        self._gene_ids = {}
         warned = False
 
         if cache_enabled and os.path.exists(cachefile):
@@ -91,6 +93,15 @@ class GTF(object):
 
                 if not gid in self._genes or chrom != self._genes[gid].chrom:
                     self._genes[gid] = _GTFGene(gid, chrom, source, **attributes)
+                    if 'gene_name' in attributes:
+                        gene_name = attributes['gene_name']
+                        if not gene_name in self._gene_names:
+                            self._gene_names[gene_name] = [gid]
+                        else:
+                            self._gene_names[gene_name].append(gid)
+
+                        if gid != attributes['gene_id']:
+                            self._gene_ids[attributes['gene_id']] = gid
 
                 self._genes[gid].add_feature(attributes['transcript_id'], feature, start, end, strand)
 
@@ -117,9 +128,11 @@ class GTF(object):
         started_t = datetime.datetime.now()
         try:
             with open(cachefile) as cache:
-                version, genes, gene_order = pickle.load(cache)
+                version, genes, gene_order, gene_names, gene_ids = pickle.load(cache)
                 if version == GTF._version:
                     self._genes, self._gene_order = genes, gene_order
+                    self._gene_names = gene_names
+                    self._gene_ids = gene_ids
                     sys.stderr.write('(%s sec)\n' % (datetime.datetime.now() - started_t).seconds)
                 else:
                     sys.stderr.write('Error reading cached file... Processing original file.\n')
@@ -131,7 +144,7 @@ class GTF(object):
     def _write_cache(self, cachefile):
         sys.stderr.write('(saving GTF cache)...')
         with open(cachefile, 'w') as cache:
-            pickle.dump((GTF._version, self._genes, self._gene_order), cache)
+            pickle.dump((GTF._version, self._genes, self._gene_order, self._gene_names, self._gene_ids), cache)
         sys.stderr.write('\n')
 
     def fsize(self):
@@ -144,11 +157,11 @@ class GTF(object):
         if chrom not in self._gene_order:
             return
 
-        if end < start:
-            raise ValueError('[gtf.find] Error: End must be smaller than start!')
-
         if not end:
             end = start
+
+        if end < start:
+            raise ValueError('[gtf.find] Error: End must be smaller than start!')
 
         for g_start, gid in self._gene_order[chrom]:
             g_start = self._genes[gid].start
@@ -165,6 +178,19 @@ class GTF(object):
                 # gene is completely inside boundary
                 yield self._genes[gid]
         return
+
+    def get_by_id(self, gene_id):
+        if gene_id in self._gene_ids:
+            return self._genes[self._gene_ids[gene_id]]
+        elif gene_id in self._genes:
+            return self._genes[gene_id]
+
+        return None
+
+    def get_by_name(self, gene_name):
+        if gene_name in self._gene_names:
+            for g in self._genes[self._gene_names[gene_name]]:
+                yield g
 
     @property
     def genes(self):

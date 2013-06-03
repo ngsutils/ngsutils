@@ -38,7 +38,6 @@ Options:
 
 
 def gtf_annotate(gtf, infile, ref_col=1, pos_col=2, gene_name=False, gene_location=False, gene_id=False, transcript_id=False, header=True):
-
     numcols = 0
 
     for line in ngsutils.support.gzip_reader(infile):
@@ -76,7 +75,7 @@ def gtf_annotate(gtf, infile, ref_col=1, pos_col=2, gene_name=False, gene_locati
                     txpt_ids.append(txpt.transcript_id)
                     found = False
                     for start, end in txpt.exons:
-                        if start < pos < end:
+                        if start <= pos <= end:
                             if pos < txpt.start_codon:
                                 locs.append("5'UTR")
                             elif pos > txpt.stop_codon:
@@ -101,6 +100,7 @@ def gtf_annotate(gtf, infile, ref_col=1, pos_col=2, gene_name=False, gene_locati
                 cols.append(','.join(locs))
 
         print '\t'.join(cols)
+
 
 if __name__ == '__main__':
     gtffile = None
@@ -128,7 +128,6 @@ if __name__ == '__main__':
             last = None
         elif arg == '-noheader':
             header = False
-
         elif arg == '-gene_id':
             gene_id = True
         elif arg == '-transcript_id':
@@ -137,7 +136,6 @@ if __name__ == '__main__':
             gene_name = True
         elif arg == '-gene_location':
             gene_location = True
-
         elif arg in ['-ref', '-pos']:
             last = arg
         elif not gtffile and os.path.exists(arg):
@@ -156,4 +154,3 @@ if __name__ == '__main__':
 
     gtf = GTF(gtffile)
     gtf_annotate(gtf, infile, ref_col, pos_col, gene_name, gene_location, gene_id, transcript_id, header)
-
