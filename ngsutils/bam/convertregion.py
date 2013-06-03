@@ -94,7 +94,10 @@ def bam_convertregion(infile, outfname, chrom_sizes, enforce_overlap=False, quie
             chrom, pos, cigar = ngsutils.bam.region_pos_to_genomic_pos(bamfile.getrname(read.tid), read.pos, read.cigar)
 
             read.pos = pos
-            read.cigar = cigar
+            try:
+                read.cigar = cigar
+            except:
+                print "Error trying to set CIGAR: %s to %s (%s, %s, %s)" % (read.cigar, cigar, read.qname, bamfile.getrname(read.tid), read.pos)
 
             chrom_found = False
             for i, name in enumerate(outfile.references):

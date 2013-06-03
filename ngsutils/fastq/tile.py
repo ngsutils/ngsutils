@@ -47,11 +47,11 @@ def fastq_tile(fname, outbase, length, offset, gz=False, quiet=False):
         pos = 0
         while pos + length < len(read.seq):
             if len(outs) <= out_idx:
-                fobj, tmp, fn = _open_file(outbase, out_idx + 1, gz, quiet)
+                fobj, tmp, fn = _open_file(outbase, out_idx, gz, quiet)
                 outs.append(fobj)
                 fnames.append((tmp, fn))
 
-            read.subseq(pos, pos + length).write(outs[out_idx])
+            read.subseq(pos, pos + length, comment="#tile:%s,%s" % (pos, pos + length)).write(outs[out_idx])
             pos += offset
             out_idx += 1
 
@@ -84,28 +84,33 @@ Options:
 if __name__ == '__main__':
     fname = None
     outtemplate = None
-    chunks = 0
-    ignore_pairs = False
     gz = False
+    length = 35
+    offset = 10
     last = None
 
     for arg in sys.argv[1:]:
         if arg == '-h':
             usage()
-        if arg == '-ignorepaired':
-            ignore_pairs = True
+        if last == '-len':
+            length = int(arg)
+            last = None
+        elif last == '-offset':
+            offset = int(arg)
+            last = none
         elif arg == '-gz':
             gz = True
+        elif arg in ['-len', '-offset']:
+            last = arg
         elif not fname:
             if not os.path.exists(arg):
                 usage("Missing file: %s" % arg)
             fname = arg
         elif not outtemplate:
             outtemplate = arg
-        else:
-            chunks = int(arg)
 
-    if not fname or not chunks or not outtemplate:
+    if not fname or not outtemplate:
         usage()
 
-    fastq_split(fname, outtemplate, chunks, ignore_pairs, gz)
+    fastq_tile(fname, outtemplate, length, offset, gz)
+
