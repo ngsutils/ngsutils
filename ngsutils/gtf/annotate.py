@@ -91,13 +91,13 @@ def gtf_annotate(gtf, infile, ref_col=1, pos_col=2, gene_name=False, gene_locati
                 locs = ['intergenic']
 
             if gene_id:
-                cols.append(','.join(gene_ids))
+                cols.append(','.join(gene_ids) if gene_ids else '')
             if transcript_id:
-                cols.append(','.join(txpt_ids))
+                cols.append(','.join(txpt_ids) if txpt_ids else '')
             if gene_name:
-                cols.append(','.join(gene_names))
+                cols.append(','.join(gene_names) if gene_names else '')
             if gene_location:
-                cols.append(','.join(locs))
+                cols.append(','.join(locs) if locs else '')
 
         print '\t'.join(cols)
 
