@@ -44,6 +44,8 @@ def export_read(bamfile, read, fields, out=sys.stdout):
                 cols.append('?')
         elif field == '-pos':
             cols.append(read.pos + 1)  # output 1-based
+        elif field == '-strand':
+            cols.append('-' if read.is_reverse else '+')
         elif field == '-cigar':
             if read.cigar:
                 cols.append(cigar_tostr(read.cigar))
@@ -106,6 +108,7 @@ Fields:
   -name          Read name
   -ref           Mapped reference (chrom)
   -pos           Mapped position (1-based)
+  -strand        Mapped strand (+/-)
   -cigar         CIGAR alignment string
   -flags         Mapping flags (base 10 number)
   -seq           Sequence
