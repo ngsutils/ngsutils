@@ -54,13 +54,13 @@ class FilterTest(unittest.TestCase):
     def testUniqueStartRev(self):
         'Uniq starts Rev'
 
-        read1 = MockRead('foo1', tid=0, pos=1, seq='TAAAAAAAAAA', is_reverse=True, cigar='11M')
-        read2 = MockRead('foo2', tid=0, pos=1, seq='CAAAAAAAAAA', is_reverse=True, cigar='11M')
-        read3 = MockRead('foo3', tid=0, pos=1, seq='AAAAAAAAAC', is_reverse=True, cigar='10M')
-        read4 = MockRead('foo4', tid=0, pos=4, seq='AAAAAAAAAC', is_reverse=True, cigar='10M')
-        read5 = MockRead('foo5', tid=0, pos=4, seq='AAAAAAAAAC', is_reverse=True, cigar='5M1D5M')
-        read6 = MockRead('foo6', tid=0, pos=150000, seq='CAAAAAAAAAA', is_reverse=True, cigar='11M')
-        read7 = MockRead('foo7', tid=0, pos=150000, seq='TAAAAAAAAAA', is_reverse=True, cigar='11M')
+        read1 = MockRead('foo1', tid=0, pos=1, seq='TAAAAAAAAAA', is_reverse=True, aend=11)
+        read2 = MockRead('foo2', tid=0, pos=1, seq='CAAAAAAAAAA', is_reverse=True, aend=11)
+        read3 = MockRead('foo3', tid=0, pos=1, seq='AAAAAAAAAC', is_reverse=True, aend=10)
+        read4 = MockRead('foo4', tid=0, pos=4, seq='AAAAAAAAAC', is_reverse=True, aend=14)
+        read5 = MockRead('foo5', tid=0, pos=4, seq='AAAAAAAAAC', is_reverse=True, aend=15)
+        read6 = MockRead('foo6', tid=0, pos=150000, seq='CAAAAAAAAAA', is_reverse=True, aend=150011)
+        read7 = MockRead('foo7', tid=0, pos=150000, seq='TAAAAAAAAAA', is_reverse=True, aend=150011)
 
         uniqpos = ngsutils.bam.filter.UniqueStart()
 

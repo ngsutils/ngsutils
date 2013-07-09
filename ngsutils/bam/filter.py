@@ -99,7 +99,7 @@ Common tags to filter by:
 import os
 import sys
 import pysam
-from ngsutils.bam import bam_iter, calc_reverse_read_startpos
+from ngsutils.bam import bam_iter
 from ngsutils.support.dbsnp import DBSNP
 from ngsutils.bam import read_calc_mismatches, read_calc_mismatches_ref, read_calc_mismatches_gen, read_calc_variations
 from ngsutils.bed import BedFile
@@ -176,7 +176,7 @@ class UniqueStart(object):
             self.last_rev_pos = -1
 
         if read.is_reverse:
-            start_pos = calc_reverse_read_startpos(read.pos, read.cigar)
+            start_pos = read.aend
 
             # clean up hash if necesary
             # Allow up to 10k over, to balance cleaning up the rev_pos hash

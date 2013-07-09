@@ -147,43 +147,6 @@ def cigar_read_len(cigar):
     return read_pos
 
 
-def calc_reverse_read_startpos(pos, cigar):
-    '''
-    >>> calc_reverse_read_startpos(0, cigar_fromstr('8M'))
-    8
-    >>> calc_reverse_read_startpos(0, cigar_fromstr('8M100N8M'))
-    116
-    >>> calc_reverse_read_startpos(0, cigar_fromstr('8M10I8M'))
-    16
-    >>> calc_reverse_read_startpos(0, cigar_fromstr('8M10D8M'))
-    26
-    '''
-
-    read_pos = pos
-
-    for op, length in cigar:
-        if op == 0:  # M
-            read_pos += length
-        elif op == 1:  # I
-            pass
-        elif op == 2:  # D
-            read_pos += length
-        elif op == 3:  # N
-            read_pos += length
-        elif op == 4:  # S
-            pass
-        elif op == 5:  # H
-            pass
-        elif op == 7:  # =
-            pass
-        elif op == 8:  # X
-            pass
-        else:
-            raise ValueError("Unsupported CIGAR operation: %s" % op)
-
-    return read_pos
-
-
 def read_calc_mismatches(read):
     inserts = 0
     deletions = 0
