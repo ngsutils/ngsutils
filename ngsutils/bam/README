@@ -11,6 +11,7 @@ Commands
     expressed     - Finds regions expressed in a BAM file
     extract       - Extracts reads based on regions in a BED file
     filter        - Removes reads from a BAM file based on criteria
+    keepbest      - Parses BAM file and keeps the best mapping for reads that have multiple mappings
     merge         - Combine multiple BAM files together (taking best-matches)
     renamepair    - Postprocesses a BAM file to rename pairs that have an extra /N value
     split         - Splits a BAM file into smaller pieces

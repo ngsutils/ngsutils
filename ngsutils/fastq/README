@@ -4,11 +4,14 @@ Commands
     filter        - Filter out reads using a number of metrics
     merge         - Merges paired FASTQ files into one file
     names         - Write out the read names
+    revcomp       - Reverse compliment a FASTQ file
     split         - Splits a FASTQ file into N chunks
     stats         - Calculate summary statistics for a FASTQ file
     tag           - Adds a prefix or suffix to the read names in a FASTQ file
+    tile          - Splits long FASTQ reads into smaller (tiled) chunks
     trim          - Remove 5' and 3' linker sequences (S/W aligned)
     truncate      - Truncates reads to a maximum length
+    unmerge       - Unmerged paired FASTQ files into two (or more) files
 
   Conversion
     convertqual   - Converts qual values from Illumina to Sanger scale
