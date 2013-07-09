@@ -97,7 +97,7 @@ Common tags to filter by:
 import os
 import sys
 import pysam
-from ngsutils.bam import bam_iter
+from ngsutils.bam import bam_iter, calc_reverse_read_startpos
 from ngsutils.support.dbsnp import DBSNP
 from ngsutils.bam import read_calc_mismatches, read_calc_mismatches_ref, read_calc_mismatches_gen, read_calc_variations
 from ngsutils.bed import BedFile
@@ -119,8 +119,6 @@ This will remove all unmapped reads, as well as any reads that have an AS:i
 value less than 1000.
 """
     sys.exit(1)
-
-bam_cigar = ['M', 'I', 'D', 'N', 'S', 'H', 'P']
 
 
 class Unique(object):
@@ -161,16 +159,51 @@ class Unique(object):
 
 class UniqueStart(object):
     def __init__(self):
-        self.last_pos = None
+        self.last_tid = None
+        self.last_fwd_pos = -1
+        self.rev_pos_list = None
 
     def __repr__(self):
         return "uniq_start"
 
     def filter(self, bam, read):
-        if self.last_pos != (read.tid, read.pos):
-            self.last_pos = (read.tid, read.pos)
-            return True
-        return False
+        if self.last_tid is None or self.last_tid != read.tid:
+            self.last_tid = read.tid
+            self.rev_pos = set()
+            self.last_fwd_pos = -1
+            self.last_rev_pos = -1
+
+        if read.is_reverse:
+            start_pos = calc_reverse_read_startpos(read.pos, read.cigar)
+
+            # clean up hash if necesary
+            # Allow up to 10k over, to balance cleaning up the rev_pos hash
+            # and memory
+            if read.pos > (self.last_rev_pos + 10000):
+                self.last_rev_pos = start_pos
+                del_list = []
+                for k in self.rev_pos:
+                    if k < read.pos:
+                        del_list.append(k)
+
+                for k in del_list:
+                    self.rev_pos.remove(k)
+
+            if not start_pos in self.rev_pos:
+                self.rev_pos.add(start_pos)
+
+                return True
+            return False
+        else:
+            if read.pos != self.last_fwd_pos:
+                self.last_fwd_pos = read.pos
+                return True
+            return False
+
+        # if self.last_pos != (read.tid, read.pos):
+        #     self.last_pos = (read.tid, read.pos)
+        #     return True
+        # return False
 
     def close(self):
         pass

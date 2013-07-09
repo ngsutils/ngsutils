@@ -51,6 +51,27 @@ class FilterTest(unittest.TestCase):
         self.assertFalse(uniqpos.filter(None, read2))
         self.assertTrue(uniqpos.filter(None, read3))
 
+    def testUniqueStartRev(self):
+        'Uniq starts Rev'
+
+        read1 = MockRead('foo1', tid=0, pos=1, seq='TAAAAAAAAAA', is_reverse=True, cigar='11M')
+        read2 = MockRead('foo2', tid=0, pos=1, seq='CAAAAAAAAAA', is_reverse=True, cigar='11M')
+        read3 = MockRead('foo3', tid=0, pos=1, seq='AAAAAAAAAC', is_reverse=True, cigar='10M')
+        read4 = MockRead('foo4', tid=0, pos=4, seq='AAAAAAAAAC', is_reverse=True, cigar='10M')
+        read5 = MockRead('foo5', tid=0, pos=4, seq='AAAAAAAAAC', is_reverse=True, cigar='5M1D5M')
+        read6 = MockRead('foo6', tid=0, pos=150000, seq='CAAAAAAAAAA', is_reverse=True, cigar='11M')
+        read7 = MockRead('foo7', tid=0, pos=150000, seq='TAAAAAAAAAA', is_reverse=True, cigar='11M')
+
+        uniqpos = ngsutils.bam.filter.UniqueStart()
+
+        self.assertTrue(uniqpos.filter(None, read1))
+        self.assertFalse(uniqpos.filter(None, read2))
+        self.assertTrue(uniqpos.filter(None, read3))
+        self.assertTrue(uniqpos.filter(None, read4))
+        self.assertTrue(uniqpos.filter(None, read5))
+        self.assertTrue(uniqpos.filter(None, read6))
+        self.assertFalse(uniqpos.filter(None, read7))
+
     def testBlacklist(self):
         'Blacklist'
         tmp_fname = os.path.join(os.path.dirname(__file__), 'tmp_list')
