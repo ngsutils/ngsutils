@@ -1,0 +1,95 @@
+#!/usr/bin/env python
+## category General
+## desc Calculate the inner mate-pair distance from two BAM files
+'''
+Calculate the inner mate-pair distance from two BAM files
+
+With paired-end reads, knowing the inner mate-pair distance is key for some
+downstream analyses or mapping. This value can be estimated using wet-lab
+techniques, but can also be found empirically. If you map each fragment
+separately to a common reference (genome or transcriptome), this command will
+calculate the average distance between the fragments.
+
+Reads where one (or both) fragment is unmapped are ignored, as are pairs that
+map to different references.
+
+(reference) ===============================================================
+                 (frag 1) *********                      ******** (frag 2)
+                                   |--------------------|
+                                  inner mate-pair distance
+'''
+import sys
+import os
+from ngsutils.bam import bam_iter
+from ngsutils.support.stats import counts_mean_stdev
+import pysam
+
+
+def bam_innerdist(bam1, bam2, out=sys.stdout):
+    iter1 = bam_iter(bam1)
+    iter2 = bam_iter(bam2, quiet=True)
+
+    distances = {}
+    total = 0
+    proper = 0
+
+    while True:
+        try:
+            read1 = iter1.next()
+            read2 = iter2.next()
+        except StopIteration:
+            break
+
+        if read1.qname != read2.qname:
+            raise ValueError("Error: BAM files aren't properly paired! (%s, %s)\n" % (read1.qname, read2.qname))
+
+        total += 1
+
+        if read1.is_unmapped or read2.is_unmapped or read1.tid != read2.tid:
+            continue
+
+        proper += 1
+        dist = read2.pos - read1.aend
+
+        if not dist in distances:
+            distances[dist] = 1
+        else:
+            distances[dist] += 1
+
+    mean, stdev = counts_mean_stdev(distances)
+
+    return total, proper, mean, stdev
+
+
+def usage():  # pragma: no cover
+    print __doc__
+    print """\
+Usage: bamutils innerdist filename1.bam filename2.bam
+
+Note: BAM files must be paired and they must be mapped to the
+      same reference and reads must be in the same order.
+
+"""
+
+if __name__ == "__main__":  # pragma: no cover
+    if len(sys.argv) < 3 or not os.path.exists(sys.argv[1]) or not os.path.exists(sys.argv[2]):
+        usage()
+        sys.exit(1)
+
+    bam1 = pysam.Samfile(sys.argv[1], "rb")
+    bam2 = pysam.Samfile(sys.argv[2], "rb")
+
+    try:
+        total, proper, mean, stdev = bam_innerdist(bam1, bam2)
+    except ValueError, e:
+        print e
+        sys.exit(1)
+    finally:
+        bam1.close()
+        bam2.close()
+
+    print "Total reads:\t%s" % total
+    print "Proper pairs:\t%s" % proper
+    print ""
+    print "Mean:\t" % mean
+    print "Stdev:\t" % stdev

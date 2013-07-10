@@ -47,7 +47,7 @@ def _matches(valid, queries):
 
 
 class MockBam(object):
-    def __init__(self, refs, lengths=None):
+    def __init__(self, refs, lengths=None, insert_order=False):
         self._refs = refs[:]
         self._ref_lengths = []
         if lengths:
@@ -63,6 +63,9 @@ class MockBam(object):
         self.__iter = None
         self.__pos = 0
 
+        self._insert_order = insert_order
+        self._read_insert_order = []
+
     def seek(self, pos):
         self.__pos = pos
 
@@ -70,10 +73,14 @@ class MockBam(object):
         return self.__pos
 
     def write(self, read):
-        k = (read.tid, read.pos, len(self._reads))
-        self._reads[k] = read
-        self._read_keys.append(k)
-        self._read_keys.sort()
+        if not self._insert_order:
+            k = (read.tid, read.pos, len(self._reads))
+            self._reads[k] = read
+            self._read_keys.append(k)
+            self._read_keys.sort()
+        else:
+            self._reads[read.qname] = read
+            self._read_keys.append(read.qname)
 
         if self._ref_lengths[read.tid] < read.aend:
             self._ref_lengths[read.tid] = read.aend
@@ -83,6 +90,7 @@ class MockBam(object):
             read = MockRead(read, *args, **kwargs)
 
         self.write(read)
+        self._read_insert_order.append(read.qname)
         return self
 
     def __iter__(self):

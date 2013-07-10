@@ -46,6 +46,40 @@ def mean_stdev(l):
     return (mean, stdev)
 
 
+def counts_mean_stdev(d):
+    '''
+
+    calc mean / stdev when data is stored as counts in a dictionary
+
+    Ex:
+        { 1: 4, 2: 1, 3: 4 } = [1, 1, 1, 1, 2, 3, 3, 3, 3]
+
+    >>> counts_mean_stdev({ 1: 4, 2: 1, 3: 4 })
+    (2.0, 1.0)
+
+    '''
+
+    acc = 0
+    count = 0
+    for k in d:
+        acc += k * d[k]
+        count += d[k]
+
+    mean = float(acc) / count
+
+    acc = 0
+    for k in d:
+        acc += (((k - mean) ** 2) * d[k])
+
+    if count > 2:
+        stdev = math.sqrt(float(acc) / (count - 1))
+    else:
+        stdev = 0.0
+
+    return (mean, stdev)
+
+
+
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
