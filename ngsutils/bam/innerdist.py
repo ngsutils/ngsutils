@@ -33,15 +33,25 @@ def bam_innerdist(bam1, bam2, out=sys.stdout):
     total = 0
     proper = 0
 
+    read1_last = None
+    read2_last = None
+    read1 = None
+    read2 = None
+
     while True:
         try:
-            read1 = iter1.next()
-            read2 = iter2.next()
+            while not read1 or read1_last == read1.qname:
+                read1 = iter1.next()
+            while not read2 or read2_last == read2.qname:
+                read2 = iter2.next()
         except StopIteration:
             break
 
         if read1.qname != read2.qname:
             raise ValueError("Error: BAM files aren't properly paired! (%s, %s)\n" % (read1.qname, read2.qname))
+
+        read1_last = read1.qname
+        read2_last = read2.qname
 
         total += 1
 
