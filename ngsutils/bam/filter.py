@@ -214,10 +214,10 @@ class UniqueStart(object):
 class Blacklist(object):
     def __init__(self, fname):
         self.fname = fname
-        self.notallowed = []
+        self.notallowed = set()
         with open(fname) as f:
             for line in f:
-                self.notallowed.append(line.strip().split()[0])
+                self.notallowed.add(line.strip().split()[0])
 
     def filter(self, bam, read):
         return read.qname not in self.notallowed
@@ -232,10 +232,10 @@ class Blacklist(object):
 class Whitelist(object):
     def __init__(self, fname):
         self.fname = fname
-        self.allowed = []
+        self.allowed = set()
         with open(fname) as f:
             for line in f:
-                self.allowed.append(line.strip().split()[0])
+                self.allowed.add(line.strip().split()[0])
 
     def filter(self, bam, read):
         return read.qname in self.allowed
