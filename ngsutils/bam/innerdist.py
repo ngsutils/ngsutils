@@ -14,9 +14,25 @@ Reads where one (or both) fragment is unmapped are ignored, as are pairs that
 map to different references.
 
 (reference) ===============================================================
-                 (frag 1) *********                      ******** (frag 2)
+                 (frag 1) >>>>>>>>>                      <<<<<<<< (frag 2)
                                    |--------------------|
                                   inner mate-pair distance
+
+This will also work if the reads are aligned in the opposite orientation:
+
+(reference) ===============================================================
+                 (frag 2) >>>>>>>>>                      <<<<<<<< (frag 1)
+                                   |--------------------|
+                                  inner mate-pair distance
+
+or if they overlap:
+
+(reference) ===============================================================
+                           (frag 1) >>>>>>>>>
+                                         <<<<<<<< (frag 2)
+                                        |----|
+                                  inner mate-pair distance (negative)
+
 '''
 import sys
 import os
@@ -32,6 +48,13 @@ def bam_innerdist(bam1, bam2, out=sys.stdout):
     distances = {}
     total = 0
     proper = 0
+
+    orientation_count = {
+        '+/-': 0,
+        '-/+': 0,
+        '+/+': 0,
+        '-/-': 0,
+    }
 
     read1_last = None
     read2_last = None
@@ -59,16 +82,24 @@ def bam_innerdist(bam1, bam2, out=sys.stdout):
             continue
 
         proper += 1
-        dist = read2.pos - read1.aend
+
+        if read1.pos < read2.pos:
+            dist = read2.pos - read1.aend
+        else:
+            dist = read1.pos - read2.aend
 
         if not dist in distances:
             distances[dist] = 1
         else:
             distances[dist] += 1
 
+        orientation = '%s/%s' % ('-' if read1.is_reverse else '+', '-' if read2.is_reverse else '+')
+
+        orientation_count[orientation] += 1
+
     mean, stdev = counts_mean_stdev(distances)
 
-    return total, proper, mean, stdev
+    return total, proper, mean, stdev, orientation_count
 
 
 def usage():  # pragma: no cover
@@ -90,7 +121,7 @@ if __name__ == "__main__":  # pragma: no cover
     bam2 = pysam.Samfile(sys.argv[2], "rb")
 
     try:
-        total, proper, mean, stdev = bam_innerdist(bam1, bam2)
+        total, proper, mean, stdev, o_count = bam_innerdist(bam1, bam2)
     except ValueError, e:
         print e
         sys.exit(1)
@@ -103,3 +134,8 @@ if __name__ == "__main__":  # pragma: no cover
     print ""
     print "Mean:\t%s" % mean
     print "Stdev:\t%s" % stdev
+
+    print "Read orientation:"
+    for o in o_count:
+        if o_count[o]:
+            print "  %s:\t%s" % (o, o_count[o])
