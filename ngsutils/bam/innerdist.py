@@ -101,5 +101,5 @@ if __name__ == "__main__":  # pragma: no cover
     print "Total reads:\t%s" % total
     print "Proper pairs:\t%s" % proper
     print ""
-    print "Mean:\t" % mean
-    print "Stdev:\t" % stdev
+    print "Mean:\t%s" % mean
+    print "Stdev:\t%s" % stdev
