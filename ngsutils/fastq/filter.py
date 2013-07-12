@@ -13,8 +13,11 @@ from ngsutils.fastq import FASTQ
 
 
 def fastq_filter(filter_chain, stats_fname=None, out=sys.stdout, quiet=False):
-    for name, seq, qual in filter_chain.filter():
-        out.write("@%s\n%s\n+\n%s\n" % (name, seq, qual))
+    for name, comment, seq, qual in filter_chain.filter():
+        if comment and comment[0] != ' ':
+            comment = ' %s' % comment
+
+        out.write("@%s%s\n%s\n+\n%s\n" % (name, comment, seq, qual))
 
     stats = []
     p = filter_chain
@@ -51,7 +54,7 @@ class FASTQReader(object):
             self.kept += 1
             if self.verbose:
                 sys.stderr.write('[FASTQ] Read: %s\n' % read.name)
-            yield read.name, read.seq, read.qual
+            yield read.name, read.comment, read.seq, read.qual
 
 
 class TrimFilter(object):
@@ -69,7 +72,7 @@ class TrimFilter(object):
         self.discard = discard
 
     def filter(self):
-        for name, seq, qual in self.parent.filter():
+        for name, comment, seq, qual in self.parent.filter():
             trimmed = False
 
             upseq = seq.upper()
@@ -104,7 +107,7 @@ class TrimFilter(object):
                         if self.verbose:
                             sys.stderr.write('[Trim] %s (altered) seq:%s clipped at:%s (%s/%s)-> %s\n' % (name, orig_seq, i, matches, total, seq[:i]))
 
-                        yield(('%s #trim' % name, seq, qual))
+                        yield((name, '%s #trim' % comment, seq, qual))
 
                         break
 
@@ -112,7 +115,7 @@ class TrimFilter(object):
                 self.kept += 1
                 if self.verbose:
                     sys.stderr.write('[Trim] %s (kept)\n' % name)
-                yield (name, seq, qual)
+                yield (name, comment, seq, qual)
 
 
 class PairedFilter(object):
@@ -176,7 +179,7 @@ class QualFilter(object):
             return [ord(q) - 33 for q in qual]
 
     def filter(self):
-        for name, seq, qual in self.parent.filter():
+        for name, comment, seq, qual in self.parent.filter():
             quals = self._convert_quals(qual)  # convert from phred to int[]
             yielded = False
             for i in xrange(len(qual) - self.window_size):
@@ -189,17 +192,18 @@ class QualFilter(object):
                     yielded = True
                     if self.verbose:
                         sys.stderr.write('[Qual] %s (altered) (idx:%s)\n' % (name, i))
+
                     if len(seq) == len(qual):  # basespace or colorspace w/o prefix
-                        yield('%s #qual' % name, seq[:i + self.window_size - 1], qual[:i + self.window_size - 1])
+                        yield(name, '%s #qual' % comment, seq[:i + self.window_size - 1], qual[:i + self.window_size - 1])
                     else:
-                        yield('%s #qual' % name, seq[:i + self.window_size], qual[:i + self.window_size - 1])
+                        yield(name, '%s #qual' % comment, seq[:i + self.window_size], qual[:i + self.window_size - 1])
                     break
 
             if not yielded:
                 self.kept += 1
                 if self.verbose:
                     sys.stderr.write('[Qual] %s (kept)\n' % (name,))
-                yield (name, seq, qual)
+                yield (name, comment, seq, qual)
 
 
 class SuffixQualFilter(object):
@@ -215,7 +219,7 @@ class SuffixQualFilter(object):
         self.discard = discard
 
     def filter(self):
-        for name, seq, qual in self.parent.filter():
+        for name, comment, seq, qual in self.parent.filter():
             alt = False
             while qual and qual[-1] == self.value:
                 alt = True
@@ -226,13 +230,13 @@ class SuffixQualFilter(object):
                 if self.verbose:
                     sys.stderr.write('[SuffixQual] %s (altered)\n' % (name,))
                 self.altered += 1
-                name = '%s #suff' % name
+                comment = '%s #suff' % comment
             else:
                 if self.verbose:
                     sys.stderr.write('[SuffixQual] %s (kept)\n' % (name,))
                 self.kept += 1
 
-            yield (name, seq, qual)
+            yield (name, comment, seq, qual)
 
 
 class WildcardFilter(object):
@@ -248,7 +252,7 @@ class WildcardFilter(object):
         self.discard = discard
 
     def filter(self):
-        for name, seq, qual in self.parent.filter():
+        for name, comment, seq, qual in self.parent.filter():
             count = 0
             for base in seq:
                 if base in '4.N':
@@ -259,7 +263,7 @@ class WildcardFilter(object):
                 if self.verbose:
                     sys.stderr.write('[Wild] %s (kept)\n' % (name,))
 
-                yield (name, seq, qual)
+                yield (name, comment, seq, qual)
             else:
                 if self.verbose:
                     sys.stderr.write('[Wild] %s (removed)\n' % (name,))
@@ -281,12 +285,12 @@ class SizeFilter(object):
         self.discard = discard
 
     def filter(self):
-        for name, seq, qual in self.parent.filter():
+        for name, comment, seq, qual in self.parent.filter():
             if len(qual) >= self.min_size:
                 self.kept += 1
                 if self.verbose:
                     sys.stderr.write('[Size] %s (kept)\n' % (name,))
-                yield (name, seq, qual)
+                yield (name, comment, seq, qual)
             else:
                 if self.verbose:
                     sys.stderr.write('[Size] %s (removed) seq:%s size:%s\n' % (name, seq, len(qual)))
@@ -310,15 +314,19 @@ class WhitelistFilter(object):
         self.whitelist = set()
         with open(fname) as f:
             for line in f:
-                self.whitelist.add(line.strip())
+                name = line.strip()
+                if name[0] == '@':
+                    name = name[1:]
+                self.whitelist.add(name)
+        sys.stderr.write('%s reads in whitelist\n' % len(self.whitelist))
 
     def filter(self):
-        for name, seq, qual in self.parent.filter():
+        for name, comment, seq, qual in self.parent.filter():
             if name in self.whitelist:
                 self.kept += 1
                 if self.verbose:
                     sys.stderr.write('[Whitelist] %s (kept)\n' % (name,))
-                yield (name, seq, qual)
+                yield (name, comment, seq, qual)
             else:
                 if self.verbose:
                     sys.stderr.write('[Whitelist] %s (removed)\n' % (name,))

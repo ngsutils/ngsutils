@@ -13,7 +13,7 @@ from ngsutils.fastq import FASTQ
 class FilterTest(unittest.TestCase):
     def testFilterNull(self):
         fq = StringIO.StringIO('''\
-@foo
+@foo comment
 ACGTACGT
 +
 ;;;;;;;;
@@ -30,7 +30,7 @@ ACGTACGT
 
     def testFilterSize(self):
         fq = StringIO.StringIO('''\
-@foo
+@foo comment
 ACGTACGTACGTACGT
 +
 ;;;;;;;;;;;;;;;;
@@ -45,7 +45,7 @@ ACGTACGT
         chain = ngsutils.fastq.filter.SizeFilter(chain, 12, verbose=False)
         ngsutils.fastq.filter.fastq_filter(chain, out=out, quiet=True)
         self.assertEqual(out.getvalue(), '''\
-@foo
+@foo comment
 ACGTACGTACGTACGT
 +
 ;;;;;;;;;;;;;;;;
@@ -100,7 +100,7 @@ ACGTACGT
 
     def testFilterQual(self):
         fq = StringIO.StringIO('''\
-@foo
+@foo comment
 ACGTACGTACGTACGT
 +
 +++++++++&&&&+++
@@ -115,7 +115,7 @@ ACGTACGTA
         chain = ngsutils.fastq.filter.QualFilter(chain, 7, 5, verbose=False)
         ngsutils.fastq.filter.fastq_filter(chain, out=out, quiet=True)
         self.assertEqual(out.getvalue(), '''\
-@foo #qual
+@foo comment #qual
 ACGTACGTACGT
 +
 +++++++++&&&
