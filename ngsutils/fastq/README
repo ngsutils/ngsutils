@@ -4,6 +4,7 @@ Commands
     filter        - Filter out reads using a number of metrics
     merge         - Merges paired FASTQ files into one file
     names         - Write out the read names
+    properpairs   - Find properly paired reads (when fragments are filtered separately)
     revcomp       - Reverse compliment a FASTQ file
     split         - Splits a FASTQ file into N chunks
     stats         - Calculate summary statistics for a FASTQ file
