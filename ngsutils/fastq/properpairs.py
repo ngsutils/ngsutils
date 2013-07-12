@@ -26,7 +26,8 @@ def find_fastq_pairs(fq1, fq2, out1, out2, quiet=False):
     readnames1 = set()
     readnames2 = set()
 
-    total = 0
+    total1 = 0
+    total2 = 0
     matched = 0
 
     gen1 = fq1.fetch(quiet=quiet)
@@ -36,14 +37,14 @@ def find_fastq_pairs(fq1, fq2, out1, out2, quiet=False):
 
         try:
             read1 = gen1.next()
-            total += 1
+            total1 += 1
 
         except:
             read1 = None
 
         try:
             read2 = gen2.next()
-            total += 1
+            total2 += 1
         except:
             read2 = None
 
@@ -98,7 +99,7 @@ def find_fastq_pairs(fq1, fq2, out1, out2, quiet=False):
             readnames1.add(read1.name)
             readnames2.add(read2.name)
 
-    return total, matched
+    return total1, total2, matched
 
 
 def usage(msg=""):
@@ -152,9 +153,9 @@ if __name__ == '__main__':
         out1 = open(outname1, 'w')
         out2 = open(outname2, 'w')
 
-    total, matched = find_fastq_pairs(fq1, fq2, out1, out2)
+    total1, total2, matched = find_fastq_pairs(fq1, fq2, out1, out2)
 
-    print "Total: %s" % total
+    print "Totals: %s, %s" % (total1, total2)
     print "Proper pairs: %s" % matched
 
     fq1.close()
