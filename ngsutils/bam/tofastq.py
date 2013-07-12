@@ -22,8 +22,6 @@ def bam_tofastx(fname, colorspace=False, show_mapped=True, show_unmapped=True, f
         if last_qname == read.qname:
             continue
 
-        last_qname = read.qname
-
         show = False
         if show_mapped and not read.is_unmapped:
             show = True
@@ -35,8 +33,11 @@ def bam_tofastx(fname, colorspace=False, show_mapped=True, show_unmapped=True, f
 
         if fastq:
             write_fastq(read, colorspace=colorspace)
+            last_qname = read.qname
         else:
             write_fasta(read, colorspace=colorspace)
+            last_qname = read.qname
+
 
 
 def write_fasta(read, out=sys.stdout, colorspace=False):
