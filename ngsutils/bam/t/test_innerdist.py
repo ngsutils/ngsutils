@@ -51,7 +51,7 @@ class InnerDistTest(unittest.TestCase):
 
 
     def testDist(self):
-        total, proper, mean, stdev = bam_innerdist(testbam1, testbam2)
+        total, proper, mean, stdev, o_count = bam_innerdist(testbam1, testbam2)
 
         self.assertEqual(total, 6)
         self.assertEqual(proper, 4)
