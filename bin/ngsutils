@@ -54,6 +54,28 @@ if [ "$1" == "help" ]; then
         fi
     fi
     "$DIR"/ngsutils/$SUBDIR/$action -h
+elif [ "$1" == "profile" ]; then
+    shift
+    action=$1.py
+
+    if [ ! -e "$DIR"/ngsutils/$SUBDIR/$action ]; then
+        action=$1.sh
+        if [ ! -e "$DIR"/ngsutils/$SUBDIR/$action ]; then
+            echo "Unknown command '$1'"
+            exit 1
+        fi
+    fi
+    shift
+
+    ARGS=()
+    i=0
+    for arg in "$@"; do
+        ARGS[$i]="$arg"
+        ((++i))
+    done
+    
+    echo "Saving profile information to profile.output" 1>&2
+    exec python -m cProfile -o profile.output "$DIR"/ngsutils/$SUBDIR/$action "${ARGS[@]}"
 else
     action=$1.py
 
