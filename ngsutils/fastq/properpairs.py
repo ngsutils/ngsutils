@@ -36,18 +36,19 @@ def find_fastq_pairs(fq1, fq2, out1, out2, quiet=False):
 
         try:
             read1 = gen1.next()
+            total += 1
+
         except:
             read1 = None
 
         try:
             read2 = gen2.next()
+            total += 1
         except:
             read2 = None
 
         if read1 is None and read2 is None:
             break
-
-        total += 1
 
         if read1 and read2 and read1.name == read2.name:
             read1.write(out1)
