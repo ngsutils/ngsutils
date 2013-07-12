@@ -11,12 +11,19 @@ from ngsutils.bam import bam_iter, bam_open
 
 
 def bam_tofastx(fname, colorspace=False, show_mapped=True, show_unmapped=True, fastq=True):
-    if show_mapped == False and show_unmapped == False:
+    if show_mapped is False and show_unmapped is False:
         return
 
     sam = bam_open(fname)
 
+    last_qname = None
+
     for read in bam_iter(sam):
+        if last_qname == read.qname:
+            continue
+
+        last_qname = read.qname
+
         show = False
         if show_mapped and not read.is_unmapped:
             show = True
