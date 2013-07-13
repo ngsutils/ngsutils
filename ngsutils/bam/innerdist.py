@@ -133,6 +133,10 @@ if __name__ == "__main__":  # pragma: no cover
             fname1 = arg
         elif not fname2 and os.path.exists(arg):
             fname2 = arg
+        elif arg in ['-summary']:
+            last = arg
+        else:
+            usage()
 
     if not fname1 or not fname2:
         usage()
