@@ -41,7 +41,7 @@ from ngsutils.support.stats import counts_mean_stdev
 import pysam
 
 
-def bam_innerdist(bam1, bam2, out=sys.stdout):
+def bam_innerdist(bam1, bam2, summaryout=None):
     iter1 = bam_iter(bam1)
     iter2 = bam_iter(bam2, quiet=True)
 
@@ -88,6 +88,9 @@ def bam_innerdist(bam1, bam2, out=sys.stdout):
         else:
             dist = read1.pos - read2.aend
 
+        if summaryout:
+            summaryout.write(dist)
+
         if not dist in distances:
             distances[dist] = 1
         else:
@@ -107,27 +110,52 @@ def usage():  # pragma: no cover
     print """\
 Usage: bamutils innerdist filename1.bam filename2.bam
 
+Options:
+  -summary filename       Write all distances out to a file
+
 Note: BAM files must be paired and they must be mapped to the
       same reference and reads must be in the same order.
 
 """
+    sys.exit(1)
 
 if __name__ == "__main__":  # pragma: no cover
-    if len(sys.argv) < 3 or not os.path.exists(sys.argv[1]) or not os.path.exists(sys.argv[2]):
-        usage()
-        sys.exit(1)
+    fname1 = None
+    fname2 = None
+    summary = None
 
-    bam1 = pysam.Samfile(sys.argv[1], "rb")
-    bam2 = pysam.Samfile(sys.argv[2], "rb")
+    last = None
+    for arg in sys.argv[1:]:
+        if last == '-summary' and not os.path.exists(arg):
+            summary = arg
+            last = None
+        elif not fname1 and os.path.exists(arg):
+            fname1 = arg
+        elif not fname2 and os.path.exists(arg):
+            fname2 = arg
+
+    if not fname1 or not fname2:
+        usage()
+
+    bam1 = pysam.Samfile(fname1, "rb")
+    bam2 = pysam.Samfile(fname2, "rb")
+
+    if summary:
+        fobj = open(summary, 'w')
+    else:
+        fobj = None
 
     try:
-        total, proper, mean, stdev, o_count = bam_innerdist(bam1, bam2)
+        total, proper, mean, stdev, o_count = bam_innerdist(bam1, bam2, fobj)
     except ValueError, e:
         print e
         sys.exit(1)
     finally:
         bam1.close()
         bam2.close()
+
+        if fobj:
+            fobj.close()
 
     print "Total reads:\t%s" % total
     print "Proper pairs:\t%s" % proper
