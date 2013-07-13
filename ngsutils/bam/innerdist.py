@@ -89,7 +89,7 @@ def bam_innerdist(bam1, bam2, summaryout=None):
             dist = read1.pos - read2.aend
 
         if summaryout:
-            summaryout.write(str(dist))
+            summaryout.write('%s\n' % dist)
 
         if not dist in distances:
             distances[dist] = 1
