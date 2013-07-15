@@ -215,13 +215,13 @@ class BEDModel(Model):
         return 'bed'
 
     def get_headers(self):
-        return 'chrom start end strand'.split()
+        return 'chrom start end name score strand'.split()
 
     def get_regions(self):
         eta = ETA(self.bed.length, fileobj=self.bed)
         for region in self.bed:
             eta.print_status(extra='%s:%s-%s[%s]' % (region.chrom, region.start, region.end, region.strand))
-            yield (region.chrom, [region.start], [region.end], region.strand, [region.chrom, region.start, region.end, region.strand], None)
+            yield (region.chrom, [region.start], [region.end], region.strand, [region.chrom, region.start, region.end, region.name, region.score, region.strand], None)
         eta.done()
 
 
