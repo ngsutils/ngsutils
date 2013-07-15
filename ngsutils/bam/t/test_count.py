@@ -43,9 +43,9 @@ chr1|300|350|foo|1|-
 ## model bed *fileobj*
 ## stranded False
 ## multiple complete
-#chrom|start|end|strand|length|count
-chr1|100|150|+|50|4
-chr1|300|350|-|50|4
+#chrom|start|end|name|score|strand|length|count
+chr1|100|150|foo|1|+|50|4
+chr1|300|350|foo|1|-|50|4
 '''.replace('|', '\t')
 
         self.assertEquals(out.getvalue(), valid)
@@ -64,8 +64,8 @@ chr1|110|130|foo|1|+
 ## model bed *fileobj*
 ## stranded False
 ## multiple complete
-#chrom|start|end|strand|length|count|coverage mean|coverage stdev|coverage median
-chr1|110|130|+|20|4|4.0|0.0|4
+#chrom|start|end|name|score|strand|length|count|coverage mean|coverage stdev|coverage median
+chr1|110|130|foo|1|+|20|4|4.0|0.0|4
 '''.replace('|', '\t')
 
         self.assertEquals(out.getvalue(), valid)
@@ -88,8 +88,8 @@ chr1|200|249|foo|1|+
 ## model bed *fileobj*
 ## stranded False
 ## multiple complete
-#chrom|start|end|strand|length|count|coverage mean|coverage stdev|coverage median
-chr1|200|249|+|49|4|2.0|0.0|2.0
+#chrom|start|end|name|score|strand|length|count|coverage mean|coverage stdev|coverage median
+chr1|200|249|foo|1|+|49|4|2.0|0.0|2.0
 '''.replace('|', '\t')
 
         self.assertEquals(out.getvalue(), valid)
@@ -110,9 +110,9 @@ chr1|300|350|foo|1|-
 ## multiple complete
 ## norm all 12
 ## CPM-factor 1.2e-05
-#chrom|start|end|strand|length|count|count (CPM)
-chr1|100|150|+|50|4|333333.333333
-chr1|300|350|-|50|4|333333.333333
+#chrom|start|end|name|score|strand|length|count|count (CPM)
+chr1|100|150|foo|1|+|50|4|333333.333333
+chr1|300|350|foo|1|-|50|4|333333.333333
 '''.replace('|', '\t')
 
         self.assertEquals(out.getvalue(), valid)
@@ -133,9 +133,9 @@ chr1|300|350|foo|1|-
 ## multiple complete
 ## norm median 4.0
 ## CPM-factor 4e-06
-#chrom|start|end|strand|length|count|count (CPM)
-chr1|100|150|+|50|4|1000000.0
-chr1|300|350|-|50|4|1000000.0
+#chrom|start|end|name|score|strand|length|count|count (CPM)
+chr1|100|150|foo|1|+|50|4|1000000.0
+chr1|300|350|foo|1|-|50|4|1000000.0
 '''.replace('|', '\t')
 
         self.assertEquals(out.getvalue(), valid)
@@ -156,9 +156,9 @@ chr1|300|350|foo|1|-
 ## multiple complete
 ## norm mapped 8
 ## CPM-factor 8e-06
-#chrom|start|end|strand|length|count|count (CPM)
-chr1|100|150|+|50|4|500000.0
-chr1|300|350|-|50|4|500000.0
+#chrom|start|end|name|score|strand|length|count|count (CPM)
+chr1|100|150|foo|1|+|50|4|500000.0
+chr1|300|350|foo|1|-|50|4|500000.0
 '''.replace('|', '\t')
 
         self.assertEquals(out.getvalue(), valid)
@@ -181,9 +181,9 @@ chr1|300|350|foo|1|-
 ## model bed *fileobj*
 ## stranded False
 ## multiple complete
-#chrom|start|end|strand|length|count
-chr1|100|150|+|50|3
-chr1|300|350|-|50|4
+#chrom|start|end|name|score|strand|length|count
+chr1|100|150|foo|1|+|50|3
+chr1|300|350|foo|1|-|50|4
 '''.replace('|', '\t')
 
         self.assertEquals(out.getvalue(), valid)
@@ -201,9 +201,9 @@ chr1|300|350|foo|1|-
 ## model bed *fileobj*
 ## stranded False
 ## multiple complete
-#chrom|start|end|strand|length|count
-chr1|100|150|+|50|3
-chr1|300|350|-|50|4
+#chrom|start|end|name|score|strand|length|count
+chr1|100|150|foo|1|+|50|3
+chr1|300|350|foo|1|-|50|4
 '''.replace('|', '\t')
 
         self.assertEquals(out.getvalue(), valid)
@@ -222,9 +222,9 @@ chr1|300|350|foo|1|-
 ## model bed *fileobj*
 ## stranded True
 ## multiple complete
-#chrom|start|end|strand|length|count
-chr1|100|150|+|50|4
-chr1|300|350|-|50|2
+#chrom|start|end|name|score|strand|length|count
+chr1|100|150|foo|1|+|50|4
+chr1|300|350|foo|1|-|50|2
 '''.replace('|', '\t')
 
         self.assertEquals(out.getvalue(), valid)
@@ -243,9 +243,9 @@ chr1|300|350|foo|1|-
 ## model bed *fileobj*
 ## stranded False
 ## multiple ignore
-#chrom|start|end|strand|length|count
-chr1|100|150|+|50|3
-chr1|300|350|-|50|4
+#chrom|start|end|name|score|strand|length|count
+chr1|100|150|foo|1|+|50|3
+chr1|300|350|foo|1|-|50|4
 '''.replace('|', '\t')
 
         self.assertEquals(out.getvalue(), valid)
@@ -264,9 +264,9 @@ chr1|300|350|foo|1|-
 ## model bed *fileobj*
 ## stranded False
 ## multiple partial
-#chrom|start|end|strand|length|count
-chr1|100|150|+|50|3.5
-chr1|300|350|-|50|4
+#chrom|start|end|name|score|strand|length|count
+chr1|100|150|foo|1|+|50|3.5
+chr1|300|350|foo|1|-|50|4
 '''.replace('|', '\t')
 
         self.assertEquals(out.getvalue(), valid)
@@ -287,9 +287,9 @@ chr1|300|350|foo|1|-
 ## multiple complete
 ## norm mapped 8
 ## CPM-factor 8e-06
-#chrom|start|end|strand|length|count|count (CPM)|RPKM
-chr1|100|150|+|50|4|500000.0|10000000.0
-chr1|300|350|-|50|4|500000.0|10000000.0
+#chrom|start|end|name|score|strand|length|count|count (CPM)|RPKM
+chr1|100|150|foo|1|+|50|4|500000.0|10000000.0
+chr1|300|350|foo|1|-|50|4|500000.0|10000000.0
 '''.replace('|', '\t')
 
         self.assertEquals(out.getvalue(), valid)
@@ -308,9 +308,9 @@ chr1|300|350|foo|1|-
 ## model bed *fileobj*
 ## stranded False
 ## multiple complete
-#chrom|start|end|strand|length|count
-chr1|100|150|+|50|2
-chr1|300|350|-|50|3
+#chrom|start|end|name|score|strand|length|count
+chr1|100|150|foo|1|+|50|2
+chr1|300|350|foo|1|-|50|3
 '''.replace('|', '\t')
 
         self.assertEquals(out.getvalue(), valid)
@@ -329,9 +329,9 @@ chr1|300|350|foo|1|-
 ## model bed *fileobj*
 ## stranded False
 ## multiple complete
-#chrom|start|end|strand|length|count
-chr1|100|150|+|50|2
-chr1|300|350|-|50|1
+#chrom|start|end|name|score|strand|length|count
+chr1|100|150|foo|1|+|50|2
+chr1|300|350|foo|1|-|50|1
 '''.replace('|', '\t')
 
         self.assertEquals(out.getvalue(), valid)
