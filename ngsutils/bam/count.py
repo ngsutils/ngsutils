@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 ## category RNA-seq
-## desc Calculates counts/RPKM for genes/BED regions/repeats
+## desc Calculates counts/RPKM for genes/BED regions/repeats (also CNV)
 '''
 Counts the number of reads in genes or regions
 
