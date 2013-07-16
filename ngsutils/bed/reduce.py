@@ -31,6 +31,7 @@ Usage: bedutils reduce {opts} bedfile
 
 -nostrand           Ignore strand information when merging regions
 """
+    sys.exit(1)
 
 
 class MergedRegion(object):
@@ -176,10 +177,8 @@ if __name__ == '__main__':
         else:
             print "Unknown option: %s" % arg
             usage()
-            sys.exit(1)
 
     if not fname:
         usage()
-        sys.exit(1)
 
     bed_reduce(BedFile(fname), extend, stranded, count, clip)
