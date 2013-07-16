@@ -3,3 +3,4 @@ env/
 build/
 .coverage
 *.sublime-*
+profile.output
