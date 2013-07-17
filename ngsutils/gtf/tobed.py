@@ -19,13 +19,30 @@ def usage(msg=None):
     if msg:
         print '%s\n' % msg
     print __doc__
-    print 'Usage: gtfutils tobed [-genes|-exons|-regions] filename.gtf{.gz}'
+    print '''\
+Usage: gtfutils tobed [type] filename.gtf{.gz}
+
+Where type is one of:
+    -genes    The gene from start to end (including introns)
+    -exons    Each annotated exon
+    -regions  Export constant / alternative regions (annotated splice regions)
+    -tss      Unique transcription start sites
+
+'''
     sys.exit(1)
 
 
 def gtf_genes_tobed(gtf, out=sys.stdout):
     for gene in gtf.genes:
         out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, gene.start, gene.end, gene.gene_name, 0, gene.strand]]))
+
+
+def gtf_tss_tobed(gtf, out=sys.stdout):
+    for gene in gtf.genes:
+        if gene.strand == '+':
+            out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, gene.start, gene.start + 3, gene.gene_name, 0, gene.strand]]))
+        else:
+            out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, gene.end - 3, gene.end, gene.gene_name, 0, gene.strand]]))
 
 
 def gtf_exons_tobed(gtf, out=sys.stdout):
@@ -53,6 +70,7 @@ if __name__ == '__main__':
     genes = False
     exons = False
     regions = False
+    tss = False
     filename = None
 
     for arg in sys.argv[1:]:
@@ -64,11 +82,13 @@ if __name__ == '__main__':
             exons = True
         elif arg == '-regions':
             regions = True
+        elif arg == '-tss':
+            tss = True
         elif not filename and os.path.exists(arg):
             filename = arg
 
-    if not genes and not exons and not regions:
-        usage('You must select "-exons" or "-genes" or "-regions"')
+    if not genes and not exons and not regions and not tss:
+        usage('You must select "-exons" or "-genes" or "-regions" or "-tss"')
     elif not filename:
         usage('Missing input file')
 
@@ -80,3 +100,5 @@ if __name__ == '__main__':
         gtf_exons_tobed(gtf)
     elif regions:
         gtf_regions_tobed(gtf)
+    elif tss:
+        gtf_tss_tobed(gtf)
