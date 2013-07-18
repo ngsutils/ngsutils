@@ -82,6 +82,7 @@ class GTF(object):
                         gid = attributes['gene_id']
                         if not warned and not quiet:
                             sys.stderr.write('\nGTF file missing isoform annotation! Each transcript will be treated separately. (%s)\n' % gid)
+                            sys.stderr.write('%s\n\n' % (str(attributes)))
                             warned = True
                     if eta:
                         eta.print_status(extra=gid)
@@ -331,13 +332,17 @@ class _GTFTranscript(object):
     def start_codon(self):
         if self._start_codon:
             return self._start_codon
-        else:
+        elif self.strand == '+':
             return (self.start, self.start + 3)
+        else:
+            return (self.end - 3, self.end)
 
     @property
     def stop_codon(self):
         if self._stop_codon:
             return self._stop_codon
+        elif self.strand == '-':
+            return (self.start, self.start + 3)
         else:
             return (self.end - 3, self.end)
 
