@@ -26,7 +26,8 @@ Where type is one of:
     -genes    The gene from start to end (including introns)
     -exons    Each annotated exon
     -regions  Export constant / alternative regions (annotated splice regions)
-    -tss      Unique transcription start sites
+    -tss      Transcription start sites (unique)
+    -tlss     Translational start sites (unique start codons)
 
 '''
     sys.exit(1)
@@ -39,10 +40,26 @@ def gtf_genes_tobed(gtf, out=sys.stdout):
 
 def gtf_tss_tobed(gtf, out=sys.stdout):
     for gene in gtf.genes:
-        if gene.strand == '+':
-            out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, gene.start, gene.start + 3, gene.gene_name, 0, gene.strand]]))
-        else:
-            out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, gene.end - 3, gene.end, gene.gene_name, 0, gene.strand]]))
+        sites = set()
+        for i, txscr in enumerate(gene.transcripts):
+            if gene.strand == '+':
+                if not txscr.start in sites:
+                    out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.start, txscr.start + 3, '%s.%s' % (gene.gene_name, i), 0, gene.strand]]))
+                    sites.add(txscr.start)
+            else:
+                if not txscr.end in sites:
+                    out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.end - 3, txscr.end, '%s.%s' % (gene.gene_name, i), 0, gene.strand]]))
+                    sites.add(txscr.end)
+
+
+def gtf_tlss_tobed(gtf, out=sys.stdout):
+    'Outputs all exons (from all transcripts)'
+    for gene in gtf.genes:
+        sites = set()
+        for i, txscr in enumerate(gene.transcripts):
+            if not txscr.start_codon in sites:
+                out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.start_codon[0], txscr.start_codon[1], '%s.%s' % (gene.gene_name, i), 0, gene.strand]]))
+                sites.add(txscr.start_codon)
 
 
 def gtf_exons_tobed(gtf, out=sys.stdout):
@@ -71,6 +88,7 @@ if __name__ == '__main__':
     exons = False
     regions = False
     tss = False
+    tlss = False
     filename = None
 
     for arg in sys.argv[1:]:
@@ -84,11 +102,20 @@ if __name__ == '__main__':
             regions = True
         elif arg == '-tss':
             tss = True
+        elif arg == '-tlss':
+            tlss = True
         elif not filename and os.path.exists(arg):
             filename = arg
 
-    if not genes and not exons and not regions and not tss:
-        usage('You must select "-exons" or "-genes" or "-regions" or "-tss"')
+    i = 0
+    for arg in [genes, exons, regions, tss, tlss]:
+        if arg:
+            i += 1
+
+    if i == 0:
+        usage('You must select one [type] to export.')
+    elif i > 1:
+        usage('You must select *only one* [type] to export.')
     elif not filename:
         usage('Missing input file')
 
@@ -102,3 +129,5 @@ if __name__ == '__main__':
         gtf_regions_tobed(gtf)
     elif tss:
         gtf_tss_tobed(gtf)
+    elif tlss:
+        gtf_tlss_tobed(gtf)
