@@ -38,7 +38,7 @@ NEWNAME="$(basename "$FNAME" | sed -e 's/\.gz$//').bgz"
 
 # use pv, if available...
 CAT=cat
-if [ $(which pv) != "" ]; then
+if [ "$(which pv)" != "" ]; then
 	CAT=pv
 fi
 
@@ -58,3 +58,6 @@ fi
 
 echo "Indexing..."
 tabix "$@" $DIR/$NEWNAME
+if [ $? -ne 0 ]; then
+	rm $DIR/$NEWNAME
+fi
