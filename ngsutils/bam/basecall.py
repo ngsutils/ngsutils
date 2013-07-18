@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 ## category DNA-seq
-## desc Base caller
+## desc Base/variant caller
 """
-Base caller
+Base/variant caller
 
 Given a BAM file and a genomic reference, for each position covered in the
 BAM file, show the reference base, and the number of A/T/C/G's and InDels.
+This can also be used to call variants.
 
 You can also optionally filter out all bases whose quality score is below a
 threshold, bases that aren't covered by enough reads, bases that have no
