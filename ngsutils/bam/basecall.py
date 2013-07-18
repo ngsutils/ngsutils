@@ -30,7 +30,7 @@ Entropy
 # gaps
 # inserts
 
-If -hettest is applied, an alternative allele percentage is calculated.
+If -altfreq is applied, an alternative allele percentage is calculated.
             minor - background
      --------------------------------
   (major - background) + (minor - background)
@@ -77,11 +77,10 @@ Options:
 -mask  val     The bitmask to use for filtering reads by flag
                (default 1540 - see SAM format for details)
 
--minorpct pct  Require a minor call to be within [pct] percent of the
-               consensus call. Calculated as #minor / #consensus.
-               (0.0 -> 1.0, default 0.01)
+-minorpct pct  Require a minor call to be at least [pct] of the total count
+               (0.0 -> 1.0, default 0.04)
 
--hettest       Calculate alternative allele frequency
+-altfreq       Calculate alternative allele frequency
 
 -showgaps      Report gaps/splice-junctions in RNA-seq data
 
@@ -363,6 +362,7 @@ def _calculate_consensus_minor(minorpct, a, c, g, t):
 
     best = calls[0][0]
     minor = 0
+    total = a + c + g + t
 
     for count, base in calls:
         if count == 0:
@@ -381,12 +381,11 @@ def _calculate_consensus_minor(minorpct, a, c, g, t):
     if best == 0:
         return ('N', '')
 
-    if best and (float(minor) / best) < minorpct:
+    if total and (minor / total) < minorpct:
         minorcalls = []  # too low of a pct...
 
     # if there is one major, there can be more than one minor
     # however, if there is more than one major, there are *no* minors
-    #
 
     if len(consensuscalls) == 1:
         return (consensuscalls[0], '/'.join(minorcalls))
@@ -406,14 +405,14 @@ def _calculate_heterozygosity(a, c, g, t):
     return float(minor - background) / (major - background + minor - background)
 
 
-def bam_basecall(bam, ref_fname, min_qual=0, min_count=0, regions=None, mask=1540, quiet=False, showgaps=False, showstrand=False, minorpct=0.01, hettest=False, variants=False, profiler=None, out=sys.stdout):
+def bam_basecall(bam, ref_fname, min_qual=0, min_count=0, regions=None, mask=1540, quiet=False, showgaps=False, showstrand=False, minorpct=0.01, altfreq=False, variants=False, profiler=None, out=sys.stdout):
     if ref_fname:
         ref = pysam.Fastafile(ref_fname)
     else:
         ref = None
 
     out.write('chrom\tpos\tref\tcount\tconsensus call\tminor call\tave mappings')
-    if hettest:
+    if altfreq:
         out.write('\talt. allele freq')
     out.write('\tentropy\tA\tC\tG\tT\tN\tDeletions\tGaps\tInsertions\tInserts')
 
@@ -494,7 +493,7 @@ def bam_basecall(bam, ref_fname, min_qual=0, min_count=0, regions=None, mask=154
                  ave_mapping,
                  ]
 
-        if hettest:
+        if altfreq:
             cols.append(_calculate_heterozygosity(basepos.a, basepos.c, basepos.g, basepos.t))
 
         cols.extend([
@@ -594,9 +593,9 @@ if __name__ == '__main__':
     quiet = False
     showgaps = False
     showstrand = False
-    hettest = False
+    altfreq = False
     variants = False
-    minorpct = 0.01
+    minorpct = 0.04
     regions = None
 
     profile = None
@@ -643,8 +642,8 @@ if __name__ == '__main__':
                 quiet = True
             elif arg == '-variants':
                 variants = True
-            elif arg == '-hettest':
-                hettest = True
+            elif arg == '-altfreq':
+                altfreq = True
             elif arg in ['-qual', '-count', '-mask', '-ref', '-minorpct', '-profile', '-bed']:
                 last = arg
             elif not bam and os.path.exists(arg):
@@ -676,9 +675,9 @@ if __name__ == '__main__':
             import cProfile
 
             def func():
-                bam_basecall(bamobj, ref, min_qual, min_count, regions, mask, quiet, showgaps, showstrand, minorpct, hettest, variants, TimedProfiler())
+                bam_basecall(bamobj, ref, min_qual, min_count, regions, mask, quiet, showgaps, showstrand, minorpct, altfreq, variants, TimedProfiler())
             sys.stderr.write('Profiling...\n')
             cProfile.run('func()', profile)
         else:
-                bam_basecall(bamobj, ref, min_qual, min_count, regions, mask, quiet, showgaps, showstrand, minorpct, hettest, variants, None)
+                bam_basecall(bamobj, ref, min_qual, min_count, regions, mask, quiet, showgaps, showstrand, minorpct, altfreq, variants, None)
         bamobj.close()
