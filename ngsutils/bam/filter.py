@@ -52,8 +52,9 @@ Currently, the available filters are:
                                -mismatch_dbsnp for dbSNP matching)
                                (use if NM or MD tag not present)
 
-    -noqcfail                  Remove reads that have the 0x200 flag set
     -nosecondary               Remove reads that have the 0x100 flag set
+    -noqcfail                  Remove reads that have the 0x200 flag set
+    -nopcrdup                  Remove reads that have the 0x400 flag set
 
 
     -exclude ref:start-end     Remove reads in this region (1-based start)
@@ -609,6 +610,17 @@ class QCFailFlag(object):
         pass
 
 
+class PCRDupFlag(object):
+    def __repr__(self):
+        return "no 0x400 (pcrdup) flag"
+
+    def filter(self, bam, read):
+        return not read.is_duplicate
+
+    def close(self):
+        pass
+
+
 class _TagCompare(object):
     def __init__(self, tag, value):
         self.args = '%s %s' % (tag, value)
@@ -701,6 +713,7 @@ _criteria = {
     'mapped': Mapped,
     'noqcfail': QCFailFlag,
     'nosecondary': SecondaryFlag,
+    'nopcrdup': PCRDupFlag,
     'mask': MaskFlag,
     'lt': TagLessThan,
     'gt': TagGreaterThan,
