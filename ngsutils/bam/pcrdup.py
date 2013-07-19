@@ -66,10 +66,13 @@ def pcrdup_mark(inbam, outbam, fragment=False):
         start_pos = (read.tid, read.pos)
 
         if fragment:
-            dup_pos = (read.tid, read.pos, read.mapq)
+            dup_pos = (read.tid, read.pos)
         else:
-            # aend is the right most part of the pair (the 3' end of the pair)
-            dup_pos = (read.tid, read.pos, read.aend, read.mapq)
+            # isize is the insert length, which if this is the first read, will
+            # be the right most part of the second read. If the ends of the reads
+            # are trimmed for QC reasons, only the 5' pos of the first read and the 3' 
+            # pos of the second read will be accurate.
+            dup_pos = (read.tid, read.pos, read.isize)
 
         if not cur_pos or start_pos != cur_pos:
             __flush_cur_reads(cur_reads, outbam)
