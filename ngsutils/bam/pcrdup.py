@@ -11,8 +11,8 @@ happen to start at the same location.
 The orientation for paired-end reads is assumed to be "FR" (forward-reverse).
 
 Note: The BAM file must be sorted in order to find duplicates. For paired-end
-      reads, the the proper-pair (0x4) flag must be set and the isize field
-      must be correctly calculated.
+      reads, the the proper-pair (0x4) flag must be set and the isize/tlen
+      field must be correctly calculated.
 '''
 
 import sys
