@@ -11,7 +11,8 @@ happen to start at the same location.
 The orientation for paired-end reads is assumed to be "FR" (forward-reverse).
 
 Note: The BAM file must be sorted in order to find duplicates. For paired-end
-      reads, the the proper-pair (0x4) flag must also be properly set.
+      reads, the the proper-pair (0x4) flag must be set and the isize field
+      must be correctly calculated.
 '''
 
 import sys
@@ -70,8 +71,9 @@ def pcrdup_mark(inbam, outbam, fragment=False):
         else:
             # isize is the insert length, which if this is the first read, will
             # be the right most part of the second read. If the ends of the reads
-            # are trimmed for QC reasons, only the 5' pos of the first read and the 3' 
+            # are trimmed for QC reasons, only the 5' pos of the first read and the 3'
             # pos of the second read will be accurate.
+            
             dup_pos = (read.tid, read.pos, read.isize)
 
         if not cur_pos or start_pos != cur_pos:
@@ -81,8 +83,8 @@ def pcrdup_mark(inbam, outbam, fragment=False):
             cur_reads = {}
             idx = 0
 
-        if not fragment and (read.mate_is_unmapped or not read.is_paired or not read.is_proper_pair or not read.is_read1):
-            # this is a paired file, but the mate isn't paired or proper or mapped.
+        if not fragment and (read.mate_is_unmapped or not read.is_paired or not read.is_proper_pair or read.isize < 0):
+            # this is a paired file, but the mate isn't paired or proper or mapped
             # just write it out, no flags to set.
 
             if read.qname in dup_list:
