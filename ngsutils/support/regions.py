@@ -41,9 +41,10 @@ class RangeMatch(object):
 
 
 class RegionTagger(object):
-    def __init__(self, gtf, valid_chroms=None):
+    def __init__(self, gtf, valid_chroms=None, only_first_fragment=True):
         self.regions = []
         self.counts = {}
+        self.only_first_fragment = only_first_fragment
 
         exons = RangeMatch('exon')
         introns = RangeMatch('intron')
@@ -81,6 +82,9 @@ class RegionTagger(object):
 
     def add_read(self, read, chrom):
         if read.is_unmapped:
+            return
+        
+        if self.only_first_fragment and read.is_paired and not read.is_read1:
             return
 
         tag = None

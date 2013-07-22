@@ -98,10 +98,10 @@ Regions should be be in the format: 'ref:start-end' or 'ref:start' using
 1-based start coordinates.
 
 Options:
+    -all    Show the stats for all fragments (defaults to just the first fragment)
+
     -region chrom:start-end
-
             Only calculate statistics for this region
-
 
     -tags tag_name{:sort_order},tag_name{:sort_order},...
 
@@ -139,21 +139,24 @@ Options:
             If a GTF gene model is given, counts corresponding to exons,
             introns, promoters, junctions, intergenic, and mitochondrial
             regions will be calculated.
+
+            Note: For paired-end reads, only the first fragment is counted
+                  regardless of the {-all} option above
 """
     sys.exit(1)
 
 flag_descriptions = {
-0x1: 'Multiple fragments',
-0x2: 'All fragments aligned',
-0x4: 'Unmapped',
-0x8: 'Next unmapped',
-0x10: 'Reverse complimented',
-0x20: 'Next reverse complimented',
-0x40: 'First fragment',
-0x80: 'Last fragment',
-0x100: 'Secondary alignment',
-0x200: 'QC Fail',
-0x400: 'PCR/Optical duplicate'
+    0x1: 'Multiple fragments',
+    0x2: 'All fragments aligned',
+    0x4: 'Unmapped',
+    0x8: 'Next unmapped',
+    0x10: 'Reverse complimented',
+    0x20: 'Next reverse complimented',
+    0x40: 'First fragment',
+    0x80: 'Last fragment',
+    0x100: 'Secondary alignment',
+    0x200: 'QC Fail',
+    0x400: 'PCR/Optical duplicate'
 }
 
 
@@ -170,7 +173,7 @@ class FlagCounts(object):
 
 
 class BamStats(object):
-    def __init__(self, bamfile, gtf=None, region=None, delim=None, tags=[]):
+    def __init__(self, bamfile, gtf=None, region=None, delim=None, tags=[], show_all=False):
         regiontagger = None
         flag_counts = FlagCounts()
 
@@ -179,7 +182,7 @@ class BamStats(object):
         end = None
 
         if gtf:
-            regiontagger = RegionTagger(gtf, bamfile.references)
+            regiontagger = RegionTagger(gtf, bamfile.references, only_first_fragment=True)
 
         if region:
             ref, startend = region.rsplit(':', 1)
@@ -224,6 +227,10 @@ class BamStats(object):
 
         try:
             for read in read_gen():
+                if not show_all and read.is_paired and not read.is_read1:
+                    # only operate on the first fragment
+                    continue
+
                 try:
                     if read.opt('IH') > 1:
                         if read.qname in names:
@@ -436,6 +443,7 @@ if __name__ == '__main__':
     gtf = None
     region = None
     delim = None
+    show_all = False
     tags = []
 
     last = None
@@ -454,6 +462,8 @@ if __name__ == '__main__':
         elif last == '-tags':
             tags = arg.split(',')
             last = None
+        elif arg == '-all':
+            show_all = True
         elif arg in ['-gtf', '-delim', '-tags', '-region']:
             last = arg
         elif os.path.exists(arg):
@@ -465,4 +475,4 @@ if __name__ == '__main__':
     if not infiles:
         usage()
     else:
-        bam_stats(infiles, gtf, region, delim, tags)
+        bam_stats(infiles, gtf, region, delim, tags, show_all=show_all)
