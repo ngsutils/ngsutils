@@ -280,7 +280,7 @@ class BamStats(object):
             yield (val, count, pct)
 
 
-def bam_stats(infiles, gtf_file=None, region=None, delim=None, tags=[]):
+def bam_stats(infiles, gtf_file=None, region=None, delim=None, tags=[], show_all=False):
     if gtf_file:
         gtf = GTF(gtf_file)
     else:
@@ -288,7 +288,7 @@ def bam_stats(infiles, gtf_file=None, region=None, delim=None, tags=[]):
 
     sys.stderr.write('Calculating Read stats...\n')
 
-    stats = [BamStats(bam_open(x), gtf, region, delim, tags) for x in infiles]
+    stats = [BamStats(bam_open(x), gtf, region, delim, tags, show_all=show_all) for x in infiles]
 
     sys.stdout.write('\t')
     for fname, stat in zip(infiles, stats):
