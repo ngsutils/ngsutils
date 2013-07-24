@@ -57,10 +57,16 @@ class FeatureBin(object):
             except:
                 return 0
 
-        return float(acc) / count
+        if count > 0:
+            return float(acc) / count
+        else:
+            return 'Not present'
 
     @property
     def max(self):
+        if self._max is None:
+            return 'Not present'
+
         return self._max
 
     def add(self, read):
