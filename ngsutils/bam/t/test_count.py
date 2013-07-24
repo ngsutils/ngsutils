@@ -108,7 +108,7 @@ chr1|300|350|foo|1|-
 ## model bed *fileobj*
 ## stranded False
 ## multiple complete
-## norm all 12
+## norm all 12.0
 ## CPM-factor 1.2e-05
 #chrom|start|end|name|score|strand|length|count|count (CPM)
 chr1|100|150|foo|1|+|50|4|333333.333333
@@ -154,7 +154,7 @@ chr1|300|350|foo|1|-
 ## model bed *fileobj*
 ## stranded False
 ## multiple complete
-## norm mapped 8
+## norm mapped 8.0
 ## CPM-factor 8e-06
 #chrom|start|end|name|score|strand|length|count|count (CPM)
 chr1|100|150|foo|1|+|50|4|500000.0
@@ -285,7 +285,7 @@ chr1|300|350|foo|1|-
 ## model bed *fileobj*
 ## stranded False
 ## multiple complete
-## norm mapped 8
+## norm mapped 8.0
 ## CPM-factor 8e-06
 #chrom|start|end|name|score|strand|length|count|count (CPM)|RPKM
 chr1|100|150|foo|1|+|50|4|500000.0|10000000.0

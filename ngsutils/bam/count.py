@@ -14,6 +14,8 @@ Possible annotation models: gtf, exon, bed, repeat, repeatfam, or bin
     gene. If [-norm] is given, an RPKM calculation is also performed,
     yielding the normalized RPKM value for each gene.
 
+    For paired-end reads, each read will only count once for each gene.
+
     Requires: GTF file
     Calculates: # reads, RPKM, coverage
 
@@ -26,6 +28,10 @@ Possible annotation models: gtf, exon, bed, repeat, repeatfam, or bin
 
     Regions can be exons, or parts of exons, depending on splicing (determined
     by isoform annotation).
+
+    For paired-end reads, multiple fragments will be counted *if* they show
+    evidence of multiple exons. If both pairs map to the same exon, it will be
+    counted only once for that exon.
 
     Requires: GTF file
     Calculates: # reads,
@@ -115,6 +121,7 @@ Model options (you must select one):
 
 Other options:
     -nostrand          ignore strand in counting reads
+    -rev_read2              for paired-end reads, reverse the strand of the second fragment
     -coverage          calculate average coverage for genes/regions
     -uniq              only count unique starting positions
                        (avoids possible PCR artifacts, not recommended)
@@ -156,6 +163,7 @@ if __name__ == '__main__':
     multiple = 'complete'
     whitelist = None
     blacklist = None
+    rev_read2 = False
     model = None
     model_arg = None
     bamfile = None
@@ -196,6 +204,8 @@ if __name__ == '__main__':
             last = arg
         elif arg in ['-norm', '-multiple', '-whitelist', '-blacklist']:
             last = arg
+        elif arg == '-rev_read2':
+            rev_read2 = True
         elif arg == '-nostrand':
             stranded = False
         elif arg == '-coverage':
@@ -221,5 +231,5 @@ if __name__ == '__main__':
 
     modelobj = count.models[model](model_arg)
     bam = bam_open(bamfile)
-    modelobj.count(bam, stranded, coverage, uniq_only, rpkm, norm, multiple, whitelist, blacklist)
+    modelobj.count(bam, stranded, coverage, uniq_only, rpkm, norm, multiple, whitelist, blacklist, rev_read2=rev_read2)
     bam.close()

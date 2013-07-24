@@ -1,9 +1,13 @@
 import ngsutils.support.stats
 import sys
 from ngsutils.bam.t import MockBam
+assert(MockBam)  # just for linting... it is used in a doctest
 
 
 class Model(object):
+    def __init__(self):
+        pass
+
     def get_source(self):
         raise NotImplemented
 
@@ -34,12 +38,13 @@ class Model(object):
     def get_postheaders(self):
         return None
 
-    def count(self, bam, stranded=False, coverage=False, uniq_only=False, rpkm=False, norm='', multiple='complete', whitelist=None, blacklist=None, out=sys.stdout, quiet=False):
+    def count(self, bam, stranded=False, coverage=False, uniq_only=False, rpkm=False, norm='', multiple='complete', whitelist=None, blacklist=None, out=sys.stdout, quiet=False, rev_read2=False):
         # bam = pysam.Samfile(bamfile, 'rb')
 
         region_counts = []
-        multireads = set()
-        single_count = 0
+        # multireads = set()
+        # single_count = 0
+        total_count = 0.0
 
         for chrom, starts, ends, strand, cols, callback in self.get_regions():
             outcols = cols[:]
@@ -49,22 +54,23 @@ class Model(object):
                 coding_len += e - s
             outcols.append(coding_len)
 
-            count, reads = _fetch_reads(bam, chrom, strand if stranded else None, starts, ends, multiple, False, whitelist, blacklist, uniq_only)
+            count, reads = _fetch_reads(bam, chrom, strand if stranded else None, starts, ends, multiple, False, whitelist, blacklist, uniq_only, rev_read2)
             outcols.append(None)
+            total_count += count
 
-            for read in reads:
-                if read.tags and 'IH' in read.tags:
-                    ih = int(read.opt('IH'))
-                else:
-                    ih = 1
+            # for read in reads:
+            #     if read.tags and 'IH' in read.tags:
+            #         ih = int(read.opt('IH'))
+            #     else:
+            #         ih = 1
 
-                if ih == 1:
-                    single_count += 1
-                else:
-                    multireads.add(read.qname)
+            #     if ih == 1:
+            #         single_count += 1
+            #     else:
+            #         multireads.add(read.qname)
 
             if coverage:
-                mean, stdev, median = calc_coverage(bam, chrom, strand if stranded else None, starts, ends, whitelist, blacklist)
+                mean, stdev, median = calc_coverage(bam, chrom, strand if stranded else None, starts, ends, whitelist, blacklist, rev_read2)
                 outcols.append(mean)
                 outcols.append(stdev)
                 outcols.append(median)
@@ -84,7 +90,8 @@ class Model(object):
         if norm == 'all':
             norm_val_orig = _find_mapped_count(bam, whitelist, blacklist, quiet)
         elif norm == 'mapped':
-            norm_val_orig = single_count + len(multireads)
+            # norm_val_orig = single_count + len(multireads)
+            norm_val_orig = total_count
         elif norm == 'quantile':
             norm_val_orig = _find_mapped_count_pcts([x[0] for x in region_counts])
         elif norm == 'median':
@@ -101,7 +108,7 @@ class Model(object):
         out.write('## stranded %s\n' % stranded)
         out.write('## multiple %s\n' % multiple)
         if norm_val:
-            out.write('## norm %s %s\n' % (norm, norm_val_orig))
+            out.write('## norm %s %s\n' % (norm, float(norm_val_orig)))
             out.write('## CPM-factor %s\n' % norm_val)
 
         out.write('#')
@@ -166,7 +173,7 @@ def _calc_read_regions(read):
     return regions
 
 
-def _fetch_reads_excluding(bam, chrom, strand, start, end, multiple, whitelist=None, blacklist=None):
+def _fetch_reads_excluding(bam, chrom, strand, start, end, multiple, whitelist=None, blacklist=None, rev_read2=False):
     '''
     Find reads that exclude this region.
 
@@ -184,19 +191,24 @@ def _fetch_reads_excluding(bam, chrom, strand, start, end, multiple, whitelist=N
         return count, reads
 
     for read in bam.fetch(chrom, start, end):
-        if not strand or (strand == '+' and not read.is_reverse) or (strand == '-' and read.is_reverse):
+        if read.is_read2 and rev_read2:
+            read_strand = '-' if not read.is_reverse else '+'
+        else:
+            read_strand = '+' if not read.is_reverse else '-'
+
+        if not strand or strand == read_strand:
             excl = True
             for s, e in _calc_read_regions(read):
                 if start <= s <= end or start <= e <= end:
                     excl = False
                     break
             if excl and not read in reads:
-                reads.add(read)
+                reads.add(read.qname)
                 count += 1
     return count, reads
 
 
-def _fetch_reads(bam, chrom, strand, starts, ends, multiple, exclusive, whitelist=None, blacklist=None, uniq=False):
+def _fetch_reads(bam, chrom, strand, starts, ends, multiple, exclusive, whitelist=None, blacklist=None, uniq=False, rev_read2=False):
     '''
     Find reads that match within the given regions...
 
@@ -223,6 +235,10 @@ def _fetch_reads(bam, chrom, strand, starts, ends, multiple, exclusive, whitelis
 
     uniq will only include reads with uniq starting positions (strand specific)
 
+    paired-end options:
+        if rev_read2 is True, then the reads flagged as read2 will
+        have their strand information reversed.
+
     '''
     assert multiple in ['complete', 'partial', 'ignore']
 
@@ -246,7 +262,12 @@ def _fetch_reads(bam, chrom, strand, starts, ends, multiple, exclusive, whitelis
                 if uniq and k in start_pos:
                         continue
 
-                if not strand or (strand == '+' and not read.is_reverse) or (strand == '-' and read.is_reverse):
+                if read.is_read2 and rev_read2:
+                    read_strand = '-' if not read.is_reverse else '+'
+                else:
+                    read_strand = '+' if not read.is_reverse else '-'
+
+                if not strand or strand == read_strand:
                     if exclusive:
                         start_ok = False
                         end_ok = False
@@ -269,7 +290,7 @@ def _fetch_reads(bam, chrom, strand, starts, ends, multiple, exclusive, whitelis
 
                     if not read in reads:
                         start_pos.add(k)
-                        reads.add(read)
+                        reads.add(read.qname)
 
                         try:
                             ih = int(read.opt('IH'))
@@ -285,7 +306,7 @@ def _fetch_reads(bam, chrom, strand, starts, ends, multiple, exclusive, whitelis
     return count, reads
 
 
-def calc_coverage(bam, chrom, strand, starts, ends, whitelist, blacklist):
+def calc_coverage(bam, chrom, strand, starts, ends, whitelist, blacklist, rev_read2=False):
     coverage = []
     for start, end in zip(starts, ends):
         for pileup in bam.pileup(chrom, start, end):
@@ -295,9 +316,12 @@ def calc_coverage(bam, chrom, strand, starts, ends, whitelist, blacklist):
                     continue
                 if not whitelist or pileupread.qname in whitelist:
                     if strand:
-                        if strand == '+' and pileupread.alignment.is_reverse:
-                            continue
-                        elif strand == '-' and not pileupread.alignment.is_reverse:
+                        if pileupread.is_read2 and rev_read2:
+                            read_strand = '-' if not pileupread.is_reverse else '+'
+                        else:
+                            read_strand = '+' if not pileupread.is_reverse else '-'
+
+                        if strand != read_strand:
                             continue
 
                     if not pileupread.is_del:

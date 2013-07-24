@@ -10,6 +10,7 @@ import sys
 class GTFModel(Model):
     def __init__(self, fname):
         self.fname = fname
+        Model.__init__(self)
 
     def get_source(self):
         return self.fname
@@ -43,6 +44,7 @@ class ExonModel(Model):
     def __init__(self, fname):
         self.fname = fname
         self.stranded = None
+        Model.__init__(self)
 
     def get_source(self):
         return self.fname
@@ -94,13 +96,13 @@ class ExonModel(Model):
                         starts.append(start)
                         ends.append(end)
 
-                    count, reads = _fetch_reads(bam, gene.chrom, gene.strand if self.stranded else None, starts, ends, self.multiple, False, self.whitelist, self.blacklist, self.uniq_only)
+                    count, reads = _fetch_reads(bam, gene.chrom, gene.strand if self.stranded else None, starts, ends, self.multiple, False, self.whitelist, self.blacklist, self.uniq_only, self.rev_read2)
                     const_count += count
 
                 #find counts for each region
                 for num, start, end, const, names in gene.regions:
-                    count, reads = _fetch_reads(bam, gene.chrom, gene.strand if self.stranded else None, [start], [end], self.multiple, False, self.whitelist, self.blacklist, self.uniq_only)
-                    excl_count, excl_reads = _fetch_reads_excluding(bam, gene.chrom, gene.strand if self.stranded else None, start, end, self.multiple, self.whitelist, self.blacklist)
+                    count, reads = _fetch_reads(bam, gene.chrom, gene.strand if self.stranded else None, [start], [end], self.multiple, False, self.whitelist, self.blacklist, self.uniq_only, self.rev_read2)
+                    excl_count, excl_reads = _fetch_reads_excluding(bam, gene.chrom, gene.strand if self.stranded else None, start, end, self.multiple, self.whitelist, self.blacklist, self.rev_read2)
 
                     # remove reads that exclude this region
                     for read in excl_reads:
@@ -142,19 +144,21 @@ class ExonModel(Model):
             yield (gene.chrom, starts, ends, gene.strand, [gene.gene_name, gene.gene_id, gene.isoform_id, gene.chrom, gene.strand, gene.start, gene.end], callback)
         eta.done()
 
-    def count(self, bam, stranded=False, coverage=False, uniq_only=False, rpkm=False, norm='', multiple='complete', whitelist=None, blacklist=None, out=sys.stdout, quiet=False):
+    def count(self, bam, stranded=False, coverage=False, uniq_only=False, rpkm=False, norm='', multiple='complete', whitelist=None, blacklist=None, out=sys.stdout, quiet=False, rev_read2=False):
         self.stranded = stranded
         self.uniq_only = uniq_only
         self.multiple = multiple
         self.whitelist = whitelist
         self.blacklist = blacklist
+        self.rev_read2 = rev_read2
 
-        Model.count(self, bam, stranded, coverage, uniq_only, rpkm, norm, multiple, whitelist, blacklist, out, quiet)
+        Model.count(self, bam, stranded, coverage, uniq_only, rpkm, norm, multiple, whitelist, blacklist, out, quiet, rev_read2)
 
 
 class BinModel(Model):
     def __init__(self, binsize):
         self.binsize = int(binsize)
+        Model.__init__(self)
 
     def get_source(self):
         return str(self.binsize)
@@ -190,13 +194,13 @@ class BinModel(Model):
 
         eta.done()
 
-    def count(self, bam, stranded=False, coverage=False, uniq_only=False, rpkm=False, norm='', multiple='complete', whitelist=None, blacklist=None, out=sys.stdout, quiet=False):
+    def count(self, bam, stranded=False, coverage=False, uniq_only=False, rpkm=False, norm='', multiple='complete', whitelist=None, blacklist=None, out=sys.stdout, quiet=False, rev_read2=False):
         self.stranded = stranded
         self.chrom_lens = []
 
         for chrom, chrom_len in zip(bam.references, bam.lengths):
             self.chrom_lens.append((chrom, chrom_len))
-        Model.count(self, bam, stranded, coverage, uniq_only, rpkm, norm, multiple, whitelist, blacklist, out, quiet)
+        Model.count(self, bam, stranded, coverage, uniq_only, rpkm, norm, multiple, whitelist, blacklist, out, quiet, rev_read2)
 
 
 class BEDModel(Model):
@@ -207,6 +211,7 @@ class BEDModel(Model):
         else:
             self.bed = BedFile(fname)
             self.fname = fname
+        Model.__init__(self)
 
     def get_source(self):
         return self.fname
@@ -249,6 +254,7 @@ def _repeatreader(fname):
 class RepeatModel(Model):
     def __init__(self, fname):
         self.fname = fname
+        Model.__init__(self)
 
     def get_source(self):
         return self.fname
@@ -267,6 +273,7 @@ class RepeatModel(Model):
 class RepeatFamilyModel(Model):
     def __init__(self, fname):
         self.fname = fname
+        Model.__init__(self)
 
     def get_source(self):
         return self.fname
@@ -281,7 +288,7 @@ class RepeatFamilyModel(Model):
         for family, member, chrom, start, end, strand in _repeatreader(self.fname):
             yield (chrom, [start], [end], strand, [family, member, chrom, start, end, strand], None)
 
-    def count(self, bam, stranded=False, coverage=False, uniq_only=False, rpkm=False, norm='', multiple='complete', whitelist=None, blacklist=None, out=sys.stdout, quiet=False):
+    def count(self, bam, stranded=False, coverage=False, uniq_only=False, rpkm=False, norm='', multiple='complete', whitelist=None, blacklist=None, out=sys.stdout, quiet=False, rev_read2=False):
         # This is a separate count implementation because for repeat families,
         # we need to combine the counts from multiple regions in the genome,
         # so the usual chrom, starts, ends loop breaks down.
@@ -294,9 +301,10 @@ class RepeatFamilyModel(Model):
             sys.stderr.write('Normalization "%s" not supported with repeatmasker family models\n' % norm)
             sys.exit(1)
 
-        multireads = set()
-        single_count = 0
+        # multireads = set()
+        # single_count = 0
         repeats = {}
+        total_count = 0.0
         for family, member, chrom, start, end, strand in _repeatreader(self.fname):
             if not (family, member) in repeats:
                 repeats[(family, member)] = {'count': 0, 'size': 0}
@@ -311,20 +319,22 @@ class RepeatFamilyModel(Model):
             repeats[(family, '*')]['size'] += size
             repeats[(family, member)]['size'] += size
 
-            count, reads = _fetch_reads(bam, chrom, strand if stranded else None, [start], [end], multiple, False, whitelist, blacklist)
+            count, reads = _fetch_reads(bam, chrom, strand if stranded else None, [start], [end], multiple, False, whitelist, blacklist, rev_read2)
             repeats[(family, '*')]['count'] += count
             repeats[(family, member)]['count'] += count
 
-            for read in reads:
-                if read.tags and 'IH' in read.tags:
-                    ih = int(read.opt('IH'))
-                else:
-                    ih = 1
+            total_count += count
 
-                if ih == 1:
-                    single_count += 1
-                else:
-                    multireads.add(read.qname)
+            # for read in reads:
+            #     if read.tags and 'IH' in read.tags:
+            #         ih = int(read.opt('IH'))
+            #     else:
+            #         ih = 1
+
+            #     if ih == 1:
+            #         single_count += 1
+            #     else:
+            #         multireads.add(read.qname)
 
         sys.stderr.write('Calculating normalization...')
 
@@ -334,7 +344,8 @@ class RepeatFamilyModel(Model):
         if norm == 'all':
             norm_val_orig = _find_mapped_count(bam, whitelist, blacklist)
         elif norm == 'mapped':
-            norm_val_orig = single_count + len(multireads)
+            # norm_val_orig = single_count + len(multireads)
+            norm_val_orig = total_count
 
         if norm_val_orig:
             norm_val = float(norm_val_orig) / 1000000
@@ -346,7 +357,7 @@ class RepeatFamilyModel(Model):
         out.write('## stranded %s\n' % stranded)
         out.write('## multiple %s\n' % multiple)
         if norm_val:
-            out.write('## norm %s %s\n' % (norm, norm_val_orig))
+            out.write('## norm %s %s\n' % (norm, float(norm_val_orig)))
             out.write('## CPM-factor %s\n' % norm_val)
 
         out.write('#')
