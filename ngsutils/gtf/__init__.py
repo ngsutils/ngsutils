@@ -78,6 +78,8 @@ class GTF(object):
                     gid = None
                     if 'isoform_id' in attributes:
                         gid = attributes['isoform_id']
+                    elif 'tss_id' in attributes:  # iGenomes GTF files...
+                        gid = attributes['tss_id']
                     else:
                         gid = attributes['gene_id']
                         if not warned and not quiet:
