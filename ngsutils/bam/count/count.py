@@ -295,7 +295,10 @@ def _fetch_reads(bam, chrom, strand, starts, ends, multiple, exclusive, whitelis
                         try:
                             ih = int(read.opt('IH'))
                         except:
-                            ih = 1
+                            try:
+                                ih = int(read.opt('NH'))
+                            except:
+                                ih = 1
 
                         if ih == 1 or multiple == 'complete':
                             count += 1
@@ -399,7 +402,10 @@ def _find_mapped_count(bam, whitelist=None, blacklist=None, quiet=False):
                 try:
                     ih = int(read.opt('IH'))
                 except:
-                    ih = 1
+                    try:
+                        ih = int(read.opt('NH'))
+                    except:
+                        ih = 1
                 if ih > 1:
                     multinames.add(read.qname)
     bam.seek(0)

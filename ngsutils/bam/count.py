@@ -151,6 +151,12 @@ Possible values for [-multiple]:
     partial     Adds a fractional count to all genes/regions
                 (1/number of matches, ex: IH:i:3 add 0.333 to each gene)
 
+    Note: The IH tag is used to determine if a read has mapped to multiple
+          locations. If the IH tag isn't present, then the NH tag is used. If
+          both tags are missing, then each read is assume to have mapped to only
+          one location on the reference.
+           
+
 """
     sys.exit(-1)
 
