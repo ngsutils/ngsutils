@@ -159,8 +159,8 @@ def stats_counts(counts):
     Takes a list of counts and calculates stats
 
     For example:
-        [1, 2, 3, 4, 5, 6] would mean:
-        there was (1) one, (2) twos, (3) threes, etc...
+        [0, 1, 2, 3, 4, 5, 6] would mean:
+        there were no zeros, (1) one, (2) twos, (3) threes, etc...
     '''
 
     acc = 0.0
