@@ -188,7 +188,7 @@ def stats_counts(counts):
     sdacc = 0.0
 
     for idx, count in enumerate(counts):
-        sdacc += ((count * (idx - mean)) ** 2)
+        sdacc += count * ((idx - mean) ** 2)
         acc += count
         if not pct25 and acc / total > 0.25:
             pct25 = idx
