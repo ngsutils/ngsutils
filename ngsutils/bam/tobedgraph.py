@@ -13,7 +13,7 @@ normalize the counts by a given factor.
 
 import sys
 import os
-from ngsutils.bam import bam_pileup_iter
+from ngsutils.bam import bam_pileup_iter, cigar_tostr, read_cigar_at_pos
 import pysam
 
 
@@ -25,7 +25,7 @@ def write_bedgraph(chrom, start, end, count, normalize=None, out=sys.stdout):
             out.write('%s\t%s\t%s\t%s\n' % (chrom, start, end, count))
 
 
-def bam_tobedgraph(bamfile, strand=None, normalize=None, out=sys.stdout):
+def bam_tobedgraph(bamfile, strand=None, normalize=None, nogaps=False, out=sys.stdout):
     last_chrom = None
     last_count = 0
     last_start = None
@@ -43,9 +43,16 @@ def bam_tobedgraph(bamfile, strand=None, normalize=None, out=sys.stdout):
 
         count = 0
         if strand is None:
-            count = pileup.n
+            if not nogaps:
+                count = pileup.n
+            else:
+                for read in pileup.pileups:
+                    op = read_cigar_at_pos(read.alignment.cigar, read.qpos, read.is_del)
+                    if op != 3:
+                        count += 1
         else:
             for read in pileup.pileups:
+                print read.alignment.qname, read.qpos
                 if not read.alignment.is_reverse and strand == '+':
                     count += 1
                 elif read.alignment.is_reverse and strand == '-':
@@ -82,6 +89,8 @@ Options:
 
     -norm VAL         the count at every position is calculated as:
                       floor(count * VAL).
+
+    -nogaps           Don't include gaps across splice-junctions
 """
     sys.exit(1)
 
@@ -89,6 +98,7 @@ if __name__ == "__main__":
     bam = None
     strand = None
     norm = None
+    nogaps = False
 
     last = None
     for arg in sys.argv[1:]:
@@ -99,6 +109,8 @@ if __name__ == "__main__":
             last = None
         elif arg in ['-norm']:
             last = arg
+        elif arg == '-nogaps':
+            nogaps = True
         elif arg == '-plus':
             strand = '+'
         elif arg == '-minus':
@@ -113,5 +125,5 @@ if __name__ == "__main__":
         usage()
 
     bamfile = pysam.Samfile(bam, "rb")
-    bam_tobedgraph(bamfile, strand, norm, out=sys.stdout)
+    bam_tobedgraph(bamfile, strand, norm, nogaps, out=sys.stdout)
     bamfile.close()
