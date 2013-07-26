@@ -91,6 +91,7 @@ Options:
                       floor(count * VAL).
 
     -nogaps           Don't include gaps across splice-junctions
+                      (RNA-seq, adds significant processing time)
 """
     sys.exit(1)
 
