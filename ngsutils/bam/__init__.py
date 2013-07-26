@@ -673,6 +673,36 @@ def _read_alignment_fragments_gen(pos, cigar):
             raise ValueError("Unsupported CIGAR operation: %s" % op)
 
 
+def read_cigar_at_pos(cigar, qpos, is_del):
+    '''
+    Returns the CIGAR operation for a given read position
+
+    qpos is the 0-based index of the base in the read
+    '''
+    pos = 0
+    returnnext = False
+    for op, length in cigar:
+        if returnnext:
+            return op
+        if op == 0:
+            pos += length
+        elif op == 1:
+            pos += length
+        elif op == 2:
+            pass
+        elif op == 3:
+            pass
+        else:
+            raise ValueError("Unsupported CIGAR operation: %s" % op)
+
+        if pos > qpos:
+            return op
+        if is_del and pos == qpos:
+            returnnext = True
+
+    return None
+
+
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
