@@ -90,8 +90,8 @@ Options:
     -norm VAL         the count at every position is calculated as:
                       floor(count * VAL).
 
-    -nogaps           Don't include gaps across splice-junctions
-                      (RNA-seq, adds significant processing time)
+    -nogaps           Don't include gaps across splice-junctions (RNA-seq)
+                      Warning: adds significant processing time!
 """
     sys.exit(1)
 
