@@ -78,8 +78,17 @@ class GTF(object):
                     gid = None
                     if 'isoform_id' in attributes:
                         gid = attributes['isoform_id']
-                    elif 'tss_id' in attributes:  # iGenomes GTF files...
-                        gid = attributes['tss_id']
+
+                    ######
+                    # This isn't right... in iGenomes GTF files, the tss_id is for each transcript, not isoforms. Isoforms
+                    # share the same gene_id or gene_name.
+                    #######
+                    # elif 'tss_id' in attributes:  # iGenomes GTF files...
+                    #     gid = attributes['tss_id']
+
+                    elif 'gene_name' in attributes:  # use gene_name if we have it.
+                        gid = attributes['gene_name']
+
                     else:
                         gid = attributes['gene_id']
                         if not warned and not quiet:
