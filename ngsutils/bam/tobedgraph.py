@@ -52,11 +52,21 @@ def bam_tobedgraph(bamfile, strand=None, normalize=None, nogaps=False, out=sys.s
                         count += 1
         else:
             for read in pileup.pileups:
-                print read.alignment.qname, read.qpos
                 if not read.alignment.is_reverse and strand == '+':
-                    count += 1
+                    if not nogaps:
+                        count += 1
+                    else:
+                        op = read_cigar_at_pos(read.alignment.cigar, read.qpos, read.is_del)
+                        if op != 3:
+                            count += 1
+
                 elif read.alignment.is_reverse and strand == '-':
-                    count += 1
+                    if not nogaps:
+                        count += 1
+                    else:
+                        op = read_cigar_at_pos(read.alignment.cigar, read.qpos, read.is_del)
+                        if op != 3:
+                            count += 1
 
             # print pileup.pos,count,last_start,last_end
         if count != last_count or not last_end or (pileup.pos - last_end) > 1:
