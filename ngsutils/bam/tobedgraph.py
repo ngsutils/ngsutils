@@ -51,6 +51,9 @@ def bam_tobedgraph(bamfile, strand=None, normalize=None, nogaps=False, out=sys.s
                     if op != 3:
                         count += 1
         else:
+            #
+            #  TODO - add rev_read2 option
+            #
             for read in pileup.pileups:
                 if not read.alignment.is_reverse and strand == '+':
                     if not nogaps:
