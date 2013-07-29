@@ -30,7 +30,7 @@ except:
 
 
 class GTF(object):
-    _version = 1
+    _version = 1.1
 
     def __init__(self, filename=None, cache_enabled=True, quiet=False, fileobj=None):
         if not filename and not fileobj:
