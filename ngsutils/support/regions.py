@@ -86,9 +86,12 @@ class RegionTagger(object):
         self.regions.append(promoters)
 
         self.counts['coding'] = 0
+        self.counts['coding-rev'] = 0
         self.counts['exons'] = 0
         self.counts['utr-5'] = 0
         self.counts['utr-3'] = 0
+        self.counts['utr-5-rev'] = 0
+        self.counts['utr-3-rev'] = 0
         self.counts['intron'] = 0
         self.counts['promoter'] = 0
         self.counts['exon-rev'] = 0
