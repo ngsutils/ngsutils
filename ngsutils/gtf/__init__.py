@@ -346,6 +346,7 @@ class _GTFTranscript(object):
                 return (self._exons[0][0], self._cds[0][0])
             else:
                 return (self._exons[-1][1], self._cds[-1][1])
+        return None
 
     @property
     def utr_3(self):
@@ -354,6 +355,7 @@ class _GTFTranscript(object):
                 return (self._cds[-1][1], self._exons[-1][1])
             else:
                 return (self._exons[-1][0], self._cds[-1][0])
+        return None
 
     @property
     def start_codon(self):
