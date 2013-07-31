@@ -32,21 +32,33 @@ Options:
     -frag    The reads are single-end fragments, so mark PCR duplicated
              based only on the location of the read (not-recommended)
 
+    -counts  Output of the number of reads at each position 
+
+             Note: this is actually the number of duplicate reads at each
+             position. If a position has multiple reads mapped to it, but they
+             are not pcr duplicates, then there each will be reported separately.
+
 ''')
 
     sys.exit(1)
 
 
-def __flush_cur_reads(cur_reads, outbam):
+def __flush_cur_reads(cur_reads, outbam, countfile=None):
     if cur_reads:
         for k in cur_reads:
+            count = 0
+
             for i, (mapq, idx, r) in enumerate(sorted(cur_reads[k])[::-1]):
+                count += 1
                 if i > 0:
                     r.is_duplicate = True
                 outbam.write(r)
 
+            if countfile:
+                countfile.write('%s\t%s\t%s\t%s\n' % (k[0], k[1], k[2], count))
 
-def pcrdup_mark(inbam, outbam, fragment=False):
+
+def pcrdup_mark(inbam, outbam, fragment=False, countfile=None):
     cur_pos = None
     cur_reads = {}
 
@@ -60,14 +72,14 @@ def pcrdup_mark(inbam, outbam, fragment=False):
         total += 1
 
         if read.is_unmapped:
-            __flush_cur_reads(cur_reads, outbam)
+            __flush_cur_reads(cur_reads, outbam, countfile)
             outbam.write(read)
             continue
 
         start_pos = (read.tid, read.pos)
 
         if fragment:
-            dup_pos = (read.tid, read.pos)
+            dup_pos = (read.tid, read.pos, '')
         else:
             # isize is the insert length, which if this is the first read, will
             # be the right most part of the second read. If the ends of the reads
@@ -77,7 +89,7 @@ def pcrdup_mark(inbam, outbam, fragment=False):
             dup_pos = (read.tid, read.pos, read.isize)
 
         if not cur_pos or start_pos != cur_pos:
-            __flush_cur_reads(cur_reads, outbam)
+            __flush_cur_reads(cur_reads, outbam, countfile)
 
             cur_pos = start_pos
             cur_reads = {}
@@ -104,7 +116,7 @@ def pcrdup_mark(inbam, outbam, fragment=False):
 
         idx += 1
 
-    __flush_cur_reads(cur_reads, outbam)
+    __flush_cur_reads(cur_reads, outbam, countfile)
 
     sys.stdout.write('Total reads:\t%s\n' % total)
     sys.stdout.write('Proper pairs:\t%s\n' % mapped)
@@ -113,11 +125,19 @@ def pcrdup_mark(inbam, outbam, fragment=False):
 if __name__ == '__main__':
     infile = None
     outfile = None
+    countfname = None
     fragment = False
+
+    last = None
 
     for arg in sys.argv[1:]:
         if arg == '-h':
             usage()
+        elif last == '-counts':
+            countfname = arg
+            last = None
+        elif arg in ['-counts']:
+            last = arg
         elif arg == '-frag':
             fragment = True
         elif not infile:
@@ -137,7 +157,12 @@ if __name__ == '__main__':
     bamfile = pysam.Samfile(infile, "rb")
     outfile = pysam.Samfile(outfile, "wb", template=bamfile)
 
-    pcrdup_mark(bamfile, outfile, fragment)
+    if countfname:
+        countfile = open(countfname, 'w')
+    else:
+        countfile = None
+
+    pcrdup_mark(bamfile, outfile, fragment, countfile)
 
     bamfile.close()
     outfile.close()
