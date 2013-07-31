@@ -166,3 +166,5 @@ if __name__ == '__main__':
 
     bamfile.close()
     outfile.close()
+    if countfile:
+        countfile.close()
