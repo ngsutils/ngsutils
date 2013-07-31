@@ -118,7 +118,7 @@ def bam_find_regions(bam_name, merge_distance=10, min_read_count=2, only_uniq_st
 def usage():
     print __doc__
     print """\
-Usage: bamutils extract {options} bamfile
+Usage: bamutils expressed {options} bamfile
 
 Options:
 -ns             Ignore strandedness when creating regions
