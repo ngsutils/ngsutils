@@ -46,7 +46,9 @@ class RegionTagger(object):
         self.counts = {}
         self.only_first_fragment = only_first_fragment
 
-        exons = RangeMatch('exon')
+        coding = RangeMatch('coding')
+        utr_5 = RangeMatch('utr_5')
+        utr_3 = RangeMatch('utr_3')
         introns = RangeMatch('intron')
         promoters = RangeMatch('promoter')
 
@@ -59,18 +61,29 @@ class RegionTagger(object):
                 promoters.add_range(gene.chrom, gene.strand, gene.end, gene.end + 2000)
 
             for transcript in gene.transcripts:
+                for start, end in transcript.cds:
+                    coding.add_range(gene.chrom, gene.strand, start, end)
+
+                utr_5.add_range(gene.chrom, gene.strand, transcript.utr_5[0], transcript.utr_5[1])
+                utr_3.add_range(gene.chrom, gene.strand, transcript.utr_3[0], transcript.utr_3[1])
+
                 last_end = None
                 for start, end in transcript.exons:
                     if last_end:
                         introns.add_range(gene.chrom, gene.strand, last_end, start)
-                    exons.add_range(gene.chrom, gene.strand, start, end)
+                    # exons.add_range(gene.chrom, gene.strand, start, end)
                     last_end = end
 
-        self.regions.append(exons)
+
+        self.regions.append(coding)
+        self.regions.append(utr_5)
+        self.regions.append(utr_3)
         self.regions.append(introns)
         self.regions.append(promoters)
 
-        self.counts['exon'] = 0
+        self.counts['coding'] = 0
+        self.counts['utr-5'] = 0
+        self.counts['utr-3'] = 0
         self.counts['intron'] = 0
         self.counts['promoter'] = 0
         self.counts['exon-rev'] = 0

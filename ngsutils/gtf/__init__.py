@@ -340,6 +340,22 @@ class _GTFTranscript(object):
             return [(self.start, self.end)]
 
     @property
+    def utr_5(self):
+        if self._cds and self._exons:
+            if self.strand == '+':
+                return (self._exons[0][0], self._cds[0][0])
+            else:
+                return (self._exons[-1][1], self._cds[-1][1])
+
+    @property
+    def utr_3(self):
+        if self._cds and self._exons:
+            if self.strand == '+':
+                return (self._cds[-1][1], self._exons[-1][1])
+            else:
+                return (self._exons[-1][0], self._cds[-1][0])
+
+    @property
     def start_codon(self):
         if self._start_codon:
             return self._start_codon
