@@ -135,7 +135,7 @@ class RegionTagger(object):
     def add_region(self, chrom, start, end, strand):
         tag = None
 
-        if chrom == 'chrM':
+        if chrom == 'chrM' or chrom == 'M':
             tag = 'mitochondrial'
 
         if not tag:
