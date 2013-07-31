@@ -340,6 +340,12 @@ class _GTFTranscript(object):
             return [(self.start, self.end)]
 
     @property
+    def has_cds:
+        if self._cds:
+            return True
+        return False
+
+    @property
     def utr_5(self):
         if self._cds and self._exons:
             if self.strand == '+':
