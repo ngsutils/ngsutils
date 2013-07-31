@@ -340,7 +340,7 @@ class _GTFTranscript(object):
             return [(self.start, self.end)]
 
     @property
-    def has_cds():
+    def has_cds(self):
         if self._cds:
             return True
         return False
