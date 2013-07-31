@@ -48,8 +48,8 @@ class RegionTagger(object):
 
         coding = RangeMatch('coding')
         exons = RangeMatch('exons')
-        utr_5 = RangeMatch('utr_5')
-        utr_3 = RangeMatch('utr_3')
+        utr_5 = RangeMatch('utr-5')
+        utr_3 = RangeMatch('utr-3')
         introns = RangeMatch('intron')
         promoters = RangeMatch('promoter')
 
@@ -132,6 +132,8 @@ class RegionTagger(object):
         if tag:
             self.counts[tag] += 1
 
+        return tag
+
     def add_region(self, chrom, start, end, strand):
         tag = None
 
@@ -155,3 +157,5 @@ class RegionTagger(object):
 
         if tag:
             self.counts[tag] += 1
+
+        return tag
