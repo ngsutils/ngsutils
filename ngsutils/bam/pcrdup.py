@@ -26,17 +26,23 @@ def usage(msg=None):
         sys.stderr.write('%s\n\n' % msg)
     sys.stderr.write(__doc__)
     sys.stderr.write('''\
-Usage: bamutils pcrdup {options} infile.bam outfile.bam
+Usage: bamutils pcrdup {options} infile.bam
 
 Options:
-    -frag    The reads are single-end fragments, so mark PCR duplicated
-             based only on the location of the read (not-recommended)
+    -frag                The reads are single-end fragments, so mark PCR
+                         duplicated based only on the location of the read 
+                         (not-recommended)
 
-    -counts  Output of the number of reads at each position 
+    -bam filename        Output BAM file with PCR duplicates marked
 
-             Note: this is actually the number of duplicate reads at each
-             position. If a position has multiple reads mapped to it, but they
-             are not pcr duplicates, then there each will be reported separately.
+    -counts filename     Output of the number of reads at each position 
+
+                         Note: this is actually the number of duplicate reads
+                         at each position. If a position has multiple reads
+                         mapped to it, but they are not pcr duplicates, then
+                         there each will be reported separately.
+
+    You must set either -bam or -counts (or both).
 
 ''')
 
@@ -52,7 +58,8 @@ def __flush_cur_reads(cur_reads, outbam, countfile=None):
                 count += 1
                 if i > 0:
                     r.is_duplicate = True
-                outbam.write(r)
+                if outbam:
+                    outbam.write(r)
 
             if countfile:
                 countfile.write('%s\t%s\t%s\t%s\n' % (k[0], k[1], k[2], count))
@@ -73,7 +80,8 @@ def pcrdup_mark(inbam, outbam, fragment=False, countfile=None):
 
         if read.is_unmapped:
             __flush_cur_reads(cur_reads, outbam, countfile)
-            outbam.write(read)
+            if outbam:
+                outbam.write(read)
             continue
 
         start_pos = (read.tid, read.pos)
@@ -136,7 +144,10 @@ if __name__ == '__main__':
         elif last == '-counts':
             countfname = arg
             last = None
-        elif arg in ['-counts']:
+        elif last == '-bam':
+            outfile = arg
+            last = None
+        elif arg in ['-counts, -bam']:
             last = arg
         elif arg == '-frag':
             fragment = True
@@ -151,20 +162,22 @@ if __name__ == '__main__':
             else:
                 usage("%s exists! Not overwriting file." % arg)
 
-    if not infile or not outfile:
+    if not infile and not (outfile or countfname):
         usage()
 
     bamfile = pysam.Samfile(infile, "rb")
-    outfile = pysam.Samfile(outfile, "wb", template=bamfile)
+    if outfile:
+        bamout = pysam.Samfile(outfile, "wb", template=bamfile)
 
     if countfname:
         countfile = open(countfname, 'w')
     else:
         countfile = None
 
-    pcrdup_mark(bamfile, outfile, fragment, countfile)
+    pcrdup_mark(bamfile, bamout, fragment, countfile)
 
     bamfile.close()
-    outfile.close()
+    if bamout:
+        outfile.close()
     if countfile:
         countfile.close()
