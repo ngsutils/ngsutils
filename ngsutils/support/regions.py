@@ -88,14 +88,14 @@ class RegionTagger(object):
 
         self.counts['coding'] = 0
         self.counts['coding-rev'] = 0
-        self.counts['exon'] = 0
+        self.counts['other-exon'] = 0
         self.counts['utr-5'] = 0
         self.counts['utr-3'] = 0
         self.counts['utr-5-rev'] = 0
         self.counts['utr-3-rev'] = 0
         self.counts['intron'] = 0
         self.counts['promoter'] = 0
-        self.counts['exon-rev'] = 0
+        self.counts['other-exon-rev'] = 0
         self.counts['intron-rev'] = 0
         self.counts['promoter-rev'] = 0
         self.counts['junction'] = 0
