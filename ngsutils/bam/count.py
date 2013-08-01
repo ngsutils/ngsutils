@@ -125,6 +125,7 @@ Other options:
     -coverage          calculate average coverage for genes/regions
     -uniq              only count unique starting positions
                        (avoids possible PCR artifacts, not recommended)
+    -startonly         Only take into account the start pos of the read to assign counts
     -rpkm              calculate RPKM values based on millions of mapped reads
                        and the length of the region in kb (number of mapped reads
                        determined by -norm value)
@@ -170,6 +171,7 @@ if __name__ == '__main__':
     whitelist = None
     blacklist = None
     rev_read2 = False
+    startonly = False
     model = None
     model_arg = None
     bamfile = None
@@ -212,6 +214,8 @@ if __name__ == '__main__':
             last = arg
         elif arg == '-rev_read2':
             rev_read2 = True
+        elif arg == '-startonly':
+            startonly = True
         elif arg == '-nostrand':
             stranded = False
         elif arg == '-coverage':
@@ -237,5 +241,5 @@ if __name__ == '__main__':
 
     modelobj = count.models[model](model_arg)
     bam = bam_open(bamfile)
-    modelobj.count(bam, stranded, coverage, uniq_only, rpkm, norm, multiple, whitelist, blacklist, rev_read2=rev_read2)
+    modelobj.count(bam, stranded, coverage, uniq_only, rpkm, norm, multiple, whitelist, blacklist, rev_read2=rev_read2, start_only=startonly)
     bam.close()

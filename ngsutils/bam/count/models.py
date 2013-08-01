@@ -144,7 +144,7 @@ class ExonModel(Model):
             yield (gene.chrom, starts, ends, gene.strand, [gene.gene_name, gene.gene_id, gene.isoform_id, gene.chrom, gene.strand, gene.start, gene.end], callback)
         eta.done()
 
-    def count(self, bam, stranded=False, coverage=False, uniq_only=False, rpkm=False, norm='', multiple='complete', whitelist=None, blacklist=None, out=sys.stdout, quiet=False, rev_read2=False):
+    def count(self, bam, stranded=False, coverage=False, uniq_only=False, rpkm=False, norm='', multiple='complete', whitelist=None, blacklist=None, out=sys.stdout, quiet=False, rev_read2=False, start_only=False):
         self.stranded = stranded
         self.uniq_only = uniq_only
         self.multiple = multiple
@@ -152,7 +152,7 @@ class ExonModel(Model):
         self.blacklist = blacklist
         self.rev_read2 = rev_read2
 
-        Model.count(self, bam, stranded, coverage, uniq_only, rpkm, norm, multiple, whitelist, blacklist, out, quiet, rev_read2)
+        Model.count(self, bam, stranded, coverage, uniq_only, rpkm, norm, multiple, whitelist, blacklist, out, quiet, rev_read2, start_only)
 
 
 class BinModel(Model):
@@ -194,13 +194,13 @@ class BinModel(Model):
 
         eta.done()
 
-    def count(self, bam, stranded=False, coverage=False, uniq_only=False, rpkm=False, norm='', multiple='complete', whitelist=None, blacklist=None, out=sys.stdout, quiet=False, rev_read2=False):
+    def count(self, bam, stranded=False, coverage=False, uniq_only=False, rpkm=False, norm='', multiple='complete', whitelist=None, blacklist=None, out=sys.stdout, quiet=False, rev_read2=False, start_only=False):
         self.stranded = stranded
         self.chrom_lens = []
 
         for chrom, chrom_len in zip(bam.references, bam.lengths):
             self.chrom_lens.append((chrom, chrom_len))
-        Model.count(self, bam, stranded, coverage, uniq_only, rpkm, norm, multiple, whitelist, blacklist, out, quiet, rev_read2)
+        Model.count(self, bam, stranded, coverage, uniq_only, rpkm, norm, multiple, whitelist, blacklist, out, quiet, rev_read2, start_only)
 
 
 class BEDModel(Model):
@@ -288,7 +288,7 @@ class RepeatFamilyModel(Model):
         for family, member, chrom, start, end, strand in _repeatreader(self.fname):
             yield (chrom, [start], [end], strand, [family, member, chrom, start, end, strand], None)
 
-    def count(self, bam, stranded=False, coverage=False, uniq_only=False, rpkm=False, norm='', multiple='complete', whitelist=None, blacklist=None, out=sys.stdout, quiet=False, rev_read2=False):
+    def count(self, bam, stranded=False, coverage=False, uniq_only=False, rpkm=False, norm='', multiple='complete', whitelist=None, blacklist=None, out=sys.stdout, quiet=False, rev_read2=False, start_only=False):
         # This is a separate count implementation because for repeat families,
         # we need to combine the counts from multiple regions in the genome,
         # so the usual chrom, starts, ends loop breaks down.

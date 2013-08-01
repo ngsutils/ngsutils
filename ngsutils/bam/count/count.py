@@ -38,7 +38,7 @@ class Model(object):
     def get_postheaders(self):
         return None
 
-    def count(self, bam, stranded=False, coverage=False, uniq_only=False, rpkm=False, norm='', multiple='complete', whitelist=None, blacklist=None, out=sys.stdout, quiet=False, rev_read2=False):
+    def count(self, bam, stranded=False, coverage=False, uniq_only=False, rpkm=False, norm='', multiple='complete', whitelist=None, blacklist=None, out=sys.stdout, quiet=False, rev_read2=False, start_only=False):
         # bam = pysam.Samfile(bamfile, 'rb')
 
         region_counts = []
@@ -54,7 +54,7 @@ class Model(object):
                 coding_len += e - s
             outcols.append(coding_len)
 
-            count, reads = _fetch_reads(bam, chrom, strand if stranded else None, starts, ends, multiple, False, whitelist, blacklist, uniq_only, rev_read2)
+            count, reads = _fetch_reads(bam, chrom, strand if stranded else None, starts, ends, multiple, False, whitelist, blacklist, uniq_only, rev_read2, start_only)
             outcols.append(None)
             total_count += count
 
@@ -208,7 +208,7 @@ def _fetch_reads_excluding(bam, chrom, strand, start, end, multiple, whitelist=N
     return count, reads
 
 
-def _fetch_reads(bam, chrom, strand, starts, ends, multiple, exclusive, whitelist=None, blacklist=None, uniq=False, rev_read2=False):
+def _fetch_reads(bam, chrom, strand, starts, ends, multiple, exclusive, whitelist=None, blacklist=None, uniq=False, rev_read2=False, start_only=False):
     '''
     Find reads that match within the given regions...
 
@@ -234,6 +234,8 @@ def _fetch_reads(bam, chrom, strand, starts, ends, multiple, exclusive, whitelis
     (mainly useful for only benchmarking)
 
     uniq will only include reads with uniq starting positions (strand specific)
+
+    start_only means that only the start of the read is used to determine presence in a start-end region.capitalize
 
     paired-end options:
         if rev_read2 is True, then the reads flagged as read2 will
@@ -268,6 +270,15 @@ def _fetch_reads(bam, chrom, strand, starts, ends, multiple, exclusive, whitelis
                     read_strand = '+' if not read.is_reverse else '-'
 
                 if not strand or strand == read_strand:
+                    if start_only:
+                        start_ok = False
+                        for s1, e1 in zip(starts, ends):
+                            if s1 <= read.pos <= e1:
+                                start_ok = True
+                                break
+                        if not start_ok:
+                            continue
+
                     if exclusive:
                         start_ok = False
                         end_ok = False
