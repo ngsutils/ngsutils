@@ -30,7 +30,7 @@ Options:
     -gene_id        Output gene_id (from GTF file)
     -transcript_id  Output transcript_id (from GTF file)
     -gene_name      Output gene_name (from GTF file)
-    -gene_location  Output gene location (exon, inton, etc)
+    -gene_location  Output gene location (exon, intron, etc)
 
     -noheader       The first line is not a header (default: True)
 '''
