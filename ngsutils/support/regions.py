@@ -24,20 +24,20 @@ class RangeMatch(object):
                 self.ranges[chrom][bin].insert(0, (start, end, strand))
 
     def get_tag(self, chrom, strand, pos, ignore_strand=False):
+        '''
+        returns (region, is_reverse_orientation)
+        '''
         if not chrom in self.ranges:
-            return None
+            return None, False
         bin = pos / 100000
-        rev_match = False
         if not bin in self.ranges[chrom]:
-            return None
+            return None, False
         for start, end, r_strand in self.ranges[chrom][bin]:
             if pos >= start and pos <= end:
                 if ignore_strand or strand == r_strand:
-                    return self.name
-                rev_match = True
-        if rev_match:
-            return "%s-rev" % self.name
-        return None
+                    return self.name, False
+                return self.name, True
+        return None, False
 
 
 class RegionTagger(object):
@@ -110,6 +110,8 @@ class RegionTagger(object):
             return
 
         tag = None
+        is_rev = False
+
         strand = '-' if read.is_reverse else '+'
 
         if chrom == 'chrM':
@@ -123,7 +125,7 @@ class RegionTagger(object):
 
         if not tag:
             for region in self.regions:
-                tag = region.get_tag(chrom, strand, read.pos)
+                tag, is_rev = region.get_tag(chrom, strand, read.pos)
                 if tag:
                     break
 
@@ -131,32 +133,33 @@ class RegionTagger(object):
             tag = 'intergenic'
 
         if tag:
-            self.counts[tag] += 1
+            if is_rev:
+                self.counts['%s-rev' % tag] += 1
+            else:
+                self.counts[tag] += 1
 
         return tag
 
-    def add_region(self, chrom, start, end, strand):
+    def tag_region(self, chrom, start, end, strand):
         tag = None
+        is_rev = False
 
         if chrom == 'chrM' or chrom == 'M':
             tag = 'mitochondrial'
 
         if not tag:
-            for op, length in read.cigar:
-                if op == 3:
-                    tag = 'junction'
-                    break
-
-        if not tag:
             for region in self.regions:
-                tag = region.get_tag(chrom, strand, read.pos)
-                if tag:
-                    break
+                tag, is_rev = region.get_tag(chrom, strand, start)
+                if is_rev:
+                    tag = '%s-rev' % tag
+
+                if start != end:
+                    endtag, is_rev = region.get_tag(chrom, strand, end)
+                    if is_rev:
+                        endtag = '%s-rev' % endtag
+
+                if tag and endtag and endtag != tag:
+                    tag = '%s/%s' % (tag, endtag)
 
         if not tag:
             tag = 'intergenic'
-
-        if tag:
-            self.counts[tag] += 1
-
-        return tag
