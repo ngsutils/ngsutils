@@ -147,7 +147,7 @@ if __name__ == '__main__':
         elif last == '-bam':
             outfile = arg
             last = None
-        elif arg in ['-counts, -bam']:
+        elif arg in ['-counts', '-bam']:
             last = arg
         elif arg == '-frag':
             fragment = True
