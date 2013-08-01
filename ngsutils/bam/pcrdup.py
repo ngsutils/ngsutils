@@ -111,7 +111,8 @@ def pcrdup_mark(inbam, outbam, fragment=False, countfile=None):
                 read.is_duplicate = True
                 dup_list.remove(read.qname)
 
-            outbam.write(read)
+            if outbam:
+                outbam.write(read)
         elif dup_pos in cur_reads:
             mapped += 1
             duplicates += 1
