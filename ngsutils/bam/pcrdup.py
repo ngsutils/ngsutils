@@ -166,6 +166,7 @@ if __name__ == '__main__':
         usage()
 
     bamfile = pysam.Samfile(infile, "rb")
+    bamout = None
     if outfile:
         bamout = pysam.Samfile(outfile, "wb", template=bamfile)
 
