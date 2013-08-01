@@ -49,7 +49,7 @@ Options:
     sys.exit(1)
 
 
-def __flush_cur_reads(cur_reads, outbam, countfile=None):
+def __flush_cur_reads(cur_reads, outbam, inbam, countfile=None):
     if cur_reads:
         for k in cur_reads:
             count = 0
@@ -62,7 +62,7 @@ def __flush_cur_reads(cur_reads, outbam, countfile=None):
                     outbam.write(r)
 
             if countfile:
-                countfile.write('%s\t%s\t%s\t%s\n' % (outbam.references[k[0]], k[1], k[2], count))
+                countfile.write('%s\t%s\t%s\t%s\n' % (inbam.references[k[0]], k[1], k[2], count))
 
 
 def pcrdup_mark(inbam, outbam, fragment=False, countfile=None):
@@ -79,7 +79,7 @@ def pcrdup_mark(inbam, outbam, fragment=False, countfile=None):
         total += 1
 
         if read.is_unmapped:
-            __flush_cur_reads(cur_reads, outbam, countfile)
+            __flush_cur_reads(cur_reads, outbam, inbam, countfile)
             if outbam:
                 outbam.write(read)
             continue
@@ -97,7 +97,7 @@ def pcrdup_mark(inbam, outbam, fragment=False, countfile=None):
             dup_pos = (read.tid, read.pos, read.isize)
 
         if not cur_pos or start_pos != cur_pos:
-            __flush_cur_reads(cur_reads, outbam, countfile)
+            __flush_cur_reads(cur_reads, outbam, inbam, countfile)
 
             cur_pos = start_pos
             cur_reads = {}
@@ -125,7 +125,7 @@ def pcrdup_mark(inbam, outbam, fragment=False, countfile=None):
 
         idx += 1
 
-    __flush_cur_reads(cur_reads, outbam, countfile)
+    __flush_cur_reads(cur_reads, outbam, inbam, countfile)
 
     sys.stdout.write('Total reads:\t%s\n' % total)
     sys.stdout.write('Proper pairs:\t%s\n' % mapped)
