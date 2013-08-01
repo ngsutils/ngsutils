@@ -62,7 +62,7 @@ def __flush_cur_reads(cur_reads, outbam, countfile=None):
                     outbam.write(r)
 
             if countfile:
-                countfile.write('%s\t%s\t%s\t%s\n' % (k[0], k[1], k[2], count))
+                countfile.write('%s\t%s\t%s\t%s\n' % (outbam.references[k[0]], k[1], k[2], count))
 
 
 def pcrdup_mark(inbam, outbam, fragment=False, countfile=None):
