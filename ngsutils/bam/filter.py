@@ -72,6 +72,9 @@ Currently, the available filters are:
                                Note: If this is a large dataset, use
                                "bamutils extract" instead.
 
+    -excluderef refname        Exclude reads mapping to a particular reference
+                               (e.g. chrM, or _dup chromosomes)
+
     -whitelist fname           Remove reads that aren't on this list (by name)
     -blacklist fname           Remove reads that are on this list (by name)
                                  These lists can be whitespace-delimited with
@@ -309,6 +312,23 @@ class ExcludeRegion(object):
 
     def __repr__(self):
         return 'Excluding: %s' % (self.region)
+
+    def close(self):
+        pass
+
+
+class ExcludeRef(object):
+    def __init__(self, ref):
+        self.ref = ref
+
+    def filter(self, bam, read):
+        if not read.is_unmapped:
+            if bam.getrname(read.tid) == self.ref:
+                    return False
+        return True
+
+    def __repr__(self):
+        return 'Excluding: %s' % (self.ref)
 
     def close(self):
         pass
@@ -726,6 +746,7 @@ _criteria = {
     'mismatch_ref_dbsnp': MismatchRefDbSNP,
     'exclude': ExcludeRegion,
     'excludebed': ExcludeBED,
+    'excluderef': ExcludeRef,
     'include': IncludeRegion,
     'includebed': IncludeBED,
     'whitelist': Whitelist,
