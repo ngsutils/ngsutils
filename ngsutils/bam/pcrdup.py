@@ -70,13 +70,14 @@ def pcrdup_mark(inbam, outbam, fragment=False, countfile=None):
     cur_reads = {}
 
     total = 0
-    mapped = 0
+    unique = 0
     duplicates = 0
 
     dup_list = set()
 
     for read in bam_iter(bamfile):
-        total += 1
+        if not read.is_paired or read.is_read1:
+            total += 1
 
         if read.is_unmapped:
             __flush_cur_reads(cur_reads, outbam, inbam, countfile)
@@ -114,13 +115,12 @@ def pcrdup_mark(inbam, outbam, fragment=False, countfile=None):
             if outbam:
                 outbam.write(read)
         elif dup_pos in cur_reads:
-            mapped += 1
             duplicates += 1
             if not fragment:
                 dup_list.add(read.qname)
             cur_reads[dup_pos].append((read.mapq, -idx, read))
         else:
-            mapped += 1
+            unique += 1
             cur_reads[dup_pos] = [(read.mapq, -idx, read), ]
 
         idx += 1
@@ -128,7 +128,7 @@ def pcrdup_mark(inbam, outbam, fragment=False, countfile=None):
     __flush_cur_reads(cur_reads, outbam, inbam, countfile)
 
     sys.stdout.write('Total reads:\t%s\n' % total)
-    sys.stdout.write('Proper pairs:\t%s\n' % mapped)
+    sys.stdout.write('Unique reads:\t%s\n' % unique)
     sys.stdout.write('PCR duplicates:\t%s\n' % duplicates)
 
 if __name__ == '__main__':
