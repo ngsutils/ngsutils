@@ -163,7 +163,7 @@ if __name__ == '__main__':
             else:
                 usage("%s exists! Not overwriting file." % arg)
 
-    if not infile and not (outfile or countfname):
+    if not infile or not (outfile or countfname):
         usage()
 
     bamfile = pysam.Samfile(infile, "rb")
