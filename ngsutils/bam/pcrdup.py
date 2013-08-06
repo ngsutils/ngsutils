@@ -75,7 +75,10 @@ def pcrdup_mark(inbam, outbam, fragment=False, countfile=None):
 
     dup_list = set()
 
-    for read in bam_iter(bamfile):
+    def callback(read):
+        return '%s, %s, %s - %s' % (total, unique, duplicates, read.qname)
+
+    for read in bam_iter(bamfile, callback=callback):
         if not read.is_paired or read.is_read1:
             total += 1
 
