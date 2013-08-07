@@ -140,12 +140,12 @@ if __name__ == '__main__':
                 sys.exit(1)
         elif arg == '-v':
             verbose = True
-        elif arg in ['-3', '-5', '-min', '-len', '-pct']:
+        elif arg in ['-3', '-5', '-min', '-len', '-pct', '-failed']:
             last = arg
         elif not fastq:
             fastq = arg
         else:
-            usage('trim')
+            usage()
 
     if not fastq or not os.path.exists(fastq) or (not linker_5 and not linker_3):
         usage()
