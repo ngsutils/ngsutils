@@ -27,8 +27,9 @@ def fastq_trim(fastq, linker_5=None, linker_3=None, out=sys.stdout, pct_identity
     sw = swalign.LocalAlignment(swalign.NucleotideScoringMatrix(2, -1), -1)
     removed = 0
     trimmed = 0
+    is_colorspace = fastq.is_colorspace  # preload to keep reader happy.
     for read in fastq.fetch(quiet=quiet):
-        retval = seq_trim(read.name, read.seq, read.qual, linker_5, linker_3, fastq.is_colorspace, sw, pct_identity, min_trim, min_len, verbose)
+        retval = seq_trim(read.name, read.seq, read.qual, linker_5, linker_3, is_colorspace, sw, pct_identity, min_trim, min_len, verbose)
         if not retval:
             if failed_out:
                 read.write(failed_out)
