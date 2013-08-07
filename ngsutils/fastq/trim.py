@@ -136,7 +136,7 @@ if __name__ == '__main__':
                 failed = arg
                 last = None
             else:
-                sys.stderr.write("Failed output file: %s exists!\nNot overwriting!\n")
+                sys.stderr.write("Failed output file: %s exists!\nNot overwriting!\n" % arg)
                 sys.exit(1)
         elif arg == '-v':
             verbose = True
