@@ -38,11 +38,10 @@ def fastq_filter(filter_chain, stats_fname=None, out=sys.stdout, quiet=False):
 
 
 class FASTQReader(object):
-    def __init__(self, fastq, verbose=False, discard=None, veryverbose=False):
+    def __init__(self, fastq, verbose=False, discard=None):
         self.parent = None
         self.fastq = fastq
         self.verbose = verbose
-        self.veryverbose = veryverbose
 
         self.altered = 0
         self.removed = 0
@@ -51,9 +50,9 @@ class FASTQReader(object):
         self.discard = discard
 
     def filter(self):
-        for read in self.fastq.fetch(quiet=not self.verbose):
+        for read in self.fastq.fetch():
             self.kept += 1
-            if self.veryverbose:
+            if self.verbose:
                 sys.stderr.write('[FASTQ] Read: %s\n' % read.name)
             yield read.name, read.comment, read.seq, read.qual
 
@@ -456,7 +455,7 @@ if __name__ == '__main__':
 
     fq = FASTQ(fname)
 
-    chain = FASTQReader(fq, verbose)
+    chain = FASTQReader(fq, veryverbose)
     for config in filters_config:
         if verbose:
             sys.stderr.write(config[0].__name__)
