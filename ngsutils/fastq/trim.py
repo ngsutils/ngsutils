@@ -59,7 +59,7 @@ def seq_trim(name, seq, qual, linker_5, linker_3, cs, sw, pct_identity, min_trim
         aln = sw.align(seq, linker_5)
         if verbose:
             sys.stderr.write("5' alignment:\n")
-            aln.dump(sys.stderr)
+            aln.dump(out=sys.stderr)
         if aln.r_pos < min_trim and aln.identity >= pct_identity:
             left = aln.r_end
 
@@ -67,7 +67,7 @@ def seq_trim(name, seq, qual, linker_5, linker_3, cs, sw, pct_identity, min_trim
         aln = sw.align(seq, linker_3)
         if verbose:
             sys.stderr.write("3' alignment:\n")
-            aln.dump(sys.stderr)
+            aln.dump(out=sys.stderr)
         if aln.r_end > len(seq) - min_trim and aln.identity >= pct_identity:
             right = aln.r_pos
 
