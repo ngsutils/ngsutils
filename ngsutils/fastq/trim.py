@@ -13,7 +13,7 @@ from ngsutils.fastq import FASTQ
 import swalign
 
 
-def fastq_trim(fastq, linker_5=None, linker_3=None, out=sys.stdout, pct_identity=0.8, min_trim=4, min_len=25, verbose=False, quiet=False):
+def fastq_trim(fastq, linker_5=None, linker_3=None, out=sys.stdout, pct_identity=0.8, min_trim=4, min_len=25, verbose=False, quiet=False, failed_out=None):
     '''
     fname - the fastq filename
     linker_5 - the 5' linker to remove
@@ -21,6 +21,7 @@ def fastq_trim(fastq, linker_5=None, linker_3=None, out=sys.stdout, pct_identity
     out - an output stream (eg: file, stdout)
     pct_identity - the percentage of matches that must be present in the alignment to strip away linkers
     min_trim - the distance away from the edges that the linkers much match w/in
+    failed_out - an output for failed reads
     '''
 
     sw = swalign.LocalAlignment(swalign.NucleotideScoringMatrix(2, -1), -1)
@@ -29,6 +30,8 @@ def fastq_trim(fastq, linker_5=None, linker_3=None, out=sys.stdout, pct_identity
     for read in fastq.fetch(quiet=quiet):
         retval = seq_trim(read.name, read.seq, read.qual, linker_5, linker_3, fastq.is_colorspace, sw, pct_identity, min_trim, min_len, verbose)
         if not retval:
+            if failed_out:
+                read.write(failed_out)
             removed += 1
         else:
             n_seq, n_qual = retval
@@ -87,11 +90,12 @@ You must specify at least one of the following:
   -3 seq      3' linker sequence to remove
 
 Options
-  -len val    Minimum length of a read (discards shorter) [default: 25]
-  -pct val    Required percent identity (0->1.0) [default: 0.8]
-  -min val    Minumum number of bases to trim (or minumum dist. from the ends)
-              [default: 4]
-  -v          Verbose output for each alignment
+  -len val         Minimum length of a read (discards shorter) [default: 25]
+  -pct val         Required percent identity (0->1.0) [default: 0.8]
+  -min val         Minumum number of bases to trim (or minumum dist. from the
+                   ends) [default: 4]
+  -failed fname    Write failed reads to file
+  -v               Verbose output for each alignment
 """
     sys.exit(1)
 
@@ -103,6 +107,7 @@ if __name__ == '__main__':
     min_len = 25
     min_trim = 4
     pct_identity = 0.8
+    failed = None
     verbose = False
 
     if '-test' in sys.argv[1:]:
@@ -126,6 +131,13 @@ if __name__ == '__main__':
         elif last == '-min':
             min_trim = int(arg)
             last = None
+        elif last == '-failed':
+            if not os.path.exists(arg):
+                failed = arg
+                last = None
+            else:
+                sys.stderr.write("Failed output file: %s exists!\nNot overwriting!\n")
+                sys.exit(1)
         elif arg == '-v':
             verbose = True
         elif arg in ['-3', '-5', '-min', '-len', '-pct']:
@@ -143,6 +155,13 @@ if __name__ == '__main__':
         if linker_3:
             sys.stderr.write("Removing %s from 3' end\n" % linker_3)
 
+        failed_out = None
+        if failed:
+            failed_out = open(failed, 'w')
+
         fq = FASTQ(fastq)
-        fastq_trim(fq, linker_5, linker_3, min_len=min_len, pct_identity=pct_identity, min_trim=min_trim, verbose=verbose)
+        fastq_trim(fq, linker_5, linker_3, min_len=min_len, pct_identity=pct_identity, min_trim=min_trim, verbose=verbose, failed_out=failed_out)
         fq.close()
+
+        if failed_out:
+            failed_out.close()
