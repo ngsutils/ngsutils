@@ -180,6 +180,10 @@ class UniqueStart(object):
             self.last_rev_pos = -1
 
         if read.is_reverse:
+            # check reverse reads from their start (3' aend)
+            # these aren't necessarily in the correct
+            # order in the file, so we have to track them in a set
+
             start_pos = read.aend
 
             # clean up hash if necesary
