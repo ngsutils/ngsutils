@@ -133,7 +133,10 @@ class GTF(object):
                 self._gene_order[chrom].sort()
 
             if cache_enabled:
-                self._write_cache(cachefile)
+                try:
+                    self._write_cache(cachefile)
+                except:
+                    pass  # do nothing if we can't write the cache.
 
     def _load_cache(self, cachefile):
         sys.stderr.write('Reading GTF file (cached)...')
