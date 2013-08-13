@@ -172,24 +172,28 @@ class BinModel(Model):
     def get_regions(self):
         total = 0
         for chrom, chrom_len in self.chrom_lens:
-            total += chrom_len
+            total += (chrom_len / self.binsize)
+            if chrom_len % self.binsize != 0:
+                total += 1
 
         eta = ETA(total)
+        pos_acc = 0
         for chrom, chrom_len in self.chrom_lens:
             pos = -1
             for bin in xrange(0, chrom_len, self.binsize):
                 if pos > -1:
-                    eta.print_status(pos, extra='%s:%s[+]' % (chrom, bin))
+                    eta.print_status(pos_acc, extra='%s:%s[+]' % (chrom, bin))
                     yield (chrom, [pos], [bin], '+', [chrom, pos, bin, '+'], None)
                     if self.stranded:
-                        eta.print_status(pos, extra='%s:%s[-]' % (chrom, bin))
+                        eta.print_status(pos_acc, extra='%s:%s[-]' % (chrom, bin))
                         yield (chrom, [pos], [bin], '-', [chrom, pos, bin, '-'], None)
                 pos = bin
+                pos_acc += 1
 
-            eta.print_status(pos, extra='%s:%s[+]' % (chrom, bin))
+            eta.print_status(pos_acc, extra='%s:%s[+]' % (chrom, bin))
             yield (chrom, [pos], [chrom_len], '+', [chrom, pos, chrom_len, '+'], None)
             if self.stranded:
-                eta.print_status(pos, extra='%s:%s[-]' % (chrom, bin))
+                eta.print_status(pos_acc, extra='%s:%s[-]' % (chrom, bin))
                 yield (chrom, [pos], [chrom_len], '- ', [chrom, pos, chrom_len, '-'], None)
 
         eta.done()
