@@ -135,7 +135,8 @@ class GTF(object):
             if cache_enabled:
                 try:
                     self._write_cache(cachefile)
-                except:
+                except Exception, e:
+                    sys.stderr.write("Error saving cache: %s!\n" % str(e))
                     pass  # do nothing if we can't write the cache.
 
     def _load_cache(self, cachefile):
