@@ -14,6 +14,7 @@ class TmpCountFile(object):
         self.tmpfile.write('%s\t%s\t%s\n' % count, coding_len, '\t'.join(cols))
 
     def fetch(self):
+        self.tmpfile.flush()
         self.tmpfile.seek(0)
         for line in self.tmpfile:
             cols = line.strip('\n').split('\t')
