@@ -127,7 +127,8 @@ Options:
 
             Common tags:
                 AS    Alignment score
-                IH    Number of alignments
+                IH    Number of stored alignments in file for a read
+                NH    Number of reported alignments for a read
                 NM    Edit distance (each indel counts as many as its length)
 
             For example, to tally the "IH" tag (number of alignments) and the
