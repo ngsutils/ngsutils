@@ -11,7 +11,7 @@ class TmpCountFile(object):
         self.tmpfile = tempfile.NamedTemporaryFile()
 
     def write(self, count, coding_len, cols):
-        self.tmpfile.write('%s\t%s\t%s\n' % count, coding_len, '\t'.join(cols))
+        self.tmpfile.write('%s\t%s\t%s\n' % (count, coding_len, '\t'.join(cols)))
 
     def fetch(self):
         self.tmpfile.flush()
