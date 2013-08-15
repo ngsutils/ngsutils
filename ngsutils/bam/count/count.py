@@ -8,7 +8,7 @@ assert(MockBam)  # just for linting... it is used in a doctest
 
 class TmpCountFile(object):
     def __init__(self):
-        self.tmpfile = tempfile.NamedTemporaryFile()
+        self.tmpfile = tempfile.TemporaryFile()
 
     def write(self, count, coding_len, cols):
         self.tmpfile.write('%s\t%s\t%s\n' % (count, coding_len, '\t'.join([str(x) for x in cols])))
