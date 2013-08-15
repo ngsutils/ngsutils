@@ -98,10 +98,11 @@ class Model(object):
                 outcols.append(stdev)
                 outcols.append(median)
 
-            if not count in counts_tally:
-                counts_tally[count] = 1
-            else:
-                counts_tally[count] += 1
+            if count > 0:
+                if not count in counts_tally:
+                    counts_tally[count] = 1
+                else:
+                    counts_tally[count] += 1
 
             if callback:
                 for callback_cols in callback(bam, count, reads, outcols):
