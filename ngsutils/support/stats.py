@@ -46,6 +46,34 @@ def mean_stdev(l):
     return (mean, stdev)
 
 
+def counts_median(d):
+    '''
+    Calculate the median from counts stored in a dictionary
+    >>> counts_median({ 1: 4, 2: 1, 3: 4 })
+    2
+    >>> counts_median({ 1: 4, 3: 4 })
+    2
+
+    '''
+    count = 0
+    for k in d:
+        count += d[k]
+
+    if count == 0:
+        return 0
+
+    acc = 0.0
+    last = 0
+    for k in sorted(d):
+        if last:
+            return (last + k) / 2
+        acc += d[k]
+        if acc / count == 0.5:
+            last = k
+        elif acc / count > 0.5:
+            return k
+
+
 def counts_mean_stdev(d):
     '''
 

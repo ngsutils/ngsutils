@@ -1,7 +1,26 @@
 import ngsutils.support.stats
 import sys
+import tempfile
+
 from ngsutils.bam.t import MockBam
 assert(MockBam)  # just for linting... it is used in a doctest
+
+
+class TmpCountFile(object):
+    def __init__(self):
+        self.tmpfile = tempfile.NamedTemporaryFile()
+
+    def write(self, count, coding_len, cols):
+        self.tmpfile.write('%s\t%s\t%s\n' % count, coding_len, '\t'.join(cols))
+
+    def fetch(self):
+        self.tmpfile.seek(0)
+        for line in self.tmpfile:
+            cols = line.strip('\n').split('\t')
+            yield (int(cols[0]), int(cols[1]), cols[2:])
+
+    def close(self):
+        self.tmpfile.close()
 
 
 class Model(object):
@@ -41,9 +60,12 @@ class Model(object):
     def count(self, bam, stranded=False, coverage=False, uniq_only=False, rpkm=False, norm='', multiple='complete', whitelist=None, blacklist=None, out=sys.stdout, quiet=False, rev_read2=False, start_only=False):
         # bam = pysam.Samfile(bamfile, 'rb')
 
-        region_counts = []
+        # region_counts = []
         # multireads = set()
         # single_count = 0
+        tmpcounts = TmpCountFile()
+
+        counts_tally = {}
         total_count = 0.0
 
         for chrom, starts, ends, strand, cols, callback in self.get_regions():
@@ -75,11 +97,18 @@ class Model(object):
                 outcols.append(stdev)
                 outcols.append(median)
 
+            if not count in counts_tally:
+                counts_tally[count] = 1
+            else:
+                counts_tally[count] += 1
+
             if callback:
                 for callback_cols in callback(bam, count, reads, outcols):
-                    region_counts.append((count, coding_len, callback_cols))
+                    tmpcounts.write(count, coding_len, callback_cols)
+                    # region_counts.append((count, coding_len, callback_cols))
             else:
-                region_counts.append((count, coding_len, outcols))
+                    tmpcounts.write(count, coding_len, outcols)
+                # region_counts.append((count, coding_len, outcols))
 
         if not quiet:
             sys.stderr.write('Calculating normalization...')
@@ -92,10 +121,11 @@ class Model(object):
         elif norm == 'mapped':
             # norm_val_orig = single_count + len(multireads)
             norm_val_orig = total_count
-        elif norm == 'quantile':
-            norm_val_orig = _find_mapped_count_pcts([x[0] for x in region_counts])
+        # elif norm == 'quantile':
+        #     norm_val_orig = _find_mapped_count_pcts([x[0] for x in region_counts])
         elif norm == 'median':
-            norm_val_orig = _find_mapped_count_median([x[0] for x in region_counts])
+            norm_val_orig = ngsutils.support.stats.count_median(counts_tally)
+            # norm_val_orig = _find_mapped_count_median([x[0] for x in region_counts])
 
         if norm_val_orig:
             norm_val = float(norm_val_orig) / 1000000
@@ -128,7 +158,7 @@ class Model(object):
 
         out.write('\n')
 
-        for count, coding_len, outcols in region_counts:
+        for count, coding_len, outcols in tmpcounts.fetch():
             first = True
             for col in outcols:
                 if not first:
@@ -149,6 +179,7 @@ class Model(object):
                     out.write(str(col))
 
             out.write('\n')
+        tmpcounts.close()
 
 
 def _calc_read_regions(read):

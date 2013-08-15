@@ -183,7 +183,7 @@ if __name__ == '__main__':
             model_arg = arg
             last = None
         elif last == '-norm':
-            if arg not in ['all', 'mapped', 'median', 'quantile', 'none']:
+            if arg not in ['all', 'mapped', 'median', 'none']: # 'quantile',
                 usage('Invalid option for -norm: %s' % arg)
             if arg != 'none':
                 norm = arg
