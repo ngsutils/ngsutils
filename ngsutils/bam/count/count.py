@@ -78,7 +78,7 @@ class Model(object):
             outcols.append(coding_len)
 
             count, reads = _fetch_reads(bam, chrom, strand if stranded else None, starts, ends, multiple, False, whitelist, blacklist, uniq_only, rev_read2, start_only)
-            outcols.append(None)
+            outcols.append('')
             total_count += count
 
             # for read in reads:
@@ -167,7 +167,7 @@ class Model(object):
                     out.write('\t')
                 first = False
 
-                if col is None:  # this is the marker for the 'count' col
+                if col == '' or col is None:  # this is the marker for the 'count' col
                     out.write('%s' % count)
 
                     if norm_val:
