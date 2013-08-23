@@ -19,9 +19,9 @@ def strip_fasta(fname, substr='_'):
 	rmlist = []
 	def callback():
 		if good:
-			return name
+			return '%s (removed %s)' % (name, len(rmlist))
 		else:
-			return '%s (removed)' % name
+			return '%s [x] (removed %s)' % (name, len(rmlist))
 
 	for line in eta_open_iter(fname, callback=callback):
 		if line[0] == '>':
