@@ -17,7 +17,11 @@ def strip_fasta(fname, substr='_'):
 	good = False
 	name = ''
 	def callback():
-		return name
+		if good:
+			return name
+		else:
+			return '%s (removed)' % name
+			
 	for line in eta_open_iter(fname, callback=callback):
 		if line[0] == '>':
 			name = line[1:].strip().split(' ')[0]
