@@ -15,9 +15,13 @@ from eta import eta_open_iter
 
 def strip_fasta(fname, substr='_'):
 	good = False
+	name = ''
+	def callback():
+		return name
 	for line in eta_open_iter(fname):
 		if line[0] == '>':
-			if substr in line[1:].strip().split(' ')[0]:
+			name = line[1:].strip().split(' ')[0]
+			if substr in name:
 				good = False
 			else:
 				good = True
