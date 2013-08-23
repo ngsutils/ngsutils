@@ -16,8 +16,11 @@ from eta import eta_open_iter
 def strip_fasta(fname, substr='_'):
 	good = False
 	for line in eta_open_iter(fname):
-		if line[0] == '>' and substr not in line[1:].strip().split(' ')[0]:
-			good = True
+		if line[0] == '>':
+			if substr in line[1:].strip().split(' ')[0]:
+				good = False
+			else:
+				good = True
 		if good:
 			sys.stdout.write(line)
 
