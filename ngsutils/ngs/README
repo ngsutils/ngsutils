@@ -1,4 +1,7 @@
 Commands
     update        - Updates NGSUtils from git repository 
                     (http://github.com/ngsutils/ngsutils)
+    repeat2fasta  - Extract repeatmasker flagged regions to a FASTA file
+    strip_fasta   - Remove sequences from a FASTA file based on name
     tabixindex    - Index a tab-delimited file using Tabix and bgzip
+
