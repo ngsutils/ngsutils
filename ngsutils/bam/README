@@ -14,7 +14,6 @@ Commands
     innerdist     - Calculate the inner mate-pair distance from two BAM files
     keepbest      - Parses BAM file and keeps the best mapping for reads that have multiple mappings
     merge         - Combine multiple BAM files together (taking best-matches)
-    nearest       - Find the nearest annotated region for each read (from tabix-indexed file)
     renamepair    - Postprocesses a BAM file to rename pairs that have an extra /N value
     split         - Splits a BAM file into smaller pieces
     stats         - Calculates simple stats for a BAM file
