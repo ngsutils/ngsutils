@@ -1,9 +1,9 @@
 all: init
 init:
-    ./init.sh
+	./init.sh
 test:
-    ./test.sh
+	./test.sh
 clean:
-    find . -name '*.pyc' -exec rm \{\} \;
-    rm -rf ./env
+	find . -name '*.pyc' -exec rm \{\} \;
+	rm -rf ./env
 
