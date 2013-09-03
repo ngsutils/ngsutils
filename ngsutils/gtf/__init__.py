@@ -382,6 +382,7 @@ class _GTFTranscript(object):
                         break
                 utr.sort()
             else:
+                cds_end = self._cds[0][0]
                 for s, e in self._exons:
                     if e < cds_end:
                         utr.append((s, e))
