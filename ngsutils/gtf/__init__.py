@@ -337,7 +337,7 @@ class _GTFTranscript(object):
         if self._cds:
             return self._cds
         else:
-            return [(self.start, self.end)]
+            return []
 
     @property
     def has_cds(self):
@@ -347,21 +347,48 @@ class _GTFTranscript(object):
 
     @property
     def utr_5(self):
+        utr = []
         if self._cds and self._exons:
             if self.strand == '+':
-                return (self._exons[0][0], self._cds[0][0])
+                cds_start = self._cds[0][0]
+                for s, e in self._exons:
+                    if e < cds_start:
+                        utr.append((s, e))
+                    else:
+                        utr.append((s, cds_start))
+                        break
             else:
-                return (self._exons[-1][1], self._cds[-1][1])
-        return None
+                cds_start = self._cds[-1][1]
+                for s, e in self._exons[::-1]:
+                    if s > cds_start:
+                        utr.append((s, e))
+                    else:
+                        utr.append((cds_start, e))
+                        break
+                utr.sort()
+        return utr
 
     @property
     def utr_3(self):
+        utr = []
         if self._cds and self._exons:
             if self.strand == '+':
-                return (self._cds[-1][1], self._exons[-1][1])
+                cds_end = self._cds[-1][1]
+                for s, e in self._exons[::-1]:
+                    if s > cds_end:
+                        utr.append((s, e))
+                    else:
+                        utr.append((cds_end, e))
+                        break
+                utr.sort()
             else:
-                return (self._exons[-1][0], self._cds[-1][0])
-        return None
+                for s, e in self._exons:
+                    if e < cds_end:
+                        utr.append((s, e))
+                    else:
+                        utr.append((s, cds_end))
+                        break
+        return utr
 
     @property
     def start_codon(self):

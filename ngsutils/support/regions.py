@@ -66,10 +66,11 @@ class RegionTagger(object):
                     for start, end in transcript.cds:
                         coding.add_range(gene.chrom, gene.strand, start, end)
 
-                    if transcript.utr_5:
-                        utr_5.add_range(gene.chrom, gene.strand, transcript.utr_5[0], transcript.utr_5[1])
-                    if transcript.utr_3:
-                        utr_3.add_range(gene.chrom, gene.strand, transcript.utr_3[0], transcript.utr_3[1])
+                    # TODO: Fix this so that it iterates over exons in the 5'/3' UTRS
+                    for s, e in transcript.utr_5:
+                        utr_5.add_range(gene.chrom, gene.strand, s, e)
+                    for s, e in transcript.utr_3:
+                        utr_3.add_range(gene.chrom, gene.strand, s, e)
 
                 last_end = None
                 for start, end in transcript.exons:
