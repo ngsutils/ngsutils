@@ -29,8 +29,10 @@ except:
     import pickle
 
 
+__binsize = 10000
+
 class GTF(object):
-    _version = 1.1
+    _version = 1.2
 
     def __init__(self, filename=None, cache_enabled=True, quiet=False, fileobj=None):
         if not filename and not fileobj:
@@ -47,7 +49,7 @@ class GTF(object):
 
         self._genes = {}
         self._pos = 0
-        self._gene_order = {}
+        self._gene_bins = {}
         self._gene_names = {}
         self._gene_ids = {}
         warned = False
@@ -122,12 +124,15 @@ class GTF(object):
 
             for gid in self._genes:
                 gene = self._genes[gid]
-                if not gene.chrom in self._gene_order:
-                    self._gene_order[gene.chrom] = []
-                self._gene_order[gene.chrom].append((gene.start, gid))
 
-            for chrom in self._gene_order:
-                self._gene_order[chrom].sort()
+                start_bin = gene.start / __binsize
+                end_bin = gene.end / __binsize
+
+                for bin in xrange(start_bin, end_bin+1):
+                    if not (gene.chrom, bin) in self._gene_bins:
+                        self._gene_bins[(gene.chrom, bin)] = [gid]
+                    else:
+                        self._gene_bins[(gene.chrom, bin)].append(gid)
 
             if cache_enabled:
                 try:
@@ -141,9 +146,9 @@ class GTF(object):
         started_t = datetime.datetime.now()
         try:
             with open(cachefile) as cache:
-                version, genes, gene_order, gene_names, gene_ids = pickle.load(cache)
+                version, genes, gene_bins, gene_names, gene_ids = pickle.load(cache)
                 if version == GTF._version:
-                    self._genes, self._gene_order = genes, gene_order
+                    self._genes, self._gene_bins = genes, gene_bins
                     self._gene_names = gene_names
                     self._gene_ids = gene_ids
                     sys.stderr.write('(%s sec)\n' % (datetime.datetime.now() - started_t).seconds)
@@ -151,13 +156,13 @@ class GTF(object):
                     sys.stderr.write('Error reading cached file... Processing original file.\n')
         except:
             self._genes = {}
-            self._gene_order = {}
+            self._gene_bins = {}
             sys.stderr.write('Failed reading cache! Processing original file.\n')
 
     def _write_cache(self, cachefile):
         sys.stderr.write('(saving GTF cache)...')
         with open(cachefile, 'w') as cache:
-            pickle.dump((GTF._version, self._genes, self._gene_order, self._gene_names, self._gene_ids), cache)
+            pickle.dump((GTF._version, self._genes, self._gene_bins, self._gene_names, self._gene_ids), cache)
         sys.stderr.write('\n')
 
     def fsize(self):
@@ -167,30 +172,40 @@ class GTF(object):
         return self._pos
 
     def find(self, chrom, start, end=None, strand=None):
-        if chrom not in self._gene_order:
-            return
-
         if not end:
             end = start
 
         if end < start:
             raise ValueError('[gtf.find] Error: End must be smaller than start!')
 
-        for g_start, gid in self._gene_order[chrom]:
-            g_start = self._genes[gid].start
-            g_end = self._genes[gid].end
-            g_strand = self._genes[gid].strand
+        startbin = start / __binsize
+        if end:
+            endbin = end / __binsize
+        else:
+            endbin = startbin
 
-            if strand and g_strand != strand:
-                continue
+        proc_list = set()
+        for bin in xrange(startbin, endbin + 1):
+            if (chrom, bin) in self._gene_bins:
+                for gid in self._gene_bins[(chrom, bin)]:
+                    if gid in proc_list:
+                        continue
 
-            if g_start <= start <= g_end or g_start <= end <= g_end:
-                # gene spans the query boundary
-                yield self._genes[gid]
-            elif start <= g_start <= end and start <= g_end <= end:
-                # gene is completely inside boundary
-                yield self._genes[gid]
-        return
+                    proc_list.add(gid)
+
+                    g_start = self._genes[gid].start
+                    g_end = self._genes[gid].end
+                    g_strand = self._genes[gid].strand
+
+                    if strand and g_strand != strand:
+                        continue
+
+                    if g_start <= start <= g_end or g_start <= end <= g_end:
+                        # gene spans the query boundary
+                        yield self._genes[gid]
+                    elif start <= g_start <= end and start <= g_end <= end:
+                        # gene is completely inside boundary
+                        yield self._genes[gid]
 
     def get_by_id(self, gene_id):
         if gene_id in self._gene_ids:
@@ -208,9 +223,14 @@ class GTF(object):
     @property
     def genes(self):
         self._pos = 0
-        for chrom in sorted(self._gene_order):
-            for start, gene_id in self._gene_order[chrom]:
+        proc_list = set()
+        for chrbin in sorted(self._gene_bins):
+            for gene_id in self._gene_bins[chrbin]:
+                if gene_id in proc_list:
+                    continue
+
                 yield self._genes[gene_id]
+                proc_list.add(gene_id)
                 self._pos += 1
 
 
