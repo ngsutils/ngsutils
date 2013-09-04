@@ -29,11 +29,11 @@ except:
     import pickle
 
 
-__binsize = 10000
 
 class GTF(object):
     _version = 1.2
-
+    __binsize = 10000
+    
     def __init__(self, filename=None, cache_enabled=True, quiet=False, fileobj=None):
         if not filename and not fileobj:
             raise ValueError('Must pass either a filename or a fileobj')
@@ -125,8 +125,8 @@ class GTF(object):
             for gid in self._genes:
                 gene = self._genes[gid]
 
-                start_bin = gene.start / __binsize
-                end_bin = gene.end / __binsize
+                start_bin = gene.start / GTF.__binsize
+                end_bin = gene.end / GTF.__binsize
 
                 for bin in xrange(start_bin, end_bin+1):
                     if not (gene.chrom, bin) in self._gene_bins:
@@ -178,9 +178,9 @@ class GTF(object):
         if end < start:
             raise ValueError('[gtf.find] Error: End must be smaller than start!')
 
-        startbin = start / __binsize
+        startbin = start / GTF.__binsize
         if end:
-            endbin = end / __binsize
+            endbin = end / GTF.__binsize
         else:
             endbin = startbin
 
