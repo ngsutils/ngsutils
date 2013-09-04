@@ -57,7 +57,8 @@ class GTF(object):
 
         if not self._genes:
             if not quiet:
-                sys.stderr.write('Reading GTF file...\n')
+                sys.stderr.write('Reading GTF file... (%s) \n' % filename)
+
             for line in fobj:
                 try:
                     idx = line.find('#')
@@ -88,7 +89,7 @@ class GTF(object):
                     else:
                         gid = attributes['gene_id']
                         if not warned and not quiet:
-                            sys.stderr.write('\nGTF file missing isoform annotation! Each transcript will be treated separately. (%s)\n' % gid)
+                            sys.stderr.write('\nGTF file potentially missing isoform annotation! Each transcript will be treated separately. (%s)\n' % gid)
                             sys.stderr.write('%s\n\n' % (str(attributes)))
                             warned = True
                     if eta:
