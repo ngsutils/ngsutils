@@ -139,6 +139,8 @@ class Model(object):
         out.write('## model %s %s\n' % (self.get_name(), self.get_source()))
         out.write('## stranded %s\n' % stranded)
         out.write('## multiple %s\n' % multiple)
+        if start_only:
+            out.write('## start_only\n')
         if norm_val:
             out.write('## norm %s %s\n' % (norm, float(norm_val_orig)))
             out.write('## CPM-factor %s\n' % norm_val)
