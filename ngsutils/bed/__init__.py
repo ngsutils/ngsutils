@@ -142,7 +142,7 @@ class BedFile(object):
 
 
 class BedRegion(object):
-    def __init__(self, chrom, start, end, name='', score='', strand=''):
+    def __init__(self, chrom, start, end, name='', score='', strand='', *args):
         self.chrom = chrom
         self.start = int(start)
         self.end = int(end)
@@ -155,6 +155,8 @@ class BedRegion(object):
             self.strand = None
         else:
             self.strand = strand
+
+        self.extras = args
 
     def __key(self):
         return (self.chrom, self.start, self.end, self.strand, self.name)
