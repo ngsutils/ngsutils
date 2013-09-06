@@ -270,7 +270,7 @@ def _fetch_reads(bam, chrom, strand, starts, ends, multiple, exclusive, whitelis
 
     uniq will only include reads with uniq starting positions (strand specific)
 
-    start_only means that only the start of the read is used to determine presence in a start-end region.capitalize
+    start_only means that only the start of the read is used to determine presence in a start-end region.
 
     paired-end options:
         if rev_read2 is True, then the reads flagged as read2 will
@@ -308,9 +308,15 @@ def _fetch_reads(bam, chrom, strand, starts, ends, multiple, exclusive, whitelis
                     if start_only:
                         start_ok = False
                         for s1, e1 in zip(starts, ends):
-                            if s1 <= read.pos <= e1:
-                                start_ok = True
-                                break
+                            if not read.is_reverse:
+                                if s1 <= read.pos <= e1:
+                                    start_ok = True
+                                    break
+                                else:
+                                    if s1 <= read.aend <= e1:
+                                        start_ok = True
+                                        break
+
                         if not start_ok:
                             continue
 
