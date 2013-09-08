@@ -312,10 +312,10 @@ def _fetch_reads(bam, chrom, strand, starts, ends, multiple, exclusive, whitelis
                                 if s1 <= read.pos <= e1:
                                     start_ok = True
                                     break
-                                else:
-                                    if s1 <= read.aend <= e1:
-                                        start_ok = True
-                                        break
+                            else:
+                                if s1 <= read.aend <= e1:
+                                    start_ok = True
+                                    break
 
                         if not start_ok:
                             continue
