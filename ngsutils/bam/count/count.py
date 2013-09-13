@@ -344,13 +344,17 @@ def _fetch_reads(bam, chrom, strand, starts, ends, multiple, exclusive, whitelis
                         start_pos.add(k)
                         reads.add(read.qname)
 
-                        try:
-                            ih = int(read.opt('IH'))
-                        except:
-                            try:
-                                ih = int(read.opt('NH'))
-                            except:
-                                ih = 1
+                        ih = 0
+                        for tag, val in read.tags:
+                            if tag == 'IH':
+                                ih = int(val)
+                                break
+                            elif tag == 'NH':
+                                ih = int(val)
+                                break
+
+                        if not ih:
+                            ih = 1
 
                         if ih == 1 or multiple == 'complete':
                             count += 1
