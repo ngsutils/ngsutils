@@ -63,9 +63,9 @@ def fastq_sort(fastq, byname=True, bysequence=False, tmpdir=None, chunksize=1000
                 try:
                     read = fastq_read_file(fobj)
                     if byname:
-                        buf[i] = (read.name, read, i)
+                        buf[i] = (read.name, i, read)
                     if bysequence:
-                        buf[i] = (read.seq, read, i)
+                        buf[i] = (read.seq, i, read)
                 except:
                     buf[i] = None
                     skip[i] = True
@@ -78,7 +78,7 @@ def fastq_sort(fastq, byname=True, bysequence=False, tmpdir=None, chunksize=1000
             if not tup:
                 continue
 
-            sorter, read, i = tup
+            sorter, i, read = tup
             read.write(out)
             buf[i] = None
             writing = True
