@@ -48,7 +48,7 @@ def fastq_unmerge(combined_fname, out_template, gz=False):
 
 def usage():
     print __doc__
-    print """Usage: fastqutils unmerge combined.fastq out_template
+    print """Usage: fastqutils unmerge {options} combined.fastq out_template
 
 Options:
   -gz    gzip compress the output files
