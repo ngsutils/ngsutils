@@ -13,7 +13,7 @@ from ngsutils.fastq import FASTQ
 
 def export_names(fastq, out=sys.stdout, quiet=False):
     for read in fastq.fetch(quiet=quiet):
-        out.write('%s\n' % read.name.split()[0])
+        out.write('%s\n' % read.name)
 
 
 def usage():
