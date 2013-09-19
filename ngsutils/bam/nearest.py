@@ -58,9 +58,9 @@ def find_nearest(bam, bed, maxdist=100000, out=sys.stdout):
 
 def usage(msg=None):
     if msg:
-        sys.stderr.write('%s\n\n' % msg)
-    sys.stderr.write(__doc__)
-    sys.stderr.write('''\
+        sys.stdout.write('%s\n\n' % msg)
+    sys.stdout.write(__doc__)
+    sys.stdout.write('''\
 Usage: bamutils nearest {-max val} filename.bam regions.bed
 
 Options:
