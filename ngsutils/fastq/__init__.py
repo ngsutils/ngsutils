@@ -40,6 +40,24 @@ class FASTQRead(collections.namedtuple('FASTQRead', 'name comment seq qual')):
         out.write(repr(self))
 
 
+def fastq_read_file(fileobj):
+    name = fileobj.next().strip()[1:]
+
+    spl = re.split(r'[ \t]', name, maxsplit=1)
+    name = spl[0]
+    if len(spl) > 1:
+        comment = spl[1]
+    else:
+        comment = ''
+
+    seq = fileobj.next().strip()
+    fileobj.next()
+    qual = fileobj.next().strip()
+
+    return FASTQRead(name, comment, seq, qual)
+
+
+
 class FASTQ(object):
     def __init__(self, fname=None, fileobj=None):
         self.fname = fname
@@ -73,22 +91,10 @@ class FASTQ(object):
 
         while True:
             try:
-                name = self.fileobj.next().strip()[1:]
-
-                spl = re.split(r'[ \t]', name, maxsplit=1)
-                name = spl[0]
-                if len(spl) > 1:
-                    comment = spl[1]
-                else:
-                    comment = ''
-
-                seq = self.fileobj.next().strip()
-                self.fileobj.next()
-                qual = self.fileobj.next().strip()
-
+                read = fastq_read_file(self.fileobj)
                 if eta:
-                    eta.print_status(extra=name)
-                yield FASTQRead(name, comment, seq, qual)
+                    eta.print_status(extra=read.name)
+                yield read
 
             except:
                 break

@@ -6,11 +6,12 @@ Commands
     names         - Write out the read names
     properpairs   - Find properly paired reads (when fragments are filtered separately)
     revcomp       - Reverse compliment a FASTQ file
+    sort          - Sorts a FASTQ file by name or sequence
     split         - Splits a FASTQ file into N chunks
     stats         - Calculate summary statistics for a FASTQ file
     tag           - Adds a prefix or suffix to the read names in a FASTQ file
     tile          - Splits long FASTQ reads into smaller (tiled) chunks
-    trim          - Remove 5' and 3' linker sequences (S/W aligned)
+    trim          - Remove 5' and 3' linker sequences (slow, S/W aligned)
     truncate      - Truncates reads to a maximum length
     unmerge       - Unmerged paired FASTQ files into two (or more) files
 
