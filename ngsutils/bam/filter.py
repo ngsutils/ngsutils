@@ -187,9 +187,9 @@ class UniqueStart(object):
             start_pos = read.aend
 
             # clean up hash if necesary
-            # Allow up to 10k over, to balance cleaning up the rev_pos hash
+            # Allow up to 100k over, to balance cleaning up the rev_pos hash
             # and memory
-            if read.pos > (self.last_rev_pos + 10000):
+            if read.pos > (self.last_rev_pos + 100000):
                 self.last_rev_pos = start_pos
                 del_list = []
                 for k in self.rev_pos:
@@ -201,7 +201,6 @@ class UniqueStart(object):
 
             if not start_pos in self.rev_pos:
                 self.rev_pos.add(start_pos)
-
                 return True
             return False
         else:
