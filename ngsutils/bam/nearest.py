@@ -22,9 +22,7 @@ def find_nearest(bam, bed, maxdist=100000, out=sys.stdout):
         if read.is_unmapped:
             continue
 
-        dists = []  # will be an list or tuples (abs_val, signed_val)
-                    # so that we can just sort the list by abs val, then
-                    # get the signed value
+        dists = []  # will be an list tuples: (abs_val of the distance, 'up/down') (respective to + strand)
 
         chrom = bam.getrname(read.tid)
         strand = '-' if read.is_reverse else '+'
@@ -34,24 +32,35 @@ def find_nearest(bam, bed, maxdist=100000, out=sys.stdout):
         for region in bed.fetch(chrom, start, end, strand):
             if region.start <= read.pos <= region.end:
                 # start is w/in region
-                dists.append((0, 0))
+                dists.append((0, ''))
                 continue
             elif region.start <= read.apos <= region.end:
                 # end is w/in region
-                dists.append((0, 0))
+                dists.append((0, ''))
                 continue
             elif read.pos <= region.start <= region.end <= read.apos:
                 # read spans the entire region
-                dists.append((0, 0))
+                dists.append((0,''))
                 continue
             elif region.end < read.pos:
-                dists.append((read.pos - region.end), (read.pos - region.end))
+                dists.append((read.pos - region.end, 'up'))
             else:
-                dists.append((region.start - read.apos, read.apos - region.start)) # should be negative
+                dists.append((region.start - read.apos, 'down'))
 
         if dists:
             dists.sort()
-            out.write('%s\t%s\n' % (read.qname, dists[0][0]))
+
+            distance = dists[0][0]
+            orient = dists[0][1]
+
+            if distance > 0:
+                if not read.is_reverse and orient == 'down':
+                    distance = -distance
+                elif read.is_reverse and orient == 'up':
+                    distance = -distance
+                    
+
+            out.write('%s\t%s\n' % (read.qname, distance))
         else:
             out.write('%s\t*\n' % (read.qname,))
 
