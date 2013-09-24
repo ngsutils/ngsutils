@@ -27,7 +27,7 @@ def find_nearest(bam, bed, maxdist=100000, out=sys.stdout):
                     # get the signed value
 
         chrom = bam.getrname(read.tid)
-        strand = '-' if read.is_reversed else '+'
+        strand = '-' if read.is_reverse else '+'
         start = min(0, read.pos - maxdist)
         end = max(read.apos + maxdist, bam.lengths[read.tid])
 
