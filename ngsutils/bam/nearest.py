@@ -27,25 +27,25 @@ def find_nearest(bam, bed, maxdist=100000, out=sys.stdout):
         chrom = bam.getrname(read.tid)
         strand = '-' if read.is_reverse else '+'
         start = min(0, read.pos - maxdist)
-        end = max(read.apos + maxdist, bam.lengths[read.tid])
+        end = max(read.aend + maxdist, bam.lengths[read.tid])
 
         for region in bed.fetch(chrom, start, end, strand):
             if region.start <= read.pos <= region.end:
                 # start is w/in region
                 dists.append((0, ''))
                 continue
-            elif region.start <= read.apos <= region.end:
+            elif region.start <= read.aend <= region.end:
                 # end is w/in region
                 dists.append((0, ''))
                 continue
-            elif read.pos <= region.start <= region.end <= read.apos:
+            elif read.pos <= region.start <= region.end <= read.aend:
                 # read spans the entire region
                 dists.append((0,''))
                 continue
             elif region.end < read.pos:
                 dists.append((read.pos - region.end, 'up'))
             else:
-                dists.append((region.start - read.apos, 'down'))
+                dists.append((region.start - read.aend, 'down'))
 
         if dists:
             dists.sort()
