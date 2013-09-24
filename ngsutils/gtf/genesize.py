@@ -19,19 +19,56 @@ Usage: gtfutils genesize filename.gtf
 
 
 def gtf_genesize(gtf, out=sys.stdout):
-    out.write('#gene\tgenomic-size\ttranscript-size\n')
+    out.write('#gene\tgenomic-size\ttranscript-size\ttotal-intron-length\tcoding-length\t5\'UTR-length\t3\'UTR-length\n')
     for gene in gtf.genes:
         cols = [gene.gene_name]
         cols.append((gene.end - gene.start))
 
-        maxsize = 0
+        maxtx = 0
+        maxintron = 0
+        maxcoding = 0
+        maxutr5 = 0
+        maxutr3 = 0
+
         for txs in gene.transcripts:
             size = 0
+            intron_size = 0
+            last_end = None
             for start, end in txs.exons:
                 size += (end - start)
-            maxsize = max(size, maxsize)
 
-        cols.append(maxsize)
+                if last_end is not None:
+                    intron_size += (start - last_end)
+                last_end = end
+
+            cds = 0
+            utr5 = 0
+            utr3 = 0
+
+            if txs.has_cds:
+                for s, e in txs.cds:
+                    cds += (e - s)
+
+                for s, e in txs.utr_5:
+                    utr5 += (e - s)
+
+                for s, e in txs.utr_3:
+                    utr3 += (e - s)
+
+
+
+            maxtx = max(size, maxtx)
+            maxintron = max(intron_size, maxintron)
+            maxcoding = max(cds, maxcoding)
+            maxutr5 = max(utr5, maxutr5)
+            maxutr3 = max(utr3, maxutr3)
+
+        cols.append(maxtx)
+        cols.append(maxintron)
+        cols.append(maxcoding)
+        cols.append(maxutr5)
+        cols.append(maxutr3)
+        
         out.write('%s\n' % '\t'.join([str(x) for x in cols]))
 
 
