@@ -95,17 +95,25 @@ class BedFile(object):
             startbin = start / BedFile._bin_const
             endbin = end / BedFile._bin_const
 
+            buf = set()
+
             for bin in xrange(startbin, endbin + 1):
                 if (chrom, bin) in self._bins:
                     for region in self._bins[(chrom, bin)]:
                         if strand and strand != region.strand:
                             continue
                         if start <= region.start <= end or start <= region.end <= end:
-                            yield region
+                            if not region in buf:
+                                yield region
+                                buf.add(region)
                         elif region.start <= start <= region.end or region.start <= end <= region.end:
-                            yield region
+                            if not region in buf:
+                                yield region
+                                buf.add(region)
                         elif region.start < start and region.end > end:
-                            yield region
+                            if not region in buf:
+                                yield region
+                                buf.add(region)
 
     def tell(self):
         return self._cur_bin_idx
