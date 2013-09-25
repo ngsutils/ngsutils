@@ -106,10 +106,6 @@ class BedFile(object):
                             if not region in buf:
                                 yield region
                                 buf.add(region)
-                        elif region.start <= start <= region.end or region.start <= end <= region.end:
-                            if not region in buf:
-                                yield region
-                                buf.add(region)
                         elif region.start < start and region.end > end:
                             if not region in buf:
                                 yield region
