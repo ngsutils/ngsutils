@@ -87,7 +87,7 @@ class BedFile(object):
         '''
 
         if self.__tabix:
-            for match in self.__tabix(chrom, start, end):
+            for match in self.__tabix.fetch(chrom, start, end):
                 region = BedRegion(*match.split('\t'))
                 if not strand or (strand and region.strand == region):
                     yield region
