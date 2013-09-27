@@ -301,9 +301,7 @@ class BamBaseCaller(object):
             buf_idx += 1
 
         read_idx = 0
-        print read.qname, read.seq
         for op, length in read.cigar:
-            print read.qname, op, length, read_idx, read.seq[read_idx]
             if op == 0:  # M
                 for i in xrange(length):
                     try:
