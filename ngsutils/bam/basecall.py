@@ -301,7 +301,9 @@ class BamBaseCaller(object):
             buf_idx += 1
 
         read_idx = 0
+        print read.qname, read.seq
         for op, length in read.cigar:
+            print read.qname, op, length, read_idx, read.seq[read_idx]
             if op == 0:  # M
                 for i in xrange(length):
                     try:
@@ -347,7 +349,7 @@ class BamBaseCaller(object):
                     self.buffer[buf_idx].records.append(mr)
                     buf_idx += 1
             elif op == 4:  # S - soft clipping
-                read_idx += 1
+                read_idx += length
                 pass
             elif op == 5:  # H - hard clipping
                 pass
