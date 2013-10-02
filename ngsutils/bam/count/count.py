@@ -58,7 +58,7 @@ class Model(object):
     def get_postheaders(self):
         return None
 
-    def count(self, bam, stranded=False, coverage=False, uniq_only=False, rpkm=False, norm='', multiple='complete', whitelist=None, blacklist=None, out=sys.stdout, quiet=False, rev_read2=False, start_only=False):
+    def count(self, bam, stranded=False, coverage=False, uniq_only=False, fpkm=False, norm='', multiple='complete', whitelist=None, blacklist=None, out=sys.stdout, quiet=False, rev_read2=False, start_only=False):
         # bam = pysam.Samfile(bamfile, 'rb')
 
         # region_counts = []
@@ -150,7 +150,7 @@ class Model(object):
         out.write('\tlength\tcount')
         if norm_val:
             out.write('\tcount (CPM)')
-            if rpkm:
+            if fpkm:
                 out.write('\tRPKM')
 
         if coverage:
@@ -175,7 +175,7 @@ class Model(object):
                     if norm_val:
                         out.write('\t')
                         out.write(str(count / norm_val))
-                        if rpkm:
+                        if fpkm:
                             out.write('\t')
                             out.write(str(count / (coding_len / 1000.0) / norm_val))
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 ## category RNA-seq
-## desc Calculates counts/RPKM for genes/BED regions/repeats (also CNV)
+## desc Calculates counts/FPKM for genes/BED regions/repeats (also CNV)
 '''
 Counts the number of reads in genes or regions
 
@@ -11,13 +11,13 @@ Possible annotation models: gtf, exon, bed, repeat, repeatfam, or bin
 
 [gtf]
     Calculate the number of reads that map within the coding regions of each
-    gene. If [-norm] is given, an RPKM calculation is also performed,
-    yielding the normalized RPKM value for each gene.
+    gene. If [-norm] is given, an FPKM calculation is also performed,
+    yielding the normalized FPKM value for each gene.
 
     For paired-end reads, each read will only count once for each gene.
 
     Requires: GTF file
-    Calculates: # reads, RPKM, coverage
+    Calculates: # reads, FPKM, coverage
 
 
 [exon]
@@ -35,7 +35,7 @@ Possible annotation models: gtf, exon, bed, repeat, repeatfam, or bin
 
     Requires: GTF file
     Calculates: # reads,
-                RPKM,
+                FPKM,
                 # const region reads for gene,
                 # region reads,
                 # region excluding reads (spliced out),
@@ -64,7 +64,7 @@ Possible annotation models: gtf, exon, bed, repeat, repeatfam, or bin
     in a BED6 formated file: chrom, start (0-based), end, name, score, strand.
 
     Requires: BED file
-    Calculates: # reads, RPKM, coverage
+    Calculates: # reads, FPKM, coverage
 
 
 [repeat]
@@ -73,7 +73,7 @@ Possible annotation models: gtf, exon, bed, repeat, repeatfam, or bin
     Output is the number of reads that map to each repeat element.
 
     Requires: RepeatMasker file
-    Calculates: # reads, RPKM
+    Calculates: # reads, FPKM
 
 [repeatfam]
     Calculates the number of reads that map to various repeat regions in the
@@ -81,7 +81,7 @@ Possible annotation models: gtf, exon, bed, repeat, repeatfam, or bin
     Output is the number of reads that map to each family/member of repeats.
 
     Requires: RepeatMasker file
-    Calculates: # reads, RPKM
+    Calculates: # reads, FPKM
 
 [bin]
     Calculates the number of reads in bins of N bases. Reads
@@ -126,7 +126,7 @@ Other options:
     -uniq              only count unique starting positions
                        (avoids possible PCR artifacts, not recommended)
     -startonly         Only take into account the start pos of the read to assign counts
-    -rpkm              calculate RPKM values based on millions of mapped reads
+    -fpkm              calculate FPKM values based on millions of mapped reads
                        and the length of the region in kb (number of mapped reads
                        determined by -norm value)
     -norm <value>      how to normalize counts
@@ -165,7 +165,7 @@ if __name__ == '__main__':
     stranded = True
     coverage = False
     uniq_only = False
-    rpkm = False
+    fpkm = False
     norm = None
     multiple = 'complete'
     whitelist = None
@@ -220,8 +220,8 @@ if __name__ == '__main__':
             stranded = False
         elif arg == '-coverage':
             coverage = True
-        elif arg == '-rpkm':
-            rpkm = True
+        elif arg == '-fpkm':
+            fpkm = True
         elif arg == '-uniq':
             uniq_only = True
         elif arg == '-h':
@@ -241,5 +241,5 @@ if __name__ == '__main__':
 
     modelobj = count.models[model](model_arg)
     bam = bam_open(bamfile)
-    modelobj.count(bam, stranded, coverage, uniq_only, rpkm, norm, multiple, whitelist, blacklist, rev_read2=rev_read2, start_only=startonly)
+    modelobj.count(bam, stranded, coverage, uniq_only, fpkm, norm, multiple, whitelist, blacklist, rev_read2=rev_read2, start_only=startonly)
     bam.close()
