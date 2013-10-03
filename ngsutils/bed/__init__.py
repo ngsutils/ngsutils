@@ -178,6 +178,11 @@ class BedRegion(object):
         out.write('%s\n' % self)
 
     def __repr__(self):
+        score = str(self.score)
+        if score[-2:] == '.0':
+            score = score[:-2]
+
         if self.name and self.strand:
-            return '\t'. join([str(x) for x in [self.chrom, self.start, self.end, self.name, self.score, self.strand]])
+            return '\t'. join([str(x) for x in [self.chrom, self.start, self.end, self.name, score, self.strand]])
+
         return '\t'. join([str(x) for x in [self.chrom, self.start, self.end]])
