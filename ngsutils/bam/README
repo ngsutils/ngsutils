@@ -3,7 +3,7 @@ Commands
     basecall      - Base/variant caller
 
   RNA-seq
-    count         - Calculates counts/RPKM for genes/BED regions/repeats (also CNV)
+    count         - Calculates counts/FPKM for genes/BED regions/repeats (also CNV)
 
   General
     convertregion - Converts region mapping to genomic mapping
