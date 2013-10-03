@@ -154,7 +154,7 @@ class BedRegion(object):
         if score == '':
             self.score = 0
         else:
-            self.score = int(score)
+            self.score = float(score)
         if strand == '':
             self.strand = None
         else:

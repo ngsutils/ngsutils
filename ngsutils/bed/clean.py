@@ -23,9 +23,9 @@ Converts the "score" field to be an integer
 
 def bed_clean(bed, out=sys.stdout):
     for region in bed:
-        score = int(region.score)
+        region.score = int(region.score)
 
-        out.write('%s\n' % BedRegion(region.chrom, region.start, region.end, region.name, score, region.strand))
+        out.write('%s\n' % region)
 
 if __name__ == '__main__':
     fname = None
