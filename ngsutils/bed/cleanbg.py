@@ -51,17 +51,20 @@ def bedgraph_clean(bedgraph, chrom_sizes, out=sys.stdout):
     
 if __name__ == '__main__':
     fname = None
+    chrom_sizes = None
 
     for arg in sys.argv[1:]:
         if arg == '-h':
             usage()
         if not fname and os.path.exists(arg):
             fname = arg
+        elif not chrom_sizes and os.path.exists(arg):
+            chrom_sizes = arg
         else:
             print "Unknown option: %s" % arg
             usage()
 
-    if not fname:
+    if not fname or not chrom_sizes:
         usage()
 
-    bed_clean(BedFile(fname))
+    bedgraph_clean(fname, chrom_sizes)
