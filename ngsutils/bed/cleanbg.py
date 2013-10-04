@@ -36,6 +36,9 @@ def bedgraph_clean(bedgraph, chrom_sizes, out=sys.stdout):
             start = int(cols[1])
             end = int(cols[2])
 
+            if not ref in refs:
+                continue
+
             if start >= refs[ref]:
                 # skip this... it makes no sense
                 continue
