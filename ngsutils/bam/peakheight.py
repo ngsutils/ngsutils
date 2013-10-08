@@ -21,20 +21,24 @@ from ngsutils.bam import bam_open
 def bam_peakheight(bam, bed_fobj, mask=1796):
     for line in bed_fobj:
         cols = line.strip('\n').split('\t')
-        coverage = []
+        coverage_acc = 0
+        max_coverage = 0
         reads = set()
         ref = cols[0]
         start = int(cols[1])
         end = int(cols[2])
         for pileup in bam.pileup(reference=ref, start=start, end=end, mask=mask):
-            coverage.append(pileup.n)
+            coverage_acc += pileup.n
+            if pileup.n > max_coverage:
+                max_coverage = pileup.n
+
             for read in pileup.pileups:
                 reads.add(read.alignment.qname)
 
-        cols.append(max(coverage) if coverage else 0)
+        cols.append(max_coverage)
         cols.append(len(reads))
-        cols.append(sum(coverage))
-        cols.append(float(sum(coverage)) / (end-start))
+        cols.append(coverage_acc)
+        cols.append(float(coverage_acc) / (end-start))
         print '\t'.join([str(x) for x in cols])
 
 
