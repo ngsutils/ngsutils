@@ -31,7 +31,7 @@ def bam_peakheight(bam, bed_fobj, mask=1796):
             for read in pileup.pileups:
                 reads.add(read.alignment.qname)
 
-        cols.append(max(coverage))
+        cols.append(max(coverage) if coverage else 0)
         cols.append(len(reads))
         cols.append(sum(coverage))
         cols.append(float(sum(coverage)) / (end-start))
