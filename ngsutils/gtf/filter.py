@@ -17,7 +17,7 @@ def usage():
 Usage: gtfutils filter {filters} filename.gtf
 
 Possible filters:
-    -ref str    Remove annotations from chromosomes with 'str' in the name
+    -chr str    Remove annotations from chromosomes with 'str' in the name
 
 '''
     sys.exit(1)
@@ -41,7 +41,7 @@ class GTFFilter(object):
         raise NotImplementedError
 
 
-class RefSubstr(GTFFilter):
+class ChrSubstr(GTFFilter):
     def __init__(self, substr):
         self.substr = substr
 
@@ -58,10 +58,10 @@ if __name__ == '__main__':
     for arg in sys.argv[1:]:
         if arg == '-h':
             usage()
-        elif last == '-ref':
-            filters.append(RefSubstr(arg))
+        elif last == '-chr':
+            filters.append(ChrSubstr(arg))
             last = None
-        elif arg in ['-ref']:
+        elif arg in ['-chr']:
             last = arg
         elif not fname and os.path.exists(arg):
             fname = arg
