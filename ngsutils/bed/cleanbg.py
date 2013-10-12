@@ -9,6 +9,7 @@ range as the associated chrom.sizes file.
 import os
 import sys
 from ngsutils.bed import BedFile, BedRegion
+from ngsutils.support import gzip_reader
 
 
 def usage():
@@ -29,24 +30,32 @@ def bedgraph_clean(bedgraph, chrom_sizes, out=sys.stdout):
             cols = line.strip().split('\t')
             refs[cols[0]] = int(cols[1])
 
-    with open(bedgraph) as f:
-        for line in f:
-            cols = line.strip().split('\t')
-            ref = cols[0]
-            start = int(cols[1])
-            end = int(cols[2])
+    first = True
+    extra  = ''
 
-            if not ref in refs:
-                continue
+    for line in gzip_reader(bedgraph, callback=lambda: extra):
+        if first:
+            out.write(line)  # header
+            first = False
+            continue
+        cols = line.strip().split('\t')
+        ref = cols[0]
+        start = int(cols[1])
+        end = int(cols[2])
 
-            if start >= refs[ref]:
-                # skip this... it makes no sense
-                continue
-            if end > refs[ref]:
-                # truncate this record...
-                end = refs[ref]
+        extra = '%s:%s-%s' % (ref, start, end)
 
-            out.write('%s\n' % '\t'.join([str (x) for x in cols]))
+        if not ref in refs:
+            continue
+
+        if start >= refs[ref]:
+            # skip this... it makes no sense
+            continue
+        if end > refs[ref]:
+            # truncate this record...
+            cols[2] = refs[ref]
+
+        out.write('%s\n' % '\t'.join([str (x) for x in cols]))
 
     
 if __name__ == '__main__':
