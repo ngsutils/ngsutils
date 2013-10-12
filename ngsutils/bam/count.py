@@ -121,7 +121,7 @@ Model options (you must select one):
 
 Other options:
     -nostrand          ignore strand in counting reads
-    -rev_read2              for paired-end reads, reverse the strand of the second fragment
+    -rev_read2         for paired-end reads, reverse the strand of the second fragment
     -coverage          calculate average coverage for genes/regions
     -uniq              only count unique starting positions
                        (avoids possible PCR artifacts, not recommended)
