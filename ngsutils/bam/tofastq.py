@@ -10,7 +10,7 @@ import os
 from ngsutils.bam import bam_iter, bam_open
 
 
-def bam_tofastx(fname, colorspace=False, show_mapped=True, show_unmapped=True, fastq=True):
+def bam_tofastx(fname, colorspace=False, show_mapped=True, show_unmapped=True, fastq=True, read1=True, read2=True, proper=False):
     if show_mapped is False and show_unmapped is False:
         return
 
@@ -19,6 +19,14 @@ def bam_tofastx(fname, colorspace=False, show_mapped=True, show_unmapped=True, f
     last_key = None
 
     for read in bam_iter(sam):
+        if not read1 and read.is_read1:
+            continue
+        if not read2 and read.is_read2:
+            continue
+
+        if proper and not read.is_proper_pair:
+            continue
+
         k = (read.qname, read.seq)
         if last_key == k:
             continue
@@ -81,6 +89,10 @@ Options:
     -cs        Output color-space sequences
     -mapped    Only output mapped sequences
     -unmapped  Only output unmapped sequences
+
+    -read1     Only output the first read (paired-end)
+    -read2     Only output the second read (paired-end)
+    -proper    Only output proper-pairs (both mapped)
 """
     sys.exit(1)
 
@@ -93,10 +105,18 @@ def main(fastq=True):
     samf = None
     mapped = True
     unmapped = True
+    read1 = True
+    read2 = True
 
     for arg in sys.argv[1:]:
         if arg == '-cs':
             cs = True
+        elif arg == '-read1':
+            read2 = False
+        elif arg == '-read2':
+            read1 = False
+        elif arg == '-proper':
+            proper = False
         elif arg == '-unmapped':
             if not unmapped:
                 usage()
@@ -110,7 +130,7 @@ def main(fastq=True):
     if not samf:
         usage()
 
-    bam_tofastx(samf, cs, mapped, unmapped, fastq)
+    bam_tofastx(samf, cs, mapped, unmapped, fastq, read1, read2, proper)
 
 if __name__ == '__main__':
     main()
