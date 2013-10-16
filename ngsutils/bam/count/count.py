@@ -1,6 +1,7 @@
 import ngsutils.support.stats
 import sys
 import tempfile
+import ngsutils
 
 from ngsutils.bam.t import MockBam
 assert(MockBam)  # just for linting... it is used in a doctest
@@ -135,6 +136,7 @@ class Model(object):
         if not quiet:
             sys.stderr.write('\n')
 
+        out.write('## %s\n' % (ngsutils.version()))
         out.write('## input%s%s\n' % (' ' if bam.filename else '', bam.filename))
         out.write('## model %s %s\n' % (self.get_name(), self.get_source()))
         out.write('## stranded %s\n' % stranded)
@@ -144,6 +146,8 @@ class Model(object):
         if norm_val:
             out.write('## norm %s %s\n' % (norm, float(norm_val_orig)))
             out.write('## CPM-factor %s\n' % norm_val)
+        if rev_read2:
+            out.write('## rev_read2\n')
 
         out.write('#')
         out.write('\t'.join(self.get_headers()))
