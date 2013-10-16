@@ -16,10 +16,11 @@ def bam_tofastx(fname, colorspace=False, show_mapped=True, show_unmapped=True, f
 
     sam = bam_open(fname)
 
-    last_qname = None
+    last_key = None
 
     for read in bam_iter(sam):
-        if last_qname == read.qname:
+        k = (read.qname, read.seq)
+        if last_key == k:
             continue
 
         show = False
@@ -33,10 +34,10 @@ def bam_tofastx(fname, colorspace=False, show_mapped=True, show_unmapped=True, f
 
         if fastq:
             write_fastq(read, colorspace=colorspace)
-            last_qname = read.qname
         else:
             write_fasta(read, colorspace=colorspace)
-            last_qname = read.qname
+
+        last_key = k
 
 
 
@@ -45,6 +46,9 @@ def write_fasta(read, out=sys.stdout, colorspace=False):
         seq = read.opt('CS')
     else:
         seq = read.seq
+
+    if not read.is_unmapped and read.is_reverse:
+        seq = seq[::-1]
 
     out.write('>%s\n%s\n' % (read.qname, seq))
 
@@ -56,6 +60,10 @@ def write_fastq(read, out=sys.stdout, colorspace=False):
     else:
         seq = read.seq
         qual = read.qual
+
+    if not read.is_unmapped and read.is_reverse:
+        seq = seq[::-1]
+        qual = qual[::-1]
 
     out.write('@%s\n%s\n+\n%s\n' % (read.qname, seq, qual))
 
