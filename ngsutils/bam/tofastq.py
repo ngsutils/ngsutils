@@ -107,6 +107,7 @@ def main(fastq=True):
     unmapped = True
     read1 = True
     read2 = True
+    proper = False
 
     for arg in sys.argv[1:]:
         if arg == '-cs':
