@@ -30,7 +30,6 @@ def find_nearest(bam, bed, maxdist=100000, out=sys.stdout):
         end = min(read.aend + maxdist, bam.lengths[read.tid])
 
         for region in bed.fetch(chrom, start, end, strand):
-            sys.stderr.write("  - checking region: %s = " % region)
             if region.start <= read.pos <= region.end:
                 # start is w/in region
                 dists.append((0, ''))
