@@ -111,7 +111,7 @@ class MergedRegion(object):
 
     def write(self):
         if self.chrom and self.region_start and self.region_end:
-            region = BedRegion(self.chrom, self.region_start, self.region_end, ','.join(self.members), self.score, self.strand)
+            region = BedRegion(self.chrom, self.region_start, self.region_end, ','.join(sorted(set(self.members))), self.score, self.strand)
             region.write(self.out)
         self.region_start = 0
         self.region_end = 0
