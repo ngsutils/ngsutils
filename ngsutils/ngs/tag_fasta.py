@@ -51,7 +51,7 @@ if __name__ == '__main__':
             else:
                 usage('%s missing!' % arg)
 
-    if not fname or not prefix or not suffix:
+    if not fname or (not prefix and not suffix):
         usage()
 
     tag_fasta(fname, prefix, suffix)
