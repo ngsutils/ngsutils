@@ -4,6 +4,7 @@ Commands
     add_reflink - Appends isoform/name annotation from RefSeq/refLink
     add_xref    - Appends name annotation from UCSC Xref file
     annotate    - Annotates genomic positions based on a GTF model
+    filter      - Filter annotations from a GTF file
     genesize    - Extract genomic/transcript sizes for genes
     junctions   - Build a junction library from FASTA and GTF model
     query       - Query a GTF file by coordinates

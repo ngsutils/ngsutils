@@ -1,14 +1,20 @@
 Commands
   General
+    clean        - Cleans a BED file (score should be integers)
     extend       - Extends BED regions (3')
     reduce       - Merges overlapping BED regions
     refcount     - Given a number of BED files, calculate the number of samples that overlap regions in a reference BED file
+    sizes        - Extract the sizes of BED regions
     sort         - Sorts a BED file (in place)
     stats        - Calculates simple stats for a BED file
 
   Conversion
+    bed3to6      - Convert a BED3 file to a BED6 file
     frombasecall - Converts a file in basecall format to BED3 format
     fromprimers  - Converts a list of PCR primer pairs to BED regions
     fromvcf      - Converts a file in VCF format to BED6
     tobedgraph   - BED to BedGraph
     tofasta      - Extract BED regions from a reference FASTA file
+
+  Misc
+    cleanbg      - Cleans up a bedgraph file
