@@ -16,8 +16,11 @@ def tag_fasta(fname, prefix='', suffix=''):
         if line[0] == '>':
             spl = line[1:].strip().split(' ',1)
             name = '%s%s%s' % (prefix, spl[0], suffix)
-            comment = spl[1]
-            sys.stdout.write('>%s %s\n' % (name, comment))
+            if len(spl) > 1:
+                comment = ' ' % spl[1]
+            else:
+                comment = ''
+            sys.stdout.write('>%s%s\n' % (name, comment))
         else:
             sys.stdout.write(line)
 
