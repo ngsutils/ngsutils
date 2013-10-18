@@ -207,8 +207,9 @@ class Counts(object):
 def memoize(func):
     __cache = {}
     def inner(*args, **kwargs):
-        if  (args, kwargs) not in __cache:
-            __cache[(args, kwargs)] = func(*args, **kwargs)
-        return __cache[(args, kwargs)]
+        k = (args, tuple(kwargs.iteritems()))
+        if  k not in __cache:
+            __cache[k] = func(*args, **kwargs)
+        return __cache[k]
 
     return inner
