@@ -46,5 +46,5 @@ if [ "$PYTHONMINOR" -eq 6 ]; then
 fi
 
 echo "Installing required libraries"
-pip install cython==0.16
+#pip install cython==0.16
 pip install -r requirements.txt
