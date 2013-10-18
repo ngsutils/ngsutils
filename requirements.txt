@@ -1,5 +1,7 @@
 # Cython 0.16 is required... 0.17 has issues with Python 2.7 building
-cython==0.16
+# 2013-10-18 mbreese - Looks like it is okay now...
+# cython==0.16
+
 pysam>=0.4.1
 coverage>=3.5.3
 eta>=0.9
