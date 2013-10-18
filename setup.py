@@ -3,7 +3,7 @@
 from distutils.core import setup
 
 setup(name='ngsutils',
-      version='0.5.1a',
+      version='0.5.2c',
       description='NGSUtils - Various utilities for working with NGS data',
       author='Marcus Breese',
       author_email='mbreese@stanford.edu',
