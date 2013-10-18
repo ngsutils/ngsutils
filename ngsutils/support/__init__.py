@@ -210,3 +210,5 @@ def memoize(func):
         if  (args, kwargs) not in __cache:
             __cache[(args, kwargs)] = func(*args, **kwargs)
         return __cache[(args, kwargs)]
+
+    return inner
