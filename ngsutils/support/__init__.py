@@ -202,3 +202,11 @@ class Counts(object):
 
     def max(self):
         return len(self.bins) - 1
+
+
+def memoize(func):
+    __cache = {}
+    def inner(*args, **kwargs):
+        if  (args, kwargs) not in __cache:
+            __cache[(args, kwargs)] = func(*args, **kwargs)
+        return __cache[(args, kwargs)]
