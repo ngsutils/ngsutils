@@ -2,8 +2,11 @@
 ## category General
 ## desc Remove 5' and 3' linker sequences (slow, S/W aligned)
 '''
-Removes linkers from 5' and 3' ends by performing local
-s/w alignments with the linker sequences
+Removes linkers from 5' and 3' ends by performing local S/W alignments with
+the linker sequences. This is best used when the sequencing is noisy with
+a lot of low quality base calls. If there aren't expected to be many
+mismatches or sequencing errors, use "fastqutils filter" as it uses a faster
+sliding window method.
 '''
 
 import os
