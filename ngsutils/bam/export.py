@@ -87,7 +87,10 @@ def export_read(bamfile, read, fields, out=sys.stdout):
                     else:
                         cols.append('%s:Z:%s' % (tag, val))
             else:
-                cols.append(read.opt(field[5:]))
+                try:
+                    cols.append(read.opt(field[5:]))
+                except KeyError:
+                    cols.append('')
 
     out.write('%s\n' % '\t'.join([str(x) for x in cols]))
 
