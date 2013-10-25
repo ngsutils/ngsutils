@@ -81,7 +81,7 @@ class TrimFilter(object):
                 total = 0
                 for s, a in zip(upseq[i:], self.trim_seq):
                     total += 1
-                    if s == a:
+                    if s == a or a == 'N':
                         matches += 1
 
                 if (matches / total) >= self.mismatch_pct:
