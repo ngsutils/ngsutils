@@ -357,9 +357,9 @@ Filters:
                               value should be given as a character (in Sanger
                               scale)(like Illumina B-trim)
 
-  -trim seq mismatch mintrim  Trim away at least [mintrim] bases that match a
-                              [sequence] (3' adaptor) allowing for a certain
-                              [mismatch] percentage (0.0-1.0)
+  -trim seq pct mintrim       Trim away at least [mintrim] bases that match a
+                              [sequence] (3' adaptor) allowing for a match
+                              percentage [pct] (0.0-1.0)
 
   -paired                     Only keep reads that are correctly paired
 
