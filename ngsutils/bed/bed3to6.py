@@ -3,7 +3,7 @@
 ## desc Convert a BED3 file to a BED6 file
 '''
 Convert a BED3 file to a BED6 file with constant name, score, and strand.
-
+(This can also be used to replace values in a BED6 file)
 '''
 
 import os
@@ -16,27 +16,22 @@ def usage():
     print """\
 Usage: bedutils bed3to6 {-name val} {-score val} {-strand val} bedfile
 
-Defaults:
-    name: chrom:start-end
-    score: 0
-    strand: "+"
-
 """
     sys.exit(1)
 
 
-def bed_bed3to6(bed, name=None, score=None, strand="+", out=sys.stdout):
+def bed_bed3to6(bed, name=None, score=None, strand=None, out=sys.stdout):
     for region in bed:
         region.name = name if name else '%s:%s-%s' % (region.chrom, region.start, region.end)
-        region.score = score
-        region.strand = strand
+        region.score = score if score else ''
+        region.strand = strand if strand else ''
         region.write(out)
 
 if __name__ == '__main__':
     fname = None
     name = None
-    score = 0
-    strand = "+"
+    score = None
+    strand = None
 
     last = None
 
