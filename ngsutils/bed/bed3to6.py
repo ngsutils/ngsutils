@@ -22,9 +22,14 @@ Usage: bedutils bed3to6 {-name val} {-score val} {-strand val} bedfile
 
 def bed_bed3to6(bed, name=None, score=None, strand=None, out=sys.stdout):
     for region in bed:
-        region.name = name if name else '%s:%s-%s' % (region.chrom, region.start, region.end)
-        region.score = score if score else ''
-        region.strand = strand if strand else ''
+        if name:
+            region.name = name
+        if not region.name:
+            region.name = '%s:%s-%s' % (region.chrom, region.start, region.end)
+        if score:
+            region.score = score
+        if strand:
+            region.strand = strand
         region.write(out)
 
 if __name__ == '__main__':
