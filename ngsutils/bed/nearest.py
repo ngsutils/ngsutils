@@ -86,7 +86,7 @@ if __name__ == '__main__':
             last = None
         elif arg in ['-max']:
             last = arg
-        elif not qbed_fname and os.path.exists(arg):
+        elif not qbed_fname and (os.path.exists(arg) or arg == '-'):
             qbed_fname = arg
         elif not refbed_fname and os.path.exists(arg):
             refbed_fname = arg

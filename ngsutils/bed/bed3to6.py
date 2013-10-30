@@ -54,7 +54,7 @@ if __name__ == '__main__':
             last = None
         elif arg in ['-name', '-score', '-strand']:
             last = arg
-        elif not fname and os.path.exists(arg):
+        elif not fname and (os.path.exists(arg) or arg == '-'):
             fname = arg
         else:
             print "Unknown option: %s" % arg

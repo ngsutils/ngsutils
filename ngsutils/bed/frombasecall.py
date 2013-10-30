@@ -38,7 +38,7 @@ def usage():
 if __name__ == '__main__':
     fname = None
     for arg in sys.argv[1:]:
-        if not fname and os.path.exists(arg):
+        if not fname and (os.path.exists(arg) or arg == '-'):
             fname = arg
         elif arg == '-h':
             usage()

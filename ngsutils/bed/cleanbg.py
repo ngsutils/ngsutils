@@ -65,7 +65,7 @@ if __name__ == '__main__':
     for arg in sys.argv[1:]:
         if arg == '-h':
             usage()
-        if not fname and os.path.exists(arg):
+        if not fname and (os.path.exists(arg) or arg == '-'):
             fname = arg
         elif not chrom_sizes and os.path.exists(arg):
             chrom_sizes = arg

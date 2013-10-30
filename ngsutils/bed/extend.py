@@ -61,7 +61,7 @@ if __name__ == '__main__':
                 size = int(arg[1:])
             else:
                 size = int(arg)
-        elif not fname and os.path.exists(arg):
+        elif not fname and (os.path.exists(arg) or arg == '-'):
             fname = arg
         else:
             print "Unknown option: %s" % arg

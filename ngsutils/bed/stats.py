@@ -81,7 +81,7 @@ if __name__ == '__main__':
     for arg in sys.argv[1:]:
         if arg == '-h':
             usage()
-        elif not infile and os.path.exists(arg):
+        elif not infile and (os.path.exists(arg) or arg == '-'):
             infile = arg
         elif not gtf_file and os.path.exists(arg):
             gtf_file = arg
