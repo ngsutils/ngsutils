@@ -13,12 +13,7 @@ import sys
 def usage():
     print __doc__
     print """\
-Usage: bedutils tobed3 {-name val} {-score val} {-strand val} bedfile
-
-Defaults:
-    name: chrom:start-end
-    score: 0
-    strand: "+"
+Usage: bedutils tobed3 bedfile
 
 """
     sys.exit(1)
