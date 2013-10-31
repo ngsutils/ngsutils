@@ -18,7 +18,7 @@ import ngsutils.support.ngs_utils
 def usage():
     print __doc__
     print """
-Usage: bedutils stats in.bed {gene_annotation.gtf}
+Usage: bedutils stats  {-names} in.bed {gene_annotation.gtf}
 
 If a GTF file is given, counts corresponding to exons, introns, promoters,
 junctions, intergenic, and mitochondrial regions will be calculated.
@@ -27,7 +27,7 @@ junctions, intergenic, and mitochondrial regions will be calculated.
 
 
 class BedStats(object):
-    def __init__(self, bed, gtf_file=None):
+    def __init__(self, bed, gtf_file=None, names=False):
         self.regiontagger = None
         if gtf_file:
             self.regiontagger = RegionTagger(gtf_file)
@@ -36,10 +36,17 @@ class BedStats(object):
         self.size = 0
         self.lengths = Counts()
         self.refs = {}
+        self.names = {}
         for region in bed:
             self.total += 1
             self.size += (region.end - region.start)
             self.lengths.add(region.end - region.start)
+
+            if names:
+                if not region.name in self.names:
+                    self.names[region.name] = 1
+                else:
+                    self.names[region.name] += 1
 
             if not region.chrom in self.refs:
                 self.refs[region.chrom] = 0
@@ -58,6 +65,11 @@ class BedStats(object):
         for refname in ngsutils.support.ngs_utils.natural_sort([x for x in self.refs]):
             out.write("%s\t%s\n" % (refname, format_number(self.refs[refname])))
 
+        if self.names:
+            out.write("\nname\tcount\n")
+            for name in ngsutils.support.ngs_utils.natural_sort([x for x in self.names]):
+                out.write("%s\t%s\n" % (name, format_number(self.names[name])))
+
         if self.regiontagger:
             out.write("\n")
             out.write("Mapping regions\n")
@@ -67,20 +79,23 @@ class BedStats(object):
                 out.write("%s\t%s\n" % (k, self.regiontagger.counts[k]))
 
 
-def bed_stats(infile, gtf_file=None, out=sys.stdout, quiet=False):
+def bed_stats(infile, gtf_file=None, out=sys.stdout, quiet=False, names=False):
     if not quiet:
         sys.stderr.write('Calculating BED region stats...\n')
 
-    stats = BedStats(BedFile(infile), gtf_file)
+    stats = BedStats(BedFile(infile), gtf_file, names=names)
     stats.write(out)
 
 if __name__ == '__main__':
     infile = None
     gtf_file = None
+    names = False
 
     for arg in sys.argv[1:]:
         if arg == '-h':
             usage()
+        elif arg == '-names':
+            names = True
         elif not infile and (os.path.exists(arg) or arg == '-'):
             infile = arg
         elif not gtf_file and os.path.exists(arg):
@@ -89,4 +104,4 @@ if __name__ == '__main__':
     if not infile:
         usage()
     else:
-        bed_stats(infile, gtf_file)
+        bed_stats(infile, gtf_file, names=names)
