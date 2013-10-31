@@ -15,7 +15,7 @@ from ngsutils.bed import BedFile
 def usage():
     print __doc__
     print """\
-Usage: bedutils bed3to6 {-name val} {-score val} {-strand val} {-rgb name value} bedfile
+Usage: bedutils annotate {-name val} {-score val} {-strand val} {-rgb name value} bedfile
 
 """
     sys.exit(1)
@@ -76,4 +76,4 @@ if __name__ == '__main__':
     if not fname:
         usage()
 
-    bed_annotate(BedFile(fname), name=name, score=score, strand=strand)
+    bed_annotate(BedFile(fname), name=name, score=score, strand=strand, rgb=rgb)
