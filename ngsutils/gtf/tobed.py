@@ -31,8 +31,8 @@ Where type is one of:
     -txs      Transcription stop sites (unique)
     -tlss     Translational start sites (unique start codons)
     -tlxs     Translational stop sites (unique stop codons)
-    -junc_5   Splice junction 5' donor
-    -junc_3   Splice junction 3' acceptor
+    -junc5    Splice junction 5' donor
+    -junc3    Splice junction 3' acceptor
 
 
 '''
@@ -209,9 +209,9 @@ if __name__ == '__main__':
             txs = True
         elif arg == '-tlxs':
             tlxs = True
-        elif arg == '-junc_5':
+        elif arg == '-junc5':
             junc_5 = True
-        elif arg == '-junc_3':
+        elif arg == '-junc3':
             junc_3 = True
         elif not filename and os.path.exists(arg):
             filename = arg
