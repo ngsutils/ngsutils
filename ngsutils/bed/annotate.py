@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 ## category Conversion
-## desc Convert a BED3 file to a BED6 file
+## desc Annotate BED files by adding / altering columns
 '''
 Convert a BED3 file to a BED6 file with constant name, score, and strand.
-(This can also be used to replace values in a BED6 file)
+This can also be used to replace values in a BED6 file, or add RGB colors based 
+on the "name" field of a region.
 '''
 
 import os
@@ -14,13 +15,13 @@ from ngsutils.bed import BedFile
 def usage():
     print __doc__
     print """\
-Usage: bedutils bed3to6 {-name val} {-score val} {-strand val} bedfile
+Usage: bedutils bed3to6 {-name val} {-score val} {-strand val} {-rgb name value} bedfile
 
 """
     sys.exit(1)
 
 
-def bed_bed3to6(bed, name=None, score=None, strand=None, out=sys.stdout):
+def bed_annotate(bed, name=None, score=None, strand=None, rgb=None, out=sys.stdout):
     for region in bed:
         if name:
             region.name = name
@@ -30,6 +31,9 @@ def bed_bed3to6(bed, name=None, score=None, strand=None, out=sys.stdout):
             region.score = score
         if strand:
             region.strand = strand
+        if rgb:
+            region.rgb = rgb[region.name]
+
         region.write(out)
 
 if __name__ == '__main__':
@@ -37,6 +41,8 @@ if __name__ == '__main__':
     name = None
     score = None
     strand = None
+    rgb = {}
+    rgb_name = None
 
     last = None
 
@@ -52,7 +58,14 @@ if __name__ == '__main__':
         elif last == '-strand':
             strand = arg
             last = None
-        elif arg in ['-name', '-score', '-strand']:
+        elif last == '-rgb':
+            if not rgb_name:
+                rgb_name = arg
+            else:
+                rgb[rgb_name] = arg
+                rgb_name = None
+                last = None
+        elif arg in ['-name', '-score', '-strand', '-rgb']:
             last = arg
         elif not fname and (os.path.exists(arg) or arg == '-'):
             fname = arg
@@ -63,4 +76,4 @@ if __name__ == '__main__':
     if not fname:
         usage()
 
-    bed_bed3to6(BedFile(fname), name=name, score=score, strand=strand)
+    bed_annotate(BedFile(fname), name=name, score=score, strand=strand)

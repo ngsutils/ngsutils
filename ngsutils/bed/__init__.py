@@ -146,19 +146,36 @@ class BedFile(object):
 
 
 class BedRegion(object):
-    def __init__(self, chrom, start, end, name='', score='', strand='', *args):
+    def __init__(self, chrom, start, end, name='', score='', strand='', thickStart='', thickEnd='', rgb='', *args):
         self.chrom = chrom
         self.start = int(start)
         self.end = int(end)
         self.name = name
+
         if score == '':
             self.score = 0
         else:
             self.score = float(score)
+
         if strand == '':
             self.strand = None
         else:
             self.strand = strand
+
+        if thickStart == '':
+            self.thickStart = None
+        else:
+            self.thickStart = thickStart
+
+        if thickEnd == '':
+            self.thickEnd = None
+        else:
+            self.thickEnd = thickEnd
+
+        if rgb == '':
+            self.rgb = None
+        else:
+            self.rgb = rgb
 
         self.extras = args
 
@@ -182,7 +199,23 @@ class BedRegion(object):
         if score[-2:] == '.0':
             score = score[:-2]
 
-        if self.name and self.strand:
-            return '\t'. join([str(x) for x in [self.chrom, self.start, self.end, self.name, score, self.strand]])
+        outcols = []
 
-        return '\t'. join([str(x) for x in [self.chrom, self.start, self.end]])
+        if self.rgb:
+            outcols.append(self.rgb)
+        if self.thinkEnd or outcols:
+            outcols.append(self.thinkEnd if self.thinkEnd else self.end)
+        if self.thickStart or outcols:
+            outcols.append(self.thickStart if self.thinkEnd else self.start)
+        if self.strand or outcols:
+            outcols.append(self.strand)
+        if score != '' or outcols:
+            outcols.append(score)
+        if self.name or outcols:
+            outcols.append(self.name)
+
+        outcols.append(self.end)
+        outcols.append(self.start)
+        outcols.append(self.chrom)
+
+        return '\t'. join([str(x) for x in outcols[::-1]])
