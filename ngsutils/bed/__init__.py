@@ -203,10 +203,10 @@ class BedRegion(object):
 
         if self.rgb:
             outcols.append(self.rgb)
-        if self.thinkEnd or outcols:
-            outcols.append(self.thinkEnd if self.thinkEnd else self.end)
+        if self.thickEnd or outcols:
+            outcols.append(self.thickEnd if self.thickEnd else self.end)
         if self.thickStart or outcols:
-            outcols.append(self.thickStart if self.thinkEnd else self.start)
+            outcols.append(self.thickStart if self.thickStart else self.start)
         if self.strand or outcols:
             outcols.append(self.strand)
         if score != '' or outcols:
