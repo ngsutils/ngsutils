@@ -66,7 +66,8 @@ class BedStats(object):
             out.write("%s\t%s\n" % (refname, format_number(self.refs[refname])))
 
         if self.names:
-            out.write("\nname\tcount\n")
+            out.write("\nName distribution\n")
+            out.write("name\tcount\n")
             for name in ngsutils.support.ngs_utils.natural_sort([x for x in self.names]):
                 out.write("%s\t%s\n" % (name, format_number(self.names[name])))
 
