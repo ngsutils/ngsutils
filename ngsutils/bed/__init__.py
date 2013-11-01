@@ -135,14 +135,17 @@ class BedFile(object):
             raise StopIteration
 
         binvals = self._bins[self._bin_list[self._cur_bin_idx]]
-        if self._cur_bin_pos < len(binvals):
+        while self._cur_bin_pos < len(binvals):
             val = binvals[self._cur_bin_pos]
             self._cur_bin_pos += 1
-            return val
-        else:
-            self._cur_bin_idx += 1
-            self._cur_bin_pos = 0
-            return self.next()
+
+            startbin = (val.chrom, val.start / BedFile._bin_const)
+            if startbin == self._bin_list[self._cur_bin_idx]:
+                return val
+
+        self._cur_bin_idx += 1
+        self._cur_bin_pos = 0
+        return self.next()
 
 
 class BedRegion(object):
@@ -179,6 +182,14 @@ class BedRegion(object):
 
         self.extras = args
 
+    @property
+    def score_int(self):
+        score = str(self.score)
+        if score[-2:] == '.0':
+            score = score[:-2]
+
+        return score
+
     def __key(self):
         return (self.chrom, self.start, self.end, self.strand, self.name)
 
@@ -195,10 +206,6 @@ class BedRegion(object):
         out.write('%s\n' % self)
 
     def __repr__(self):
-        score = str(self.score)
-        if score[-2:] == '.0':
-            score = score[:-2]
-
         outcols = []
 
         if self.rgb:
@@ -209,8 +216,8 @@ class BedRegion(object):
             outcols.append(self.thickStart if self.thickStart else self.start)
         if self.strand or outcols:
             outcols.append(self.strand)
-        if score != '' or outcols:
-            outcols.append(score)
+        if self.score_int != '' or outcols:
+            outcols.append(self.score_int)
         if self.name or outcols:
             outcols.append(self.name)
 
