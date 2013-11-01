@@ -16,7 +16,9 @@ if [[ "$1" == "" || "$1" == "-h" ]]; then
     exit 1
 fi
 
-if [ "$2" == "" ]; then
+if [ "$1" == "-" ]; then
+    sort -k1,1 -k2,2n -
+elif [ "$2" == "" ]; then
     DN=`dirname "$1"`
     BASE=`basename "$1"`
     TMP="$DN/.$BASE.sort.$$"
