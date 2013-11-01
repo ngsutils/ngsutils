@@ -17,13 +17,13 @@ if [[ "$1" == "" || "$1" == "-h" ]]; then
 fi
 
 if [ "$1" == "-" ]; then
-    sort -k1,1 -k2,2n -
+    sort -k1,1 -k2,3n -
 elif [ "$2" == "" ]; then
     DN=`dirname "$1"`
     BASE=`basename "$1"`
     TMP="$DN/.$BASE.sort.$$"
-    sort -k1,1 -k2,2n "$1" > "$TMP"
+    sort -k1,1 -k2,3n "$1" > "$TMP"
     mv "$TMP" "$1"
 else
-    sort -k1,1 -k2,2n "$1" > "$2"
+    sort -k1,1 -k2,3n "$1" > "$2"
 fi
