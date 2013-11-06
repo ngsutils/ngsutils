@@ -375,14 +375,14 @@ def calc_coverage(bam, chrom, strand, starts, ends, whitelist, blacklist, rev_re
         for pileup in bam.pileup(chrom, start, end):
             count = 0
             for pileupread in pileup.pileups:
-                if blacklist and pileupread.qname in blacklist:
+                if blacklist and pileupread.alignment.qname in blacklist:
                     continue
-                if not whitelist or pileupread.qname in whitelist:
+                if not whitelist or pileupread.alignment.qname in whitelist:
                     if strand:
-                        if pileupread.is_read2 and rev_read2:
-                            read_strand = '-' if not pileupread.is_reverse else '+'
+                        if pileupread.alignment.is_read2 and rev_read2:
+                            read_strand = '-' if not pileupread.alignment.is_reverse else '+'
                         else:
-                            read_strand = '+' if not pileupread.is_reverse else '-'
+                            read_strand = '+' if not pileupread.alignment.is_reverse else '-'
 
                         if strand != read_strand:
                             continue
