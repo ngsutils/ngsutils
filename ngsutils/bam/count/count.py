@@ -392,10 +392,13 @@ def calc_coverage(bam, chrom, strand, starts, ends, whitelist, blacklist, rev_re
 
             coverage.append(count)
 
-    mean, stdev = ngsutils.support.stats.mean_stdev(coverage)
-    median = ngsutils.support.stats.median(coverage)
+    if coverage:
+        mean, stdev = ngsutils.support.stats.mean_stdev(coverage)
+        median = ngsutils.support.stats.median(coverage)
 
-    return mean, stdev, median
+        return mean, stdev, median
+    else:
+        return 0, 0, 0
 
 
 def _find_mapped_count_median(counts):
