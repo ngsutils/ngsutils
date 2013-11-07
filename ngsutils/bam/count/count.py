@@ -370,6 +370,9 @@ def _fetch_reads(bam, chrom, strand, starts, ends, multiple, exclusive, whitelis
 
 
 def calc_coverage(bam, chrom, strand, starts, ends, whitelist, blacklist, rev_read2=False):
+    if not chrom in bam.references:
+        return 0, 0, 0
+
     coverage = []
     for start, end in zip(starts, ends):
         for pileup in bam.pileup(chrom, start, end):
