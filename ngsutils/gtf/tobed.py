@@ -34,6 +34,8 @@ Where type is one of:
     -junc5    Splice junction 5' donor
     -junc3    Splice junction 3' acceptor
 
+    -promoter length    Promoter region from the gene [length] upstream of TSS
+
 
 '''
     sys.exit(1)
@@ -87,6 +89,19 @@ def gtf_genes_tobed(gtf, out=sys.stdout):
     for gene in gtf.genes:
         out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, gene.start, gene.end, gene.gene_name, 0, gene.strand]]))
 
+
+def gtf_promoter_tobed(gtf, promoter_length, out=sys.stdout):
+    for gene in gtf.genes:
+        sites = set()
+        for i, txscr in enumerate(gene.transcripts):
+            if gene.strand == '+':
+                if not txscr.start in sites:
+                    out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.start - promoter_length, txscr.start, '%s.%s' % (gene.gene_name, i), 0, gene.strand]]))
+                    sites.add(txscr.start)
+            else:
+                if not txscr.end in sites:
+                    out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.end, txscr.end + promoter_length, '%s.%s' % (gene.gene_name, i), 0, gene.strand]]))
+                    sites.add(txscr.end)
 
 def gtf_tss_tobed(gtf, out=sys.stdout):
     for gene in gtf.genes:
@@ -188,12 +203,20 @@ if __name__ == '__main__':
     tlxs = False
     junc_5 = False
     junc_3 = False
+    promoter = False
+    promoter_length = 0
+    last = None
+
     filename = None
+
 
     for arg in sys.argv[1:]:
         if arg == '-h':
             usage()
-        if arg == '-genes':
+        elif last == '-promoter':
+            promoter_length = int(arg)
+            last = None
+        elif arg == '-genes':
             genes = True
         elif arg == '-exons':
             exons = True
@@ -213,11 +236,14 @@ if __name__ == '__main__':
             junc_5 = True
         elif arg == '-junc3':
             junc_3 = True
+        elif arg in ['-promoter']:
+            promoter = True
+            last = arg
         elif not filename and os.path.exists(arg):
             filename = arg
 
     i = 0
-    for arg in [genes, exons, introns, regions, tss, tlss, txs, tlxs, junc_5, junc_3]:
+    for arg in [genes, exons, introns, regions, tss, tlss, txs, tlxs, junc_5, junc_3, promoter]:
         if arg:
             i += 1
 
@@ -227,6 +253,8 @@ if __name__ == '__main__':
         usage('You must select *only one* [type] to export.')
     elif not filename:
         usage('Missing input file')
+    elif promoter and not promoter_length:
+        usage('You must specify a valid promoter length!')
 
     gtf = GTF(filename)
 
@@ -250,3 +278,6 @@ if __name__ == '__main__':
         gtf_junc_5_tobed(gtf)
     elif junc_3:
         gtf_junc_3_tobed(gtf)
+    elif promoter:
+        gtf_promoter_tobed(gtf, promoter_length)
+
