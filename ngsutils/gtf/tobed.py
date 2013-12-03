@@ -41,7 +41,7 @@ Where type is one of:
 
                         By default the "down" length is zero.
 
-                        For example, for a gene that starts a chr1:1000, using
+                        For example, for a gene that starts a chr1:1000 (+), using
                         "-promoter 200,100" would yield a BED region of:
                         chr1   800    1100
 
