@@ -35,7 +35,15 @@ Where type is one of:
     -junc3    Splice junction 3' acceptor
 
     -promoter length    Promoter region from the gene [length] upstream of TSS
+                        
+                        Note: Length may also be in the form "up,down", where
+                        the promoter coordinates will be TSS-up -> TSS+down.
 
+                        By default the "down" length is zero.
+
+                        For example, for a gene that starts a chr1:1000, using
+                        "-promoter 100,100" would yield a BED region of:
+                        chr1    900    1100
 
 '''
     sys.exit(1)
@@ -90,17 +98,17 @@ def gtf_genes_tobed(gtf, out=sys.stdout):
         out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, gene.start, gene.end, gene.gene_name, 0, gene.strand]]))
 
 
-def gtf_promoter_tobed(gtf, promoter_length, out=sys.stdout):
+def gtf_promoter_tobed(gtf, promoter_up, promoter_down, out=sys.stdout):
     for gene in gtf.genes:
         sites = set()
         for i, txscr in enumerate(gene.transcripts):
             if gene.strand == '+':
                 if not txscr.start in sites:
-                    out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.start - promoter_length, txscr.start, '%s.%s' % (gene.gene_name, i), 0, gene.strand]]))
+                    out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.start - promoter_up, txscr.start + promoter_down, '%s.%s' % (gene.gene_name, i), 0, gene.strand]]))
                     sites.add(txscr.start)
             else:
                 if not txscr.end in sites:
-                    out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.end, txscr.end + promoter_length, '%s.%s' % (gene.gene_name, i), 0, gene.strand]]))
+                    out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.end - promoter_down, txscr.end + promoter_up, '%s.%s' % (gene.gene_name, i), 0, gene.strand]]))
                     sites.add(txscr.end)
 
 def gtf_tss_tobed(gtf, out=sys.stdout):
@@ -204,7 +212,8 @@ if __name__ == '__main__':
     junc_5 = False
     junc_3 = False
     promoter = False
-    promoter_length = 0
+    promoter_up = 0
+    promoter_down = 0
     last = None
 
     filename = None
@@ -214,7 +223,10 @@ if __name__ == '__main__':
         if arg == '-h':
             usage()
         elif last == '-promoter':
-            promoter_length = int(arg)
+            if ',' in arg:
+                promoter_up, promoter_down = [int(x) for x in arg.split(',')]
+            else:
+                promoter_up = int(arg)
             last = None
         elif arg == '-genes':
             genes = True
@@ -253,7 +265,7 @@ if __name__ == '__main__':
         usage('You must select *only one* [type] to export.')
     elif not filename:
         usage('Missing input file')
-    elif promoter and not promoter_length:
+    elif promoter and not (promoter_down or promoter_up):
         usage('You must specify a valid promoter length!')
 
     gtf = GTF(filename)
@@ -279,5 +291,5 @@ if __name__ == '__main__':
     elif junc_3:
         gtf_junc_3_tobed(gtf)
     elif promoter:
-        gtf_promoter_tobed(gtf, promoter_length)
+        gtf_promoter_tobed(gtf, promoter_up, promoter_down)
 
