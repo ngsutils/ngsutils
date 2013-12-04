@@ -108,6 +108,7 @@ def usage(msg=""):
     print """Usage: fastqutils properpairs filename1.fastq{.gz} filename2.fastq{.gz} output1 output2
 
 Options:
+  -f    Force overwriting output file (if it exists)
   -z    Output files should be gzip compressed
 """
     sys.exit(1)
@@ -117,12 +118,15 @@ if __name__ == '__main__':
     fqname2 = None
     outname1 = None
     outname2 = None
+    force = False
 
     gz = False
 
     for arg in sys.argv[1:]:
         if arg == '-z':
             gz = True
+        elif arg == '-f':
+            force = True
         elif not fqname1:
             if not os.path.exists(arg):
                 usage("File %s doesn't exist!" % arg)
@@ -132,16 +136,17 @@ if __name__ == '__main__':
                 usage("File %s doesn't exist!" % arg)
             fqname2 = arg
         elif not outname1:
-            if os.path.exists(arg):
-                usage("File %s exists!" % arg)
             outname1 = arg
         elif not outname2:
-            if os.path.exists(arg):
-                usage("File %s exists!" % arg)
             outname2 = arg
 
     if not fqname1 or not fqname2 or not outname1 or not outname2:
         usage()
+
+    if not force:
+        for fname in [outname1, outname2]:
+            if os.path.exists(fname):
+                usage("File %s exists!" % fname)
 
     fq1 = FASTQ(fqname1)
     fq2 = FASTQ(fqname2)
