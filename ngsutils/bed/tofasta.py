@@ -12,7 +12,7 @@ from ngsutils.support import revcomp
 import pysam
 
 
-def bed_tofasta(bed, ref_fasta, min_size=50, stranded=True, name=False, out=sys.stdout):
+def bed_tofasta(bed, ref_fasta, min_size=50, stranded=True, include_name=False, out=sys.stdout):
     if not os.path.exists('%s.fai' % ref_fasta):
         pysam.faidx(ref_fasta)
 
@@ -26,7 +26,7 @@ def bed_tofasta(bed, ref_fasta, min_size=50, stranded=True, name=False, out=sys.
     name = ''
     for region in bed:
         if name:
-            name = '%s|' % region.name
+            name = '%s|' % (region.name.strip())
 
         if region.end - region.start >= min_size and region.chrom in refs:
             seq = fasta.fetch(region.chrom, region.start, region.end)
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     bed = None
     ref = None
     stranded = True
-    name = False
+    include_name = False
 
     last = None
     for arg in sys.argv[1:]:
@@ -76,7 +76,7 @@ if __name__ == "__main__":
         elif arg in ['-min']:
             last = arg
         elif arg == '-name':
-            name = True
+            include_name = True
         elif arg == '-ns':
             stranded = False
         elif not bed and os.path.exists(arg):
@@ -88,4 +88,4 @@ if __name__ == "__main__":
         usage()
         sys.exit(1)
 
-    bed_tofasta(BedFile(bed), ref, min_size=min_size, stranded=stranded, name=name)
+    bed_tofasta(BedFile(bed), ref, min_size=min_size, stranded=stranded, include_name=include_name)
