@@ -25,7 +25,7 @@ def bed_tofasta(bed, ref_fasta, min_size=50, stranded=True, include_name=False, 
 
     name = ''
     for region in bed:
-        if name:
+        if include_name:
             name = '%s|' % (region.name.strip())
 
         if region.end - region.start >= min_size and region.chrom in refs:
