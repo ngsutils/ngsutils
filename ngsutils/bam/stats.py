@@ -232,6 +232,9 @@ class BamStats(object):
         else:
             read_gen = _foo2
 
+        has_ih = True
+        has_nh = True
+
         try:
             for read in read_gen():
                 if not show_all and read.is_paired and not read.is_read1:
@@ -239,13 +242,27 @@ class BamStats(object):
                     continue
 
                 try:
-                    if read.opt('IH') > 1:
+                    if has_ih and read.opt('IH') > 1:
                         if read.qname in names:
                             # reads only count once for this...
                             continue
                         names.add(read.qname)
                 except KeyError:
+                    if not read.is_unmapped:
+                        has_ih = False
                     #missing IH tag - ignore
+                    pass
+
+                try:
+                    if has_nh and read.opt('NH') > 1:
+                        if read.qname in names:
+                            # reads only count once for this...
+                            continue
+                        names.add(read.qname)
+                except KeyError:
+                    if not read.is_unmapped:
+                        has_nh = False
+                    #missing NH tag - ignore
                     pass
 
                 flag_counts.add(read.flag)
