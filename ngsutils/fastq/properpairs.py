@@ -32,7 +32,7 @@ def find_fastq_pairs(fq1, fq2, out1, out2, quiet=False):
     removed = 0
 
     def callback():
-        return 'matched: %s, removed: %s' % (matched, removed)
+        return 'ma/rm:%s/%s' % (matched, removed)
 
     gen1 = fq1.fetch(quiet=quiet, callback=callback)
     gen2 = fq2.fetch(quiet=True)
