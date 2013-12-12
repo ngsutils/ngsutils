@@ -10,6 +10,7 @@ import sys
 from ngsutils.bam import read_calc_mismatches, bam_iter, bam_open
 from ngsutils.gtf import GTF
 from ngsutils.support.regions import RegionTagger
+from ngsutils.support.stats import counts_mean_stdev
 
 
 class FeatureBin(object):
@@ -122,7 +123,6 @@ Options:
             There are also special case tags that can be used as well:
                 MAPQ     - use the mapq score
                 LENGTH   - use the length of the read
-                TLEN     - use the template length / insert size
                 MISMATCH - use the mismatch score (# mismatches) + (# indels)
                            where indels count for 1 regardless of length
 
@@ -210,8 +210,7 @@ class BamStats(object):
         mapped = 0
         unmapped = 0
         
-        tlen_acc = 0
-        tlen_count = 0
+        tlen_counts = {}
 
         names = set()
         refs = {}
@@ -284,11 +283,15 @@ class BamStats(object):
 
                 if read.is_proper_pair and read.tid == read.mrnm:
                     # we don't care about reads that don't map to the same reference
-                    tlen_count += 1
                     if read.is_reverse:
-                        tlen_acc += -read.tlen
+                        k = -read.tlen
                     else:
-                        tlen_acc += read.tlen
+                        k = read.tlen
+
+                    if not k in tlen_counts:
+                        tlen_counts[k] = 1
+                    else:
+                        tlen_counts[k] += 1
 
                 if delim:
                     refs[bamfile.getrname(read.rname).split(delim)[0]] += 1
@@ -311,7 +314,7 @@ class BamStats(object):
         self.tagbins = tagbins
         self.refs = refs
         self.regiontagger = regiontagger
-        self.tlen_ave = float(tlen_acc) / tlen_count if tlen_count > 0 else -1
+        self.tlen_counts = tlen_counts
 
     def distribution_gen(self, tag):
         acc = 0.0
@@ -367,10 +370,11 @@ def bam_stats(infiles, gtf_file=None, region=None, delim=None, tags=[], show_all
         sys.stdout.write('\n')
     sys.stdout.write('\n')
 
-    if stats[0].tlen_ave > 0:
-        sys.stdout.write('Template length')
+    if stats[0].tlen_counts:
+        sys.stdout.write('Template length:')
         for stat in stats:
-            sys.stdout.write('\t%0.2f\t' % stat.tlen_ave)
+            mean, stdev = counts_mean_stdev(stat.tlen_counts)
+            sys.stdout.write('\t%0.2f\t+/- %0.2f' % (mean, stdev))
         sys.stdout.write('\n')
     sys.stdout.write('\n')
 
