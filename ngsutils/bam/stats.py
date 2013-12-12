@@ -74,6 +74,15 @@ class FeatureBin(object):
             val = len(read.seq)
         elif self.tag == 'MAPQ':
             val = read.mapq
+        elif self.tag in ['TLEN', 'ISIZE']:
+            if read.tid != read.mrnm:
+                # we don't care about reads that don't map to the same reference
+                return
+
+            if read.is_reverse:
+                val = -read.isize
+            else:
+                val = read.isize
         elif self.tag == 'MISMATCH':
             val = read_calc_mismatches(read)
         else:
@@ -119,6 +128,7 @@ Options:
             There are also special case tags that can be used as well:
                 MAPQ     - use the mapq score
                 LENGTH   - use the length of the read
+                TLEN     - use the template length / insert size
                 MISMATCH - use the mismatch score (# mismatches) + (# indels)
                            where indels count for 1 regardless of length
 
