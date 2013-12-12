@@ -209,6 +209,10 @@ class BamStats(object):
         total = 0
         mapped = 0
         unmapped = 0
+        
+        tlen_acc = 0
+        tlen_count = 0
+
         names = set()
         refs = {}
 
@@ -278,6 +282,14 @@ class BamStats(object):
 
                 mapped += 1
 
+                if read.is_proper_pair and read.tid == read.mrnm:
+                    # we don't care about reads that don't map to the same reference
+                    tlen_count += 1
+                    if read.is_reverse:
+                        tlen_acc += -read.tlen
+                    else:
+                        tlen_acc += read.tlen
+
                 if delim:
                     refs[bamfile.getrname(read.rname).split(delim)[0]] += 1
                 else:
@@ -299,6 +311,7 @@ class BamStats(object):
         self.tagbins = tagbins
         self.refs = refs
         self.regiontagger = regiontagger
+        self.tlen_ave = float(tlen_acc) / tlen_count if tlen_count > 0 else -1
 
     def distribution_gen(self, tag):
         acc = 0.0
@@ -352,7 +365,13 @@ def bam_stats(infiles, gtf_file=None, region=None, delim=None, tags=[], show_all
         for stat in stats:
             sys.stdout.write('\t%s\t%0.2f%%' % (stat.flag_counts.counts[flag], (float(stat.flag_counts.counts[flag]) * 100 / stat.total)))
         sys.stdout.write('\n')
+    sys.stdout.write('\n')
 
+    if stats[0].tlen_ave > 0:
+        sys.stdout.write('Template length')
+        for stat in stats:
+            sys.stdout.write('\t%0.2f\t' % stat.tlen_ave)
+        sys.stdout.write('\n')
     sys.stdout.write('\n')
 
     stat_tags = {}
