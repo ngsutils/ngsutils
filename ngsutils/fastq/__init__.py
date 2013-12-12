@@ -83,7 +83,7 @@ class FASTQ(object):
     def seek(self, pos, whence=0):
         self.fileobj.seek(pos, whence)
 
-    def fetch(self, quiet=False):
+    def fetch(self, quiet=False, callback=None):
         if self.fname and not quiet:
             eta = ETA(os.stat(self.fname).st_size, fileobj=self.fileobj)
         else:
@@ -93,7 +93,10 @@ class FASTQ(object):
             try:
                 read = fastq_read_file(self.fileobj)
                 if eta:
-                    eta.print_status(extra=read.name)
+                    if callback:
+                        eta.print_status(extra=callback())
+                    else:
+                        eta.print_status(extra=read.name)
                 yield read
 
             except:
