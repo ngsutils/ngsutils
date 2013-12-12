@@ -68,9 +68,10 @@ def find_fastq_pairs(fq1, fq2, out1, out2, quiet=False):
 
             cur = None
             while cur is None or cur.name != read1.name:
+                if cur:
+                    removed += 1
                 cur = buffer2.get()
                 readnames2.remove(cur.name)
-                removed += 1
 
             if cur:
                 cur.write(out2)
@@ -87,9 +88,10 @@ def find_fastq_pairs(fq1, fq2, out1, out2, quiet=False):
 
             cur = None
             while cur is None or cur.name != read2.name:
+                if cur:
+                    removed += 1
                 cur = buffer1.get()
                 readnames1.remove(cur.name)
-                removed += 1
 
             if cur:
                 cur.write(out1)
