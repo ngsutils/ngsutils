@@ -76,16 +76,6 @@ class FeatureBin(object):
         elif self.tag == 'MAPQ':
             val = read.mapq
 
-        elif self.tag in ['TLEN', 'ISIZE']:
-            if read.tid != read.mrnm:
-                # we don't care about reads that don't map to the same reference
-                return
-
-            if read.is_reverse:
-                val = -read.tlen
-            else:
-                val = read.tlen
-
         elif self.tag == 'MISMATCH':
             val = read_calc_mismatches(read)
 
