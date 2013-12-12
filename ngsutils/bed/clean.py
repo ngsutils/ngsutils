@@ -24,6 +24,8 @@ Converts the "score" field to be an integer
 def bed_clean(bed, out=sys.stdout):
     for region in bed:
         region.score = int(region.score)
+        if region.score > 1000:
+            region.score = 1000
 
         out.write('%s\n' % region)
 

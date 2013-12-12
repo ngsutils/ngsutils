@@ -125,10 +125,15 @@ def bed_reduce(bed, extend=(0, 0), stranded=True, count=False, clip=False, out=s
     lchrom = None
     lstart = None
     lend = None
+    lregion = None
 
     for region in bed:
         if lchrom == region.chrom:
             if region.start < lstart or (region.start == lstart and region.end < lend):
+                print bed._bins[bed._bin_list[bed._cur_bin_idx]]
+                print 'last    ', lregion
+                print 'current ', region
+                
                 sys.stderr.write('BED file is not sorted!\n')
                 sys.stderr.write('chrom: %s\t%s (= %s)\n' % (lchrom, region.chrom, (region.chrom == lchrom)))
                 sys.stderr.write('start: %s\t%s (< %s)\n' % (lstart, region.start, (lstart < region.start)))
@@ -138,6 +143,8 @@ def bed_reduce(bed, extend=(0, 0), stranded=True, count=False, clip=False, out=s
         lchrom = region.chrom
         lstart = region.start
         lend = region.end
+
+        lregion = region
 
         if not stranded or region.strand == '+':
             plus_region.add(region)

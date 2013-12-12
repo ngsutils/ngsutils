@@ -29,8 +29,12 @@ def find_fastq_pairs(fq1, fq2, out1, out2, quiet=False):
     total1 = 0
     total2 = 0
     matched = 0
+    removed = 0
 
-    gen1 = fq1.fetch(quiet=quiet)
+    def callback():
+        return 'matched: %s, removed: %s' % (matched, removed)
+
+    gen1 = fq1.fetch(quiet=quiet, callback=callback)
     gen2 = fq2.fetch(quiet=True)
 
     while True:
@@ -66,6 +70,7 @@ def find_fastq_pairs(fq1, fq2, out1, out2, quiet=False):
             while cur is None or cur.name != read1.name:
                 cur = buffer2.get()
                 readnames2.remove(cur.name)
+                removed += 1
 
             if cur:
                 cur.write(out2)
@@ -84,6 +89,7 @@ def find_fastq_pairs(fq1, fq2, out1, out2, quiet=False):
             while cur is None or cur.name != read2.name:
                 cur = buffer1.get()
                 readnames1.remove(cur.name)
+                removed += 1
 
             if cur:
                 cur.write(out1)
