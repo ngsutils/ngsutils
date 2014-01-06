@@ -187,11 +187,10 @@ if __name__ == '__main__':
         if last in ['-%s' % x for x in count.models]:
             model_arg = arg
             last = None
-        elif last == '-library_type':
+        elif last == '-library':
             if arg not in ['unstranded', 'FR', 'RF']:
-                usage('Invalid option for -library_type: %s' % arg)
-            if arg != 'none':
-                norm = arg
+                usage('Invalid option for -library: %s' % arg)
+            library_type = arg
             last = None
         elif last == '-norm':
             if arg not in ['all', 'mapped', 'median', 'none']: # 'quantile',
