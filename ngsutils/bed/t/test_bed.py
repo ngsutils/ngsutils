@@ -20,7 +20,7 @@ class BedTest(unittest.TestCase):
                    'chr1|300|350|foo|1|-',
                 ]
 
-        regions = ['%s|%s|%s|%s|%s|%s' % (x.chrom, x.start, x.end, x.name, x.score, x.strand) for x in BedFile(fname)]
+        regions = ['%s|%s|%s|%s|%s|%s' % (x.chrom, x.start, x.end, x.name, x.score_int, x.strand) for x in BedFile(fname)]
         self.assertTrue(_matches(valid, regions))
 
     def testBedFileObj(self):
