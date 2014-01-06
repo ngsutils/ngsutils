@@ -239,6 +239,42 @@ class SuffixQualFilter(object):
             yield (name, comment, seq, qual)
 
 
+class TruncateFilter(object):
+    def __init__(self, parent, size, verbose=False, discard=None):
+        self.parent = parent
+        self.size = size
+        self.verbose = verbose
+
+        self.altered = 0
+        self.removed = 0
+        self.kept = 0
+
+        self.discard = discard
+
+    def filter(self):
+        for name, comment, seq, qual in self.parent.filter():
+            alt = False
+            if len(qual) > self.size:
+                alt = True
+                if len(seq) == len(qual):  
+                    # basespace or colorspace w/o prefix
+                    seq = seq[:self.size]
+                    qual = qual[:self.size]
+                else:
+                    # colorspace with prefix
+                    seq = seq[:self.size + 1]
+                    qual = qual[:self.size]
+
+                if self.verbose:
+                    sys.stderr.write('[Truncate] %s (altered)\n' % (name,))
+                self.altered += 1
+                comment = '%s #trunc' % comment
+            else:
+                self.kept += 1
+
+            yield (name, comment, seq, qual)
+
+
 class WildcardFilter(object):
     def __init__(self, parent, max_num, verbose=False, discard=None):
         self.parent = parent
@@ -349,6 +385,8 @@ Filters:
 
   -size minsize               Discard reads that are too short
 
+  -truncate size              Trim reads to a maximum length
+
   -qual minval window_size    Truncate reads (5'->3') where the quality falls
                               below a threshold (floating average over
                               window_size)
@@ -388,6 +426,9 @@ if __name__ == '__main__':
         elif last == '-size':
             filters_config.append((SizeFilter, int(arg)))
             last = None
+        elif last == '-truncate':
+            filters_config.append((TruncateFilter, int(arg)))
+            last = None
         elif last == '-suffixqual':
             filters_config.append((SuffixQualFilter, arg))
             last = None
@@ -425,7 +466,7 @@ if __name__ == '__main__':
         elif last == '-discard':
             discard_fname = arg
             last = None
-        elif arg in ['-wildcard', '-size', '-qual', '-suffixqual', '-trim', '-stats', '-discard', '-whitelist']:
+        elif arg in ['-wildcard', '-size', '-qual', '-suffixqual', '-trim', '-stats', '-discard', '-whitelist', '-truncate']:
             last = arg
         elif arg == '-illumina':
             illumina = True
