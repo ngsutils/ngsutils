@@ -2,7 +2,10 @@
 ## category Conversion
 ## desc Extract BED regions from a reference FASTA file
 '''
-Extract BED regions from a reference FASTA file
+Extract BED regions from a reference FASTA file.
+
+Note: Sequences that are extracted will be in the same orientation as the
+BED region, unless the {-ns} option is given.
 '''
 
 import sys
