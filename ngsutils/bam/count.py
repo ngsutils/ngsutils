@@ -120,8 +120,14 @@ Model options (you must select one):
     -bin size          Count reads present in bins of {size} bases
 
 Other options:
-    -nostrand          ignore strand in counting reads
-    -rev_read2         for paired-end reads, reverse the strand of the second fragment
+    -library <value>   the orientation of mapping for single or paired end reads
+                       with respect to the primary strand of the gene/region.
+
+                       Possible values:
+                       FR         - fragments mapped forward/reverse (default)
+                       RF         - fragments mapped reverse/forward
+                       unstranded - fragments mapped in either FR or RF
+
     -coverage          calculate average coverage for genes/regions
     -uniq              only count unique starting positions
                        (avoids possible PCR artifacts, not recommended)
@@ -162,7 +168,6 @@ Possible values for [-multiple]:
     sys.exit(-1)
 
 if __name__ == '__main__':
-    stranded = True
     coverage = False
     uniq_only = False
     fpkm = False
@@ -170,17 +175,23 @@ if __name__ == '__main__':
     multiple = 'complete'
     whitelist = None
     blacklist = None
-    rev_read2 = False
     startonly = False
     model = None
     model_arg = None
     bamfile = None
+    library_type = 'FR'
 
     last = None
 
     for arg in sys.argv[1:]:
         if last in ['-%s' % x for x in count.models]:
             model_arg = arg
+            last = None
+        elif last == '-library_type':
+            if arg not in ['unstranded', 'FR', 'RF']:
+                usage('Invalid option for -library_type: %s' % arg)
+            if arg != 'none':
+                norm = arg
             last = None
         elif last == '-norm':
             if arg not in ['all', 'mapped', 'median', 'none']: # 'quantile',
@@ -210,14 +221,10 @@ if __name__ == '__main__':
         elif arg in ['-%s' % x for x in count.models]:
             model = arg[1:]
             last = arg
-        elif arg in ['-norm', '-multiple', '-whitelist', '-blacklist']:
+        elif arg in ['-norm', '-multiple', '-whitelist', '-blacklist', '-library']:
             last = arg
-        elif arg == '-rev_read2':
-            rev_read2 = True
         elif arg == '-startonly':
             startonly = True
-        elif arg == '-nostrand':
-            stranded = False
         elif arg == '-coverage':
             coverage = True
         elif arg == '-fpkm':
@@ -241,5 +248,5 @@ if __name__ == '__main__':
 
     modelobj = count.models[model](model_arg)
     bam = bam_open(bamfile)
-    modelobj.count(bam, stranded, coverage, uniq_only, fpkm, norm, multiple, whitelist, blacklist, rev_read2=rev_read2, start_only=startonly)
+    modelobj.count(bam, library_type, coverage, uniq_only, fpkm, norm, multiple, whitelist, blacklist, start_only=startonly)
     bam.close()

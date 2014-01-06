@@ -59,7 +59,7 @@ class Model(object):
     def get_postheaders(self):
         return None
 
-    def count(self, bam, stranded=False, coverage=False, uniq_only=False, fpkm=False, norm='', multiple='complete', whitelist=None, blacklist=None, out=sys.stdout, quiet=False, rev_read2=False, start_only=False):
+    def count(self, bam, library_type='FR', coverage=False, uniq_only=False, fpkm=False, norm='', multiple='complete', whitelist=None, blacklist=None, out=sys.stdout, quiet=False, start_only=False):
         # bam = pysam.Samfile(bamfile, 'rb')
 
         # region_counts = []
@@ -70,6 +70,11 @@ class Model(object):
         counts_tally = {}
         total_count = 0.0
 
+        if library_type == 'FR' or 'RF':
+            stranded = True
+        else:
+            stranded = False
+
         for chrom, starts, ends, strand, cols, callback in self.get_regions():
             outcols = cols[:]
 
@@ -78,7 +83,7 @@ class Model(object):
                 coding_len += e - s
             outcols.append(coding_len)
 
-            count, reads = _fetch_reads(bam, chrom, strand if stranded else None, starts, ends, multiple, False, whitelist, blacklist, uniq_only, rev_read2, start_only)
+            count, reads = _fetch_reads(bam, chrom, strand if stranded else None, starts, ends, multiple, False, whitelist, blacklist, uniq_only, start_only, library_type)
             outcols.append('')
             total_count += count
 
@@ -94,7 +99,7 @@ class Model(object):
             #         multireads.add(read.qname)
 
             if coverage:
-                mean, stdev, median = calc_coverage(bam, chrom, strand if stranded else None, starts, ends, whitelist, blacklist, rev_read2)
+                mean, stdev, median = calc_coverage(bam, chrom, strand if stranded else None, starts, ends, whitelist, blacklist, library_type)
                 outcols.append(mean)
                 outcols.append(stdev)
                 outcols.append(median)
@@ -139,15 +144,13 @@ class Model(object):
         out.write('## %s\n' % (ngsutils.version()))
         out.write('## input%s%s\n' % (' ' if bam.filename else '', bam.filename))
         out.write('## model %s %s\n' % (self.get_name(), self.get_source()))
-        out.write('## stranded %s\n' % stranded)
+        out.write('## library_type %s\n' % library_type)
         out.write('## multiple %s\n' % multiple)
         if start_only:
             out.write('## start_only\n')
         if norm_val:
             out.write('## norm %s %s\n' % (norm, float(norm_val_orig)))
             out.write('## CPM-factor %s\n' % norm_val)
-        if rev_read2:
-            out.write('## rev_read2\n')
 
         out.write('#')
         out.write('\t'.join(self.get_headers()))
@@ -212,7 +215,7 @@ def _calc_read_regions(read):
     return regions
 
 
-def _fetch_reads_excluding(bam, chrom, strand, start, end, multiple, whitelist=None, blacklist=None, rev_read2=False):
+def _fetch_reads_excluding(bam, chrom, strand, start, end, multiple, whitelist=None, blacklist=None, library_type='FR'):
     '''
     Find reads that exclude this region.
 
@@ -230,12 +233,19 @@ def _fetch_reads_excluding(bam, chrom, strand, start, end, multiple, whitelist=N
         return count, reads
 
     for read in bam.fetch(chrom, start, end):
-        if read.is_read2 and rev_read2:
-            read_strand = '-' if not read.is_reverse else '+'
-        else:
-            read_strand = '+' if not read.is_reverse else '-'
+        frag_strand = None
+        if library_type == 'FR':
+            if read.is_read1:
+                frag_strand = '+' if not read.is_reverse else '-'
+            elif read.is_read2:
+                frag_strand = '-' if not read.is_reverse else '+'
+        elif library_type == 'RF':
+            if read.is_read1:
+                frag_strand = '-' if not read.is_reverse else '+'
+            elif read.is_read2:
+                frag_strand = '+' if not read.is_reverse else '-'
 
-        if not strand or strand == read_strand:
+        if not strand or strand == frag_strand:
             excl = True
             for s, e in _calc_read_regions(read):
                 if start <= s <= end or start <= e <= end:
@@ -247,7 +257,7 @@ def _fetch_reads_excluding(bam, chrom, strand, start, end, multiple, whitelist=N
     return count, reads
 
 
-def _fetch_reads(bam, chrom, strand, starts, ends, multiple, exclusive, whitelist=None, blacklist=None, uniq=False, rev_read2=False, start_only=False):
+def _fetch_reads(bam, chrom, strand, starts, ends, multiple, exclusive, whitelist=None, blacklist=None, uniq=False, library_type='FR', start_only=False):
     '''
     Find reads that match within the given regions...
 
@@ -303,12 +313,19 @@ def _fetch_reads(bam, chrom, strand, starts, ends, multiple, exclusive, whitelis
                 if uniq and k in start_pos:
                         continue
 
-                if read.is_read2 and rev_read2:
-                    read_strand = '-' if not read.is_reverse else '+'
-                else:
-                    read_strand = '+' if not read.is_reverse else '-'
+                frag_strand = None
+                if library_type == 'FR':
+                    if read.is_read1:
+                        frag_strand = '+' if not read.is_reverse else '-'
+                    elif read.is_read2:
+                        frag_strand = '-' if not read.is_reverse else '+'
+                elif library_type == 'RF':
+                    if read.is_read1:
+                        frag_strand = '-' if not read.is_reverse else '+'
+                    elif read.is_read2:
+                        frag_strand = '+' if not read.is_reverse else '-'
 
-                if not strand or strand == read_strand:
+                if not strand or strand == frag_strand:
                     if start_only:
                         start_ok = False
                         for s1, e1 in zip(starts, ends):
@@ -369,7 +386,7 @@ def _fetch_reads(bam, chrom, strand, starts, ends, multiple, exclusive, whitelis
     return count, reads
 
 
-def calc_coverage(bam, chrom, strand, starts, ends, whitelist, blacklist, rev_read2=False):
+def calc_coverage(bam, chrom, strand, starts, ends, whitelist, blacklist, library_type='FR'):
     if not chrom in bam.references:
         return 0, 0, 0
 
@@ -382,12 +399,19 @@ def calc_coverage(bam, chrom, strand, starts, ends, whitelist, blacklist, rev_re
                     continue
                 if not whitelist or pileupread.alignment.qname in whitelist:
                     if strand:
-                        if pileupread.alignment.is_read2 and rev_read2:
-                            read_strand = '-' if not pileupread.alignment.is_reverse else '+'
-                        else:
-                            read_strand = '+' if not pileupread.alignment.is_reverse else '-'
+                        frag_strand = None
+                        if library_type == 'FR':
+                            if pileupread.alignment.is_read1:
+                                frag_strand = '+' if not pileupread.alignment.is_reverse else '-'
+                            elif pileupread.alignment.is_read2:
+                                frag_strand = '-' if not pileupread.alignment.is_reverse else '+'
+                        elif library_type == 'RF':
+                            if pileupread.alignment.is_read1:
+                                frag_strand = '-' if not pileupread.alignment.is_reverse else '+'
+                            elif pileupread.alignment.is_read2:
+                                frag_strand = '+' if not pileupread.alignment.is_reverse else '-'
 
-                        if strand != read_strand:
+                        if strand != frag_strand:
                             continue
 
                     if not pileupread.is_del:
