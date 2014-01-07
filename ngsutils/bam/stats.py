@@ -283,6 +283,10 @@ class BamStats(object):
 
                 if read.is_proper_pair and read.tid == read.mrnm:
                     # we don't care about reads that don't map to the same reference
+
+                    # note: this doesn't work for RNA mapped to a reference genome...
+                    # for RNA, you'd need to map to a transcript library (refseq) to get
+                    # an accurate template length
                     if read.is_reverse:
                         k = -read.tlen
                     else:
