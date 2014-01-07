@@ -70,7 +70,7 @@ class Model(object):
         counts_tally = {}
         total_count = 0.0
 
-        if library_type == 'FR' or 'RF':
+        if library_type in ['FR', 'RF']:
             stranded = True
         else:
             stranded = False
@@ -83,7 +83,7 @@ class Model(object):
                 coding_len += e - s
             outcols.append(coding_len)
 
-            count, reads = _fetch_reads(bam, chrom, strand if stranded else None, starts, ends, multiple, False, whitelist, blacklist, uniq_only, start_only, library_type)
+            count, reads = _fetch_reads(bam, chrom, strand if stranded else None, starts, ends, multiple, False, whitelist, blacklist, uniq_only, library_type, start_only)
             outcols.append('')
             total_count += count
 
@@ -99,7 +99,7 @@ class Model(object):
             #         multireads.add(read.qname)
 
             if coverage:
-                mean, stdev, median = calc_coverage(bam, chrom, strand if stranded else None, starts, ends, whitelist, blacklist, library_type)
+                mean, stdev, median = calc_coverage(bam, chrom, strand if stranded else None, starts, ends, whitelist, blacklist, library_type=library_type)
                 outcols.append(mean)
                 outcols.append(stdev)
                 outcols.append(median)
@@ -236,14 +236,14 @@ def _fetch_reads_excluding(bam, chrom, strand, start, end, multiple, whitelist=N
         frag_strand = None
         if library_type == 'FR':
             if read.is_read1:
-                frag_strand = '+' if not read.is_reverse else '-'
+                frag_strand = '-' if read.is_reverse else '+'
             elif read.is_read2:
-                frag_strand = '-' if not read.is_reverse else '+'
+                frag_strand = '+' if read.is_reverse else '-'
         elif library_type == 'RF':
             if read.is_read1:
-                frag_strand = '-' if not read.is_reverse else '+'
+                frag_strand = '+' if read.is_reverse else '-'
             elif read.is_read2:
-                frag_strand = '+' if not read.is_reverse else '-'
+                frag_strand = '-' if read.is_reverse else '+'
 
         if not strand or strand == frag_strand:
             excl = True
@@ -316,14 +316,14 @@ def _fetch_reads(bam, chrom, strand, starts, ends, multiple, exclusive, whitelis
                 frag_strand = None
                 if library_type == 'FR':
                     if read.is_read1:
-                        frag_strand = '+' if not read.is_reverse else '-'
+                        frag_strand = '-' if read.is_reverse else '+'
                     elif read.is_read2:
-                        frag_strand = '-' if not read.is_reverse else '+'
+                        frag_strand = '+' if read.is_reverse else '-'
                 elif library_type == 'RF':
                     if read.is_read1:
-                        frag_strand = '-' if not read.is_reverse else '+'
+                        frag_strand = '+' if read.is_reverse else '-'
                     elif read.is_read2:
-                        frag_strand = '+' if not read.is_reverse else '-'
+                        frag_strand = '-' if read.is_reverse else '+'
 
                 if not strand or strand == frag_strand:
                     if start_only:

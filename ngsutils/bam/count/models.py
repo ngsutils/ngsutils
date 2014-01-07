@@ -150,11 +150,7 @@ class ExonModel(Model):
         self.blacklist = blacklist
         self.library_type = library_type
 
-        if library_type == 'FR' or library_type == 'RF':
-            self.stranded = True
-        else:
-            self.stranded = False
-
+        self.stranded = library_type in ['FR', 'RF']
 
         Model.count(self, bam, library_type, coverage, uniq_only, fpkm, norm, multiple, whitelist, blacklist, out, quiet, start_only)
 
@@ -329,7 +325,7 @@ class RepeatFamilyModel(Model):
             repeats[(family, '*')]['size'] += size
             repeats[(family, member)]['size'] += size
 
-            count, reads = _fetch_reads(bam, chrom, strand if stranded else None, [start], [end], multiple, False, whitelist, blacklist, library_type)
+            count, reads = _fetch_reads(bam, chrom, strand if stranded else None, [start], [end], multiple, False, whitelist, blacklist, library_type=library_type)
             repeats[(family, '*')]['count'] += count
             repeats[(family, member)]['count'] += count
 
