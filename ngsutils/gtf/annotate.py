@@ -71,7 +71,7 @@ def gtf_annotate(gtf, infile, ref_col=1, pos_col=2, gene_name=False, gene_locati
             if ref and pos:
                 for gene in gtf.find(ref, pos):
                     gene_names.append(gene.gene_name)
-                    gene_ids.append(gene.isoform_id)
+                    gene_ids.append(gene.gene_id)
                     for txpt in gene.transcripts:
                         txpt_ids.append(txpt.transcript_id)
                         found = False
