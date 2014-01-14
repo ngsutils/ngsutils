@@ -12,6 +12,15 @@ class GTFModel(Model):
         self.fname = fname
         Model.__init__(self)
 
+        # test for what attributes we need to return
+        self.gtf = GTF(self.fname)
+        gene_gen = self.gtf.genes
+        gene = gene_gen.next()
+
+        self.has_isoform = 'isoform_id' in gene.attributes
+        self.has_biotype = 'gene_biotype' in gene.attributes
+
+
     def get_source(self):
         return self.fname
 
@@ -19,13 +28,18 @@ class GTFModel(Model):
         return 'gtf'
 
     def get_headers(self):
-        return 'gene geneid isoid chrom strand txstart txend'.split()
+        out = ['gene_id', 'gene_name', ]
+        if self.has_isoform:
+            out.append('isoform_id')
+        if self.has_biotype:
+            out.append('gene_biotype')
+        out.extend('chrom strand txstart txend'.split())
+        return out
 
     def get_regions(self):
-        gtf = GTF(self.fname)
-        eta = ETA(gtf.fsize(), fileobj=gtf)
+        eta = ETA(self.gtf.fsize(), fileobj=self.gtf)
 
-        for gene in gtf.genes:
+        for gene in self.gtf.genes:
             eta.print_status(extra=gene.gene_name)
             starts = []
             ends = []
@@ -36,7 +50,14 @@ class GTFModel(Model):
                 starts.append(start)
                 ends.append(end)
 
-            yield (gene.chrom, starts, ends, gene.strand, [gene.gene_name, gene.gene_id, gene.isoform_id, gene.chrom, gene.strand, gene.start, gene.end], None)
+            out = [gene.gene_id, gene.gene_name, ]
+            if self.has_isoform:
+                out.append(gene.attributes['isoform_id'] if 'isoform_id' in gene.attributes else '')
+            if self.has_biotype:
+                out.append(gene.attributes['gene_biotype'] if 'gene_biotype' in gene.attributes else '')
+            out.extend([gene.chrom, gene.strand, gene.start, gene.end])
+
+            yield (gene.chrom, starts, ends, gene.strand, out, None)
         eta.done()
 
 

@@ -85,13 +85,13 @@ class GTF(object):
                     elif 'gene_name' in attributes:  # use gene_name if we have it.
                         gid = attributes['gene_name']
 
-                    elif 'tss_id' in attributes:  # iGenomes GTF files... are strange. use gene_name first.
-                        gid = attributes['tss_id']
+                    # elif 'tss_id' in attributes:  # iGenomes GTF files... are strange. use gene_name first.
+                    #     gid = attributes['tss_id']
 
                     else:
                         gid = attributes['gene_id']
                         if not warned and not quiet:
-                            sys.stderr.write('\nGTF file potentially missing isoform annotation! Each transcript will be treated separately. (%s)\n' % gid)
+                            sys.stderr.write('\nGTF file potentially missing isoform annotation! Each transcript may be treated separately. (%s)\n' % gid)
                             sys.stderr.write('%s\n\n' % (str(attributes)))
                             warned = True
                     if eta:
@@ -239,19 +239,20 @@ class _GTFGene(object):
     Stores info for a single gene_id
 
     A gene consists of one or more transcripts. It *must* have a gene_id, and chrom
-    It may also contain a gene_name and an isoform_id.
+    It may also contain a other attributes (isoform_id, gene_biotype, etc).
 
-    The gid is the 'gene_id' from the GTF file *unless* there is an isoform_id
-    attribute. If 'isoform_id' is present, this is used for the gid.
+    The gid is used to merge multiple transcripts together into one GTFGene record.
+    This is a separate attribute that will be either (in order): 
 
+    isoform_id, gene_name, gene_id
 
     """
 
-    def __init__(self, gid, chrom, source, gene_id, gene_name=None, isoform_id=None, **extras):
+    def __init__(self, gid, chrom, source, gene_id, gene_name=None, **attributes):
         self.gid = gid
         self.gene_id = gene_id
         self.gene_name = gene_name if gene_name else gene_id
-        self.isoform_id = isoform_id if isoform_id else gene_id
+        self.attributes = attributes
 
         self.chrom = chrom
         self.source = source
