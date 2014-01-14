@@ -31,7 +31,7 @@ except:
 
 
 class GTF(object):
-    _version = 1.2
+    _version = 1.3
     __binsize = 10000
     
     def __init__(self, filename=None, cache_enabled=True, quiet=False, fileobj=None):
