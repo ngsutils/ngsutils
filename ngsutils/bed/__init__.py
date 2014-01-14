@@ -112,7 +112,7 @@ class BedFile(object):
                                 buf.add(region)
 
     def tell(self):
-        return self._cur_bin_idx
+        return self._tellpos
 
     def close(self):
         pass
@@ -128,6 +128,7 @@ class BedFile(object):
     def __iter__(self):
         self._cur_bin_idx = 0
         self._cur_bin_pos = 0
+        self._tellpos = 0
         return self
 
     def next(self):
@@ -145,6 +146,7 @@ class BedFile(object):
 
         self._cur_bin_idx += 1
         self._cur_bin_pos = 0
+        self._tellpos += 1
         return self.next()
 
 
