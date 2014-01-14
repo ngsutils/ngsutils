@@ -235,15 +235,15 @@ def _fetch_reads_excluding(bam, chrom, strand, start, end, multiple, whitelist=N
     for read in bam.fetch(chrom, start, end):
         frag_strand = None
         if library_type == 'FR':
-            if read.is_read1:
-                frag_strand = '-' if read.is_reverse else '+'
-            elif read.is_read2:
+            if read.is_read2:
                 frag_strand = '+' if read.is_reverse else '-'
+            else:
+                frag_strand = '-' if read.is_reverse else '+'
         elif library_type == 'RF':
-            if read.is_read1:
-                frag_strand = '+' if read.is_reverse else '-'
-            elif read.is_read2:
+            if read.is_read2:
                 frag_strand = '-' if read.is_reverse else '+'
+            else:
+                frag_strand = '+' if read.is_reverse else '-'
 
         if not strand or strand == frag_strand:
             excl = True
@@ -314,16 +314,18 @@ def _fetch_reads(bam, chrom, strand, starts, ends, multiple, exclusive, whitelis
                         continue
 
                 frag_strand = None
+                # readpos = None
+
                 if library_type == 'FR':
-                    if read.is_read1:
-                        frag_strand = '-' if read.is_reverse else '+'
-                    elif read.is_read2:
+                    if read.is_read2:
                         frag_strand = '+' if read.is_reverse else '-'
+                    else:
+                        frag_strand = '-' if read.is_reverse else '+'
                 elif library_type == 'RF':
-                    if read.is_read1:
-                        frag_strand = '+' if read.is_reverse else '-'
-                    elif read.is_read2:
+                    if read.is_read2:
                         frag_strand = '-' if read.is_reverse else '+'
+                    else:
+                        frag_strand = '+' if read.is_reverse else '-'
 
                 if not strand or strand == frag_strand:
                     if start_only:
@@ -401,15 +403,15 @@ def calc_coverage(bam, chrom, strand, starts, ends, whitelist, blacklist, librar
                     if strand:
                         frag_strand = None
                         if library_type == 'FR':
-                            if pileupread.alignment.is_read1:
-                                frag_strand = '+' if not pileupread.alignment.is_reverse else '-'
-                            elif pileupread.alignment.is_read2:
+                            if pileupread.alignment.is_read2:
                                 frag_strand = '-' if not pileupread.alignment.is_reverse else '+'
+                            else:
+                                frag_strand = '+' if not pileupread.alignment.is_reverse else '-'
                         elif library_type == 'RF':
-                            if pileupread.alignment.is_read1:
-                                frag_strand = '-' if not pileupread.alignment.is_reverse else '+'
-                            elif pileupread.alignment.is_read2:
+                            if pileupread.alignment.is_read2:
                                 frag_strand = '+' if not pileupread.alignment.is_reverse else '-'
+                            else:
+                                frag_strand = '-' if not pileupread.alignment.is_reverse else '+'
 
                         if strand != frag_strand:
                             continue
