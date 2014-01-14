@@ -23,6 +23,7 @@ class BedFile(object):
         self._bin_list = []
         self._cur_bin_idx = 0
         self._cur_bin_pos = 0
+        self._tellpos = 0
         self._total = 0
         self._length = 0
         self.__tabix = None
