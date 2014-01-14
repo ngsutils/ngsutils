@@ -143,11 +143,11 @@ class BedFile(object):
 
             startbin = (val.chrom, val.start / BedFile._bin_const)
             if startbin == self._bin_list[self._cur_bin_idx]:
+                self._tellpos += 1
                 return val
 
         self._cur_bin_idx += 1
         self._cur_bin_pos = 0
-        self._tellpos += 1
         return self.next()
 
 
