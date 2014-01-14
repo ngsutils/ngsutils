@@ -74,7 +74,7 @@ class MergedRegion(object):
         if self.chrom != region.chrom:
             self.write()
             self._reset()
-        elif newstart > self.extended_end:
+        elif newstart >= self.extended_end:
             self.write()
             self._reset()
 
