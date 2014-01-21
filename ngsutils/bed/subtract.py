@@ -7,13 +7,11 @@ Removes overlaping BED regions from another BED file.
 
 import os
 import sys
-from ngsutils.bed import BedFile
-from ngsutils.support.ngs_utils import gzip_opener
+from ngsutils.bed import BedFile, BedStreamer
 
 def usage(msg=None):
     if msg:
-        print msg
-        print ""
+        print 'ERROR: %s' % msg
 
     print __doc__
     print """\
@@ -29,34 +27,44 @@ Options:
 
 
 
-def bed_subtract(fname, removebed, stranded=True, out=sys.stdout):
-    with gzip_opener(fname) as fobj:
-        for line in fobj:
-            cols = line.strip().split('\t')
-            chrom = cols[0]
-            start = int(cols[1])
-            end = int(cols[2])
-            strand = cols[5] if stranded else None
+def bed_subtract(mainbed, removebed, stranded=True, out=sys.stdout):
+    for mainregion in mainbed:
+            regionlist = [mainregion,]
+            changed = False
 
-            newstart = start
-            newend = end
-            skip = False
+            while regionlist:
+                cur = regionlist[0]
+                regionlist = regionlist[1:]
+                skip = False
 
-            for region in removebed.fetch(chrom, start, end, strand):
-                if region.start < newstart < newend < region.end:
-                    skip = True
-                    break
+                newstart = cur.start
+                newend = cur.end
 
-                if region.start < newstart < region.end:
-                    newstart = region.end
-                elif region.start < newend < region.end:
-                    newend = region.start
+                for region in removebed.fetch(cur.chrom, cur.start, cur.end, cur.strand if stranded else None):
+                    if region.start < newstart < newend < region.end:
+                        # subtract out the entire region
+                        skip = True
+                        break
+                    
+                    if newstart < region.start < region.end < newend:
+                        # subtract a subregion - add the end to the list.
+                        regionlist.append(cur.clone(start=region.end, end=newend, name='%s*' % cur.name))
+                        newend = region.start
+                        changed = True
+                    elif region.start < newstart < region.end:
+                        newstart = region.end
+                        changed = True
+                    elif region.start < newend < region.end:
+                        newend = region.start
+                        changed = True
 
+                if not skip:
+                    cur.start = newstart
+                    cur.end = newend
+                    if changed:
+                        cur.name = "%s*" % cur.name
 
-            if not skip:
-                cols[1] = str(newstart)
-                cols[2] = str(newend)
-                out.write('%s\n' % '\t'.join(cols))
+                    out.write('%s\n' % cur)
 
 
 if __name__ == '__main__':
@@ -77,12 +85,16 @@ if __name__ == '__main__':
             print "Unknown option: %s" % arg
             usage()
 
-    if not fname1 or fname2:
+    if not fname1 or not fname2:
         usage()
 
     if fname1 == '-' and fname2 == '-':
         usage("Both input files can't be from stdin!")
 
+    bed1 = BedStreamer(fname1)
     bed2 = BedFile(fname2)
-    bed_subtract(fname1, bed2, stranded)
+
+    bed_subtract(bed1, bed2, stranded)
+
+    bed1.close()
     bed2.close()
