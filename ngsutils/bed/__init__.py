@@ -2,6 +2,48 @@ import os
 import ngsutils.support.ngs_utils
 import pysam
 
+
+class BedStreamer(object):
+    '''
+    Streams BedRegions from a BED file
+    '''
+
+    def __init__(self, fname=None, fileobj=None):
+        if not fname and not fileobj:
+            raise ValueError("You must specify either fname or fileobj!")
+
+        self.fname = fname
+        if fileobj:
+            self.fileobj = fileobj
+        else:
+            self.fileobj = ngsutils.support.ngs_utils.gzip_opener(fname)
+
+    def tell(self):
+        return self.fileobj.tell()
+
+    def close(self):
+        self.fileobj.close()
+
+    def __iter__(self):
+        self.fileobj.seek(0)
+        return self
+
+    def next(self):
+        try:
+            while True:
+                line = self.fileobj.next().strip()
+
+                if line and line[0] != '#':
+                    cols = line.split('\t')
+                    while len(cols) < 6:
+                        cols.append('')
+
+                    return BedRegion(*cols)
+        except:
+            raise StopIteration
+
+
+
 class BedFile(object):
     '''
     BED files are read in their entirety memory, in a series of bins. Each bin
@@ -183,6 +225,26 @@ class BedRegion(object):
             self.rgb = rgb
 
         self.extras = args
+
+    def clone(self, chrom=None, start=None, end=None, name=None, score=None, strand=None, thickStart=None, thickEnd=None, rgb=None, *args):
+        cols = []
+        cols.append(self.chrom if chrom is None else chrom)
+        cols.append(self.start if start is None else start)
+        cols.append(self.end if end is None else end)
+        cols.append(self.name if name is None else name)
+        cols.append(self.score if score is None else score)
+        cols.append(self.strand if strand is None else strand)
+        cols.append(self.thickStart if thickStart is None else thickStart)
+        cols.append(self.thickEnd if thickEnd is None else thickEnd)
+        cols.append(self.rgb if rgb is None else rgb)
+
+        for i, val in enumerate(self.extras):
+            if len(args) > i:
+                cols.append(args[i])
+            else:
+                cols.append(val)
+
+        return BedRegion(*cols)
 
     @property
     def score_int(self):
