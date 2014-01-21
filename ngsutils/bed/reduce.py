@@ -130,7 +130,6 @@ def bed_reduce(bed, extend=(0, 0), stranded=True, count=False, clip=False, out=s
     for region in bed:
         if lchrom == region.chrom:
             if region.start < lstart or (region.start == lstart and region.end < lend):
-                print bed._bins[bed._bin_list[bed._cur_bin_idx]]
                 print 'last    ', lregion
                 print 'current ', region
                 
