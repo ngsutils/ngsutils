@@ -1,12 +1,11 @@
 import os
 import ngsutils.support.ngs_utils
 import pysam
-import sys
 
 class BedFile(object):
     '''
     BED files are read in their entirety memory, in a series of bins. Each bin
-    is ~100K in size. Each bin can then be iterated over.
+    is ~100kb in size. Each bin can then be iterated over.
 
     This is less efficient than using a proper index, but in reality, this
     usually isn't an issue. However, if the BED file has been Tabix indexed,
