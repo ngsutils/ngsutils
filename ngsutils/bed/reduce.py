@@ -8,7 +8,7 @@ to merge them.
 
 import os
 import sys
-from ngsutils.bed import BedFile, BedRegion
+from ngsutils.bed import BedStreamer, BedRegion
 
 
 def usage():
@@ -188,4 +188,4 @@ if __name__ == '__main__':
     if not fname:
         usage()
 
-    bed_reduce(BedFile(fname), extend, stranded, count, clip)
+    bed_reduce(BedStreamer(fname), extend, stranded, count, clip)
