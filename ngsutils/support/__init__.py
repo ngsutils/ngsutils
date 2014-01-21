@@ -103,8 +103,10 @@ class FASTA(object):
             eta.done()
 
 
-def gzip_reader(fname, quiet=False, callback=None, done_callback=None):
-    if fname == '-':
+def gzip_reader(fname, quiet=False, callback=None, done_callback=None, fileobj=None):
+    if fileobj:
+        f = fileobj
+    elif fname == '-':
         f = sys.stdin
     elif fname[-3:] == '.gz' or fname[-4:] == '.bgz':
         f = gzip.open(os.path.expanduser(fname))
@@ -129,7 +131,7 @@ def gzip_reader(fname, quiet=False, callback=None, done_callback=None):
         if done_callback and done_callback():
                 break
 
-    if f != sys.stdout:
+    if f != sys.stdin:
         f.close()
 
     if eta:
