@@ -6,6 +6,8 @@ import pysam
 class BedStreamer(object):
     '''
     Streams BedRegions from a BED file
+
+    Note - this can only be used once! There is no mechanism to seek the stream.
     '''
 
     def __init__(self, fname=None, fileobj=None):
@@ -25,7 +27,6 @@ class BedStreamer(object):
         self.fileobj.close()
 
     def __iter__(self):
-        self.fileobj.seek(0)
         return self
 
     def next(self):
