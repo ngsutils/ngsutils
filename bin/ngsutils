@@ -30,13 +30,26 @@ export PYTHONPATH=$PYTHONPATH:"$DIR"
 if [[ "$SUBDIR" == "ngs" && -e "$DIR"/.git && "$1" == "update" ]]; then
     cd "$DIR"
     
+    echo "Updating from current branch"
+    git pull
+
+    exit 0
+fi
+
+if [[ "$SUBDIR" == "ngs" && -e "$DIR"/.git && "$1" == "switch" ]]; then
+    cd "$DIR"
+    
     if [ "$2" != "" ]; then
-        echo "Updating from $2 branch"
-        git checkout $2
+        echo "Switching to branch: $2"
+        git fetch origin
+        if [ "$(git branch -l | grep "$2")" == "" ]; then
+            git checkout -b $2
+        else
+            git checkout $2
+        fi
         git pull origin $2
     else
-        echo "Updating from current branch"
-        git pull
+        git branch -a
     fi
 
     exit 0
