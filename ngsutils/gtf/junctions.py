@@ -23,7 +23,7 @@ from ngsutils.gtf import GTF
 from eta import ETA
 
 
-def gtf_junctions(gtf, refname, fragment_size, min_size, max_exons=5, known=False, out=sys.stdout, quiet=False):
+def gtf_junctions(gtf, refname, fragment_size, min_size, max_exons=5, known=False, out=sys.stdout, quiet=False, scramble=False, retain_introns=False):
     ref = pysam.Fastafile(refname)
 
     references = []
@@ -58,9 +58,19 @@ def gtf_junctions(gtf, refname, fragment_size, min_size, max_exons=5, known=Fals
             for txpt in gene.transcripts:
                 for exon in txpt.exons:
                     exons.add(exon)
+
             exons = list(exons)
             exons.sort()
+
+            if retain_introns:
+                exporter.export_retained_introns(gene.chrom, exons, gene.strand)
+
+            if scramble:
+                exons = exons * 2
+
             exporter.export(gene.chrom, exons)
+
+
 
     if eta:
         eta.done()
@@ -77,6 +87,35 @@ class JunctionExporter(object):
         self._junctions = set()
         self._cur_chrom = None
 
+    def export_retained_introns(self, chrom, exons, strand):
+        # Only retain introns extending from a 3' splice site
+        # -> this is the only reason to check the strand
+
+        if chrom != self._cur_chrom:
+            self._junctions = set()
+            self._cur_chrom = chrom
+
+        for i, (start, end) in enumerate(exons):
+            if strand == '+':
+                if i == len(exons) - 1:
+                    continue
+
+                frag_start = max(start, end - self.fragment_size)
+                frag_end = end + self.fragment_size
+
+            else:
+                if i == 0:
+                    continue
+
+                frag_start = start - self.fragment_size
+                frag_end = min(end, start + self.fragment_size)
+
+            name = '%s:%s-%s' % (chrom, frag_start, frag_end)
+            if not name in self._junctions:
+                self._junctions.add(name)
+                seq = self.ref.fetch(chrom, frag_start, frag_end)
+                self.out.write('>%s\n%s\n' % (name, seq))
+
     def export(self, chrom, exons):
         if chrom != self._cur_chrom:
             self._junctions = set()
@@ -86,6 +125,7 @@ class JunctionExporter(object):
             if i == len(exons) - 1:
                 # can't splice the last exon
                 continue
+
             frag_start = start
 
             if end - start > self.fragment_size:
@@ -104,9 +144,11 @@ class JunctionExporter(object):
     def _extend_junction(self, seq, name, chrom, exons, anchor_frag_end, counter=1):
         if counter >= self.max_exons:
             return
+
         start, end = exons[0]
-        if start <= anchor_frag_end:
-            return
+        # if start <= anchor_frag_end:
+        #     return
+
         frag_end = end
         if end - start > self.fragment_size:
             frag_end = start + self.fragment_size
@@ -117,7 +159,7 @@ class JunctionExporter(object):
         if len(newseq) >= self.min_size:
             yield newname, newseq
             return
-        elif len(exons) > 1 and counter + 1 < self.max_exons:
+        elif len(exons) > 1 and (counter + 1) < self.max_exons:
             for i in xrange(1, len(exons)):
                 for nn_name, nn_seq in self._extend_junction(newseq, newname, chrom, exons[i:], frag_end, counter + 1):
                     yield nn_name, nn_seq
@@ -136,11 +178,22 @@ Arguments
                   (samtools indexed ref.fasta.fai req'd)
 
 Options
-  -frag size      Number of bases on either side of the junction to include
-                  [default 46]
-  -min size       Minimum size of a junction
-                  [default 50]
-  -known          Only export known junctions
+  -frag size        Number of bases on either side of the junction to include
+                    [default 46]
+  -min size         Minimum size of a junction
+                    [default 50]
+  -known            Only export known junctions
+
+  -scramble         Include potential 3'->5' and self->self junctions
+  -retain-introns   Include retained introns (only retains introns from the 3'
+                    splice side)
+
+                    +->
+                    |    ________           _______
+                    :---|        |---------|       |---
+                         --------           -------
+                               ******
+
 '''
     sys.exit(1)
 
@@ -150,6 +203,8 @@ if __name__ == '__main__':
     frag_size = 46
     min_size = 50
     known = False
+    scramble = False
+    retain_introns = False
     last = None
 
     for arg in sys.argv[1:]:
@@ -161,6 +216,10 @@ if __name__ == '__main__':
             last = None
         elif arg in ['-frag', '-min']:
             last = arg
+        elif arg == '-scramble':
+            scramble = True
+        elif arg == '-retain-introns':
+            retain_introns = True
         elif arg == '-known':
             known = True
         elif arg == '-h':
@@ -175,4 +234,7 @@ if __name__ == '__main__':
     if not gtf or not fasta:
         usage()
 
-    gtf_junctions(GTF(gtf), fasta, frag_size, min_size, known=known)
+    if known and scramble:
+        usage("You can not use both -known and -scramble at the same time!")
+
+    gtf_junctions(GTF(gtf), fasta, frag_size, min_size, known=known, scramble=scramble, retain_introns=retain_introns)
