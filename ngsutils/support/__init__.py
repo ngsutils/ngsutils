@@ -207,6 +207,9 @@ class Counts(object):
 
 
 def memoize(func):
+    if 'TESTING' in os.environ or 'DEBUG' in os.environ:
+        return func
+
     __cache = {}
     def inner(*args, **kwargs):
         k = (args, tuple(kwargs.iteritems()))
@@ -214,4 +217,5 @@ def memoize(func):
             __cache[k] = func(*args, **kwargs)
         return __cache[k]
 
+    inner.__doc__ = '(@memoized %s)\n%s' % (func.__name__, func.__doc__)
     return inner
