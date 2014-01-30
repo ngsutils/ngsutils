@@ -2,7 +2,7 @@
 various statistical tests and methods...
 '''
 import math
-
+from ngsutils.support import memoize
 
 def median(vals):
     '''
@@ -106,7 +106,50 @@ def counts_mean_stdev(d):
 
     return (mean, stdev)
 
+@memoize
+def poisson_prob(x, mean):
+    '''
+        Return the probability that you could get x counts in
+        a Poisson test with a mean value.
 
+        p(mu) = (lambda^mu * e^(-lambda)) / (mu!)
+
+        prob(x) = sum(i=1..x){p(i)}
+
+        >>> poisson_prob(6,10)
+        0.1300960209527205
+        >>> poisson_prob(8,10)
+        0.33277427882095645
+    '''
+    acc = 0.0
+    for i in xrange(1, x+1):
+        acc += poisson_func(i, mean)
+    return acc
+
+@memoize
+def poisson_func(mu, lambd):
+    '''
+        >>> poisson_func(1,10)
+        0.00045399929762484856
+        >>> poisson_func(2,10)
+        0.0022699964881242427
+        >>> poisson_func(3,10)
+        0.007566654960414142
+    '''
+    return (lambd ** mu) * (math.exp(-1 * lambd)) / _factorial(mu)
+
+
+@memoize
+def _factorial(x):
+    '''
+    >>> _factorial(1)
+    1
+    >>> _factorial(2)
+    2
+    >>> _factorial(3)
+    6
+    '''
+    return math.factorial(x)
 
 if __name__ == '__main__':
     import doctest
