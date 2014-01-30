@@ -112,9 +112,7 @@ def poisson_prob(x, mean):
         Return the probability that you could get x counts in
         a Poisson test with a mean value.
 
-        p(mu) = (lambda^mu * e^(-lambda)) / (mu!)
-
-        prob(x) = sum(i=1..x){p(i)}
+        prob(x) = sum(i=1..x){poisson(i)}
 
         >>> poisson_prob(6,10)
         0.1300960209527205
@@ -129,6 +127,13 @@ def poisson_prob(x, mean):
 @memoize
 def poisson_func(mu, lambd):
     '''
+        This is the Poisson distribution function
+        
+        p(mu) = (lambda^mu * e^(-lambda)) / (mu!)
+
+        mu is a count
+        lambd is the mean
+
         >>> poisson_func(1,10)
         0.00045399929762484856
         >>> poisson_func(2,10)
