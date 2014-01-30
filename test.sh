@@ -6,6 +6,7 @@ SUBDIR=$(basename $0 | sed -e 's/utils//')
 . "$DIR"/env/bin/activate
 export PYTHONPATH=$PYTHONPATH:"$DIR"
 export HIDE_ETA="1"
+export TESTING="1"
 
 if [ "$1" == "" ]; then
     # run all tests...
