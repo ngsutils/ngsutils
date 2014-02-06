@@ -8,6 +8,7 @@ Convert BAM reads back to FASTA/FASTQ sequences (mapped or unmapped)
 import sys
 import os
 from ngsutils.bam import bam_iter, bam_open
+from ngsutils.support import revcomp
 
 
 def bam_tofastx(fname, colorspace=False, show_mapped=True, show_unmapped=True, fastq=True, read1=True, read2=True, proper=False):
@@ -56,7 +57,10 @@ def write_fasta(read, out=sys.stdout, colorspace=False):
         seq = read.seq
 
     if not read.is_unmapped and read.is_reverse:
-        seq = seq[::-1]
+        if colorspace:
+            seq = seq[::-1]
+        else:
+            seq = revcomp(seq)
 
     out.write('>%s\n%s\n' % (read.qname, seq))
 
@@ -70,7 +74,11 @@ def write_fastq(read, out=sys.stdout, colorspace=False):
         qual = read.qual
 
     if not read.is_unmapped and read.is_reverse:
-        seq = seq[::-1]
+        if colorspace:
+            seq = seq[::-1]
+        else:
+            seq = revcomp(seq)
+
         qual = qual[::-1]
 
     out.write('@%s\n%s\n+\n%s\n' % (read.qname, seq, qual))
