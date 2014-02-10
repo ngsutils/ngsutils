@@ -37,7 +37,7 @@ def gtf_junctions(gtf, refname, fragment_size, min_size, max_exons=5, known=Fals
     else:
         eta = None
 
-    exporter = JunctionExporter(ref, fragment_size, min_size, max_exons, out)
+    exporter = JunctionExporter(ref, fragment_size, min_size, max_exons, out, scramble)
 
     for gene in gtf.genes:
         if not gene.chrom in references:
@@ -66,6 +66,8 @@ def gtf_junctions(gtf, refname, fragment_size, min_size, max_exons=5, known=Fals
                 exporter.export_retained_introns(gene.chrom, exons, gene.strand)
 
             if scramble:
+                # We can just pretend the transcript is repeated
+                # and then let the set take care of removing the duplicates
                 exons = exons * 2
 
             exporter.export(gene.chrom, exons)
@@ -78,7 +80,7 @@ def gtf_junctions(gtf, refname, fragment_size, min_size, max_exons=5, known=Fals
 
 
 class JunctionExporter(object):
-    def __init__(self, ref, fragment_size, min_size, max_exons, out):
+    def __init__(self, ref, fragment_size, min_size, max_exons, out, scramble=False):
         self.ref = ref
         self.fragment_size = fragment_size
         self.min_size = min_size
@@ -86,35 +88,37 @@ class JunctionExporter(object):
         self.out = out
         self._junctions = set()
         self._cur_chrom = None
+        self.scramble = scramble
 
     def export_retained_introns(self, chrom, exons, strand):
-        # Only retain introns extending from a 3' splice site
-        # -> this is the only reason to check the strand
-
+        # Retain introns from both the alt-3 and alt-5 side.
         if chrom != self._cur_chrom:
             self._junctions = set()
             self._cur_chrom = chrom
 
         for i, (start, end) in enumerate(exons):
-            if strand == '+':
-                if i == len(exons) - 1:
-                    continue
-
+            # alt-3' extension (rel to + strand)
+            if i < len(exons):
                 frag_start = max(start, end - self.fragment_size)
                 frag_end = end + self.fragment_size
 
-            else:
-                if i == 0:
-                    continue
+                name = '%s:%s-%s' % (chrom, frag_start, frag_end)
+                if not name in self._junctions:
+                    self._junctions.add(name)
+                    seq = self.ref.fetch(chrom, frag_start, frag_end)
+                    self.out.write('>%s\n%s\n' % (name, seq))
 
+            # alt-5 extension
+            if i > 0:
                 frag_start = start - self.fragment_size
                 frag_end = min(end, start + self.fragment_size)
 
-            name = '%s:%s-%s' % (chrom, frag_start, frag_end)
-            if not name in self._junctions:
-                self._junctions.add(name)
-                seq = self.ref.fetch(chrom, frag_start, frag_end)
-                self.out.write('>%s\n%s\n' % (name, seq))
+                name = '%s:%s-%s' % (chrom, frag_start, frag_end)
+                if not name in self._junctions:
+                    self._junctions.add(name)
+                    seq = self.ref.fetch(chrom, frag_start, frag_end)
+                    self.out.write('>%s\n%s\n' % (name, seq))
+
 
     def export(self, chrom, exons):
         if chrom != self._cur_chrom:
@@ -146,8 +150,10 @@ class JunctionExporter(object):
             return
 
         start, end = exons[0]
-        # if start <= anchor_frag_end:
-        #     return
+        if not self.scramble and start <= anchor_frag_end:
+            # this shouldn't happen in non-scrambled 
+            # conditions, but just in case.
+             return
 
         frag_end = end
         if end - start > self.fragment_size:
