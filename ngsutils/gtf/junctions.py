@@ -119,7 +119,6 @@ class JunctionExporter(object):
                     seq = self.ref.fetch(chrom, frag_start, frag_end)
                     self.out.write('>%s\n%s\n' % (name, seq))
 
-
     def export(self, chrom, exons):
         if chrom != self._cur_chrom:
             self._junctions = set()
