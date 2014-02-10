@@ -190,14 +190,13 @@ Options
   -known            Only export known junctions
 
   -scramble         Include potential 3'->5' and self->self junctions
-  -retain-introns   Include retained introns (only retains introns from the 3'
-                    splice side)
+  -retain-introns   Include retained introns (retains introns from both the 
+                    5' and 3' splice side)
 
-                    +->
-                    |    ________           _______
-                    :---|        |---------|       |---
-                         --------           -------
-                               ******
+                        ________           _______
+                    ---|        |---------|       |---
+                        --------           -------
+                              ******   ++++++
 
 '''
     sys.exit(1)
