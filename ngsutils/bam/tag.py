@@ -61,8 +61,9 @@ class OrigRef(object):
         self.tag = tag
 
     def filter(self, bam):
+        refs = list(bam.references)
         for read in self.parent.filter(bam):
-            read.tags = read.tags + [(self.tag, bam.references[read.tid])]
+            read.tags = read.tags + [(self.tag, refs[read.tid])]
             yield read
 
 
