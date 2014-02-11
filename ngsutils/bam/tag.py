@@ -29,6 +29,7 @@ class BamWriter(object):
         for read in chain.filter(self.inbam):
             outbam.write(read)
 
+        self.inbam.close()
         outbam.close()
 
         if os.path.exists(outfname):
@@ -36,12 +37,11 @@ class BamWriter(object):
         os.rename(tmp, outfname)
 
 
+
 class BamReader(object):
     def filter(self, bam):
         for read in bam_iter(bam):
             yield read
-
-        self.bamfile.close()
 
 
 class Suffix(object):
@@ -50,7 +50,7 @@ class Suffix(object):
         self.suffix = suffix
 
     def filter(self, bam):
-        for read in self.parent.filter():
+        for read in self.parent.filter(bam):
             read.qname = "%s%s" % (read.qname, self.suffix)
             yield read
 
@@ -61,7 +61,7 @@ class OrigRef(object):
         self.tag = tag
 
     def filter(self, bam):
-        for read in self.parent.filter():
+        for read in self.parent.filter(bam):
             read.tags = read.tags + [(self.tag, bam.references[read.tid])]
             yield read
 
@@ -72,7 +72,7 @@ class OrigPos(object):
         self.tag = tag
 
     def filter(self, bam):
-        for read in self.parent.filter():
+        for read in self.parent.filter(bam):
             read.tags = read.tags + [(self.tag, read.pos)]
             yield read
 
@@ -83,7 +83,7 @@ class OrigCIGAR(object):
         self.tag = tag
 
     def filter(self, bam):
-        for read in self.parent.filter():
+        for read in self.parent.filter(bam):
             read.tags = read.tags + [(self.tag, cigar_tostr(read.cigar))]
             yield read
 
@@ -106,7 +106,7 @@ class Tag(object):
             self.key = self.key.split(':')[0]
 
     def filter(self, bam):
-        for read in self.parent.filter():
+        for read in self.parent.filter(bam):
             read.tags = read.tags + [(self.key, self.value)]
             yield read
 
@@ -116,7 +116,7 @@ class CufflinksXS(object):
         self.parent = parent
 
     def filter(self, bam):
-        for read in self.parent.filter():
+        for read in self.parent.filter(bam):
             if not read.is_unmapped:
                 if read.is_reverse:
                     read.tags = read.tags + [('XS', '-')]

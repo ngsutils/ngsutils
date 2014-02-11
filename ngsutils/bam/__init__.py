@@ -38,6 +38,8 @@ def bam_iter(bam, quiet=False, show_ref_pos=False, callback=None):
     >>> [x.qname for x in bam_iter(bam_open(os.path.join(os.path.dirname(__file__), 't', 'test.bam')), quiet=True)]
     ['A', 'B', 'E', 'C', 'D', 'F', 'Z']
     '''
+
+    
     if not quiet and bam.filename:
         eta = ETA(os.stat(bam.filename).st_size)
     else:
