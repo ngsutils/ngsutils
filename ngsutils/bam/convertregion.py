@@ -44,8 +44,9 @@ Usage: bamutils convertregion {-overlap} in.bam out.bam [chrom.sizes]
 Options:
   -f             Force overwriting an existing out.bam file
 
-  -overlap       Require that all reads must overlap a splice junction
-                 by 4 bases. (Also removes unmapped reads)
+  -overlap N     Require that all reads must overlap a splice junction
+                 by N bases. This also removes unmapped reads. [default 4]
+                 Set to zero to allow all reads.
 
   -validateonly  Don't convert the reference and position, just confirm that
                  the reads correctly overlap a junction. Any reads that don't
@@ -76,7 +77,7 @@ def bam_batch_reads(bam):
         yield reads
 
 
-def bam_convertregion(infile, outfname, chrom_sizes=None, enforce_overlap=False, validateonly=False, quiet=False):
+def bam_convertregion(infile, outfname, chrom_sizes=None, overlap=4, validateonly=False, quiet=False):
     bamfile = pysam.Samfile(infile, "rb")
 
     if validateonly:
@@ -107,7 +108,7 @@ def bam_convertregion(infile, outfname, chrom_sizes=None, enforce_overlap=False,
         for read in batch:
             if read.is_unmapped and not read.is_secondary:
                 unmapped_count += 1
-                if not enforce_overlap:
+                if not overlap:
                     outfile.write(read)
                 continue
 
@@ -131,20 +132,20 @@ def bam_convertregion(infile, outfname, chrom_sizes=None, enforce_overlap=False,
                     print "Can't find chrom: %s" % chrom
                     sys.exit(1)
 
-            if not enforce_overlap:
+            if not overlap:
                 if not validateonly:
                     ngsutils.bam.read_cleancigar(read)
                 outfile.write(read)
                 continue
 
-            valid, reason = ngsutils.bam.is_junction_valid(cigar)
+            valid, reason = ngsutils.bam.is_junction_valid(cigar, overlap)
             if valid:
                 converted_count += 1
                 outreads.append(read)
             else:
                 invalid_count += 1
 
-        if enforce_overlap and outreads:
+        if outreads:
             for i, read in enumerate(outreads):
                 newtags = []
                 has_ihnh = False
@@ -203,19 +204,26 @@ if __name__ == '__main__':
     infile = None
     outfile = None
     chrom_sizes = None
-    overlap = False
+    overlap = 4
     validateonly = False
     force = False
+
+    last = None
 
     for arg in sys.argv[1:]:
         if arg == '-h':
             usage()
-        elif arg == '-overlap':
-            overlap = True
+        elif last == '-overlap':
+            overlap = int(arg)
+            if overlap < 0:
+                overlap = 0
+            last = None
         elif arg == '-f':
             force = True
         elif arg == '-validateonly':
             validateonly = True
+        elif arg in ['-overlap']:
+            last = arg
         elif not infile:
             infile = arg
         elif not outfile:
