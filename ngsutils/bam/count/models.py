@@ -66,6 +66,14 @@ class ExonModel(Model):
         self.fname = fname
         Model.__init__(self)
 
+        self.gtf = GTF(self.fname)
+        gene_gen = self.gtf.genes
+        gene = gene_gen.next()
+
+        self.has_isoform = 'isoform_id' in gene.attributes
+        self.has_biotype = 'gene_biotype' in gene.attributes
+
+
     def get_source(self):
         return self.fname
 
@@ -73,7 +81,14 @@ class ExonModel(Model):
         return 'exon'
 
     def get_headers(self):
-        return 'gene geneid isoid chrom strand txstart txend '.split()
+        out = ['gene_id', 'gene_name', ]
+        if self.has_isoform:
+            out.append('isoform_id')
+        if self.has_biotype:
+            out.append('gene_biotype')
+        out.extend('chrom strand txstart txend'.split())
+
+        return out
 
     def get_postheaders(self):
         return 'regionstart regionend const_count region_num const_alt count excl_count incl_pct excl_pct alt-index'.split()
@@ -87,6 +102,14 @@ class ExonModel(Model):
             starts = []
             ends = []
             const_spans = []
+
+            geneout = [gene.gene_id, gene.gene_name, ]
+            if self.has_isoform:
+                geneout.append(gene.attributes['isoform_id'] if 'isoform_id' in gene.attributes else '')
+            if self.has_biotype:
+                geneout.append(gene.attributes['gene_biotype'] if 'gene_biotype' in gene.attributes else '')
+            geneout.extend([gene.chrom, gene.strand, gene.start, gene.end])
+
 
             was_last_const = False
             for num, start, end, const, names in gene.regions:
@@ -161,7 +184,7 @@ class ExonModel(Model):
                     cols.append(altindex)
                     yield cols
 
-            yield (gene.chrom, starts, ends, gene.strand, [gene.gene_name, gene.gene_id, gene.isoform_id, gene.chrom, gene.strand, gene.start, gene.end], callback)
+            yield (gene.chrom, starts, ends, gene.strand, geneout, callback)
         eta.done()
 
     def count(self, bam, library_type, coverage=False, uniq_only=False, fpkm=False, norm='', multiple='complete', whitelist=None, blacklist=None, out=sys.stdout, quiet=False, start_only=False):
