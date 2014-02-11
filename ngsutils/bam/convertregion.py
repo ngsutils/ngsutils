@@ -39,9 +39,17 @@ def usage():
     print """
 Usage: bamutils convertregion {-overlap} in.bam out.bam chrom.sizes
 
+Note: A samtools faidx file can be used for the chrom.sizes file.
+
 Options:
 -overlap    Require that all reads must overlap a splice junction
             by 4 bases. (Also removes unmapped reads)
+
+-checkonly  Don't convert the reference and position, just confirm that
+            the reads correctly overlap a junction.
+
+            If -checkonly is set, then the chrom.sizes file isn't required
+
 """
     sys.exit(1)
 
@@ -64,18 +72,26 @@ def bam_batch_reads(bam):
         yield reads
 
 
-def bam_convertregion(infile, outfname, chrom_sizes, enforce_overlap=False, quiet=False):
+def bam_convertregion(infile, outfname, chrom_sizes=None, enforce_overlap=False, checkonly=False, quiet=False):
     bamfile = pysam.Samfile(infile, "rb")
-    header = bamfile.header
-    header['SQ'] = []
 
-    with open(chrom_sizes) as f:
-        for line in f:
-            if line[0] != '#':
-                cols = line.strip().split('\t')
-                header['SQ'].append({'LN': int(cols[1]), 'SN': cols[0]})
+    if checkonly:
+        outfile = pysam.Samfile('%s.tmp' % outfname, "wb", template=bamfile)
 
-    outfile = pysam.Samfile('%s.tmp' % outfname, "wb", header=header)
+    else:
+        if not chrom_sizes:
+            ValueError("Missing chrom_sizes file!")
+
+        header = bamfile.header
+        header['SQ'] = []
+
+        with open(chrom_sizes) as f:
+            for line in f:
+                if line[0] != '#':
+                    cols = line.strip().split('\t')
+                    header['SQ'].append({'LN': int(cols[1]), 'SN': cols[0]})
+
+        outfile = pysam.Samfile('%s.tmp' % outfname, "wb", header=header)
 
     converted_count = 0
     invalid_count = 0
@@ -93,23 +109,27 @@ def bam_convertregion(infile, outfname, chrom_sizes, enforce_overlap=False, quie
 
             chrom, pos, cigar = ngsutils.bam.region_pos_to_genomic_pos(bamfile.getrname(read.tid), read.pos, read.cigar)
 
-            read.pos = pos
-            try:
-                read.cigar = cigar
-            except:
-                print "Error trying to set CIGAR: %s to %s (%s, %s, %s)" % (read.cigar, cigar, read.qname, bamfile.getrname(read.tid), read.pos)
+            if not checkonly:
+                read.pos = pos
+                try:
+                    read.cigar = cigar
+                except:
+                    print "Error trying to set CIGAR: %s to %s (%s, %s, %s)" % (read.cigar, cigar, read.qname, bamfile.getrname(read.tid), read.pos)
 
-            chrom_found = False
-            for i, name in enumerate(outfile.references):
-                if name == chrom:
-                    read.tid = i
-                    chrom_found = True
-                    break
-            if not chrom_found:
-                print "Can't find chrom: %s" % chrom
-                sys.exit(1)
+                chrom_found = False
+                for i, name in enumerate(outfile.references):
+                    if name == chrom:
+                        read.tid = i
+                        chrom_found = True
+                        break
+
+                if not chrom_found:
+                    print "Can't find chrom: %s" % chrom
+                    sys.exit(1)
 
             if not enforce_overlap:
+                if not checkonly:
+                    ngsutils.bam.read_cleancigar(read)
                 outfile.write(read)
                 continue
 
@@ -123,14 +143,25 @@ def bam_convertregion(infile, outfname, chrom_sizes, enforce_overlap=False, quie
         if enforce_overlap and outreads:
             for i, read in enumerate(outreads):
                 newtags = []
+                has_ihnh = False
                 for key, val in read.tags:
                     if key == 'HI':
                         newtags.append(('HI', i + 1))
                     elif key == 'IH':
                         newtags.append(('IH', len(outreads)))
+                        has_ihnh = True
+                    elif key == 'NH':
+                        newtags.append(('NH', len(outreads)))
+                        has_ihnh = True
                     else:
                         newtags.append((key, val))
+
+                if not has_ihnh:
+                    newtags.append(('NH', len(outreads)))
+
                 read.tags = newtags
+                if not checkonly:
+                    ngsutils.bam.read_cleancigar(read)
                 outfile.write(read)
         #
         # If a read doesn't overlap, just skip it in the output, don't reset the values
@@ -169,12 +200,15 @@ if __name__ == '__main__':
     outfile = None
     chrom_sizes = None
     overlap = False
+    checkonly = False
 
     for arg in sys.argv[1:]:
         if arg == '-h':
             usage()
         elif arg == '-overlap':
             overlap = True
+        elif arg == '-checkonly':
+            checkonly = True
         elif not infile:
             infile = arg
         elif not outfile:
@@ -182,7 +216,9 @@ if __name__ == '__main__':
         elif not chrom_sizes:
             chrom_sizes = arg
 
-    if not infile or not outfile or not chrom_sizes:
+    if not infile or not outfile:
+        usage()
+    elif not checkonly and not chrom_sizes:
         usage()
     else:
-        bam_convertregion(infile, outfile, chrom_sizes, overlap)
+        bam_convertregion(infile, outfile, chrom_sizes, overlap, checkonly)

@@ -8,7 +8,7 @@ import sys
 import os
 import pysam
 
-from ngsutils.bam import bam_iter
+from ngsutils.bam import bam_iter, read_cleancigar
 
 
 def bam_cleancigar(infile, outfile):
@@ -27,35 +27,6 @@ def bam_cleancigar(infile, outfile):
     out.close()
     sys.stderr.write('Wrote: %s reads\nAltered: %s\n' % (total, count))
 
-
-def read_cleancigar(read):
-    if read.is_unmapped:
-        return False
-
-    newcigar = []
-    changed = False
-    last_op = None
-    size_acc = 0
-
-    for op, size in read.cigar:
-        if size > 0:
-            if last_op == op:
-                size_acc += size
-            else:
-                if last_op:
-                    newcigar.append((last_op, size_acc))
-                last_op = op
-                size_acc = size
-        else:
-            changed = True
-
-    newcigar.append((last_op, size_acc))
-
-    if changed:
-        read.cigar = newcigar
-        return True
-
-    return False
 
 
 def usage():

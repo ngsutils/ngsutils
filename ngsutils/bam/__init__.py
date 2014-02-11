@@ -493,6 +493,9 @@ def region_pos_to_genomic_pos(name, start, cigar):
     >>> region_pos_to_genomic_pos('chr1:1000-1050,2000-2050,3000-4000', 25, [(0, 100)])
     ('chr1', 1025, [(0, 25), (3, 950), (0, 50), (3, 950), (0, 25)])
 
+    >>> region_pos_to_genomic_pos('chr1:1000-1050,1050-1200', 25, [(0, 100)])
+    ('chr1', 1025, [(0, 25), (3, 0), (0, 75)])
+
     >>> region_pos_to_genomic_pos('chr3R:17630851-17630897,17634338-17634384', 17, [(0, 39)])
     ('chr3R', 17630868, [(0, 29), (3, 3441), (0, 10)])
 
@@ -599,6 +602,9 @@ def is_junction_valid(cigar, min_overlap=4):
     >>> is_junction_valid(cigar_fromstr('100M1000N4M'), 4)
     (True, '')
 
+    >>> is_junction_valid(cigar_fromstr('4M0N100M'), 4)
+    (True, '')
+
     '''
     first = True
     pre_gap = True
@@ -703,6 +709,39 @@ def read_cigar_at_pos(cigar, qpos, is_del):
             returnnext = True
 
     return None
+
+
+def read_cleancigar(read):
+    '''
+    Cleans the CIGAR string for a read to remove any operations that are zero length.
+    '''
+    if read.is_unmapped:
+        return False
+
+    newcigar = []
+    changed = False
+    last_op = None
+    size_acc = 0
+
+    for op, size in read.cigar:
+        if size > 0:
+            if last_op == op:
+                size_acc += size
+            else:
+                if last_op:
+                    newcigar.append((last_op, size_acc))
+                last_op = op
+                size_acc = size
+        else:
+            changed = True
+
+    newcigar.append((last_op, size_acc))
+
+    if changed:
+        read.cigar = newcigar
+        return True
+
+    return False
 
 
 if __name__ == '__main__':
