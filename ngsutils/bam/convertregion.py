@@ -37,18 +37,20 @@ import ngsutils.bam
 def usage():
     print __doc__
     print """
-Usage: bamutils convertregion {-overlap} in.bam out.bam chrom.sizes
+Usage: bamutils convertregion {-overlap} in.bam out.bam [chrom.sizes]
 
-Note: A samtools faidx file can be used for the chrom.sizes file.
+(Note: A samtools faidx file can be used for the chrom.sizes file.)
 
 Options:
--overlap    Require that all reads must overlap a splice junction
-            by 4 bases. (Also removes unmapped reads)
+  -f          Force overwriting an existing out.bam file
 
--checkonly  Don't convert the reference and position, just confirm that
-            the reads correctly overlap a junction.
+  -overlap    Require that all reads must overlap a splice junction
+              by 4 bases. (Also removes unmapped reads)
 
-            If -checkonly is set, then the chrom.sizes file isn't required
+  -checkonly  Don't convert the reference and position, just confirm that
+              the reads correctly overlap a junction.
+
+              If -checkonly is set, then the chrom.sizes file isn't required
 
 """
     sys.exit(1)
@@ -201,12 +203,15 @@ if __name__ == '__main__':
     chrom_sizes = None
     overlap = False
     checkonly = False
+    force = False
 
     for arg in sys.argv[1:]:
         if arg == '-h':
             usage()
         elif arg == '-overlap':
             overlap = True
+        elif arg == '-f':
+            force = True
         elif arg == '-checkonly':
             checkonly = True
         elif not infile:
@@ -220,5 +225,9 @@ if __name__ == '__main__':
         usage()
     elif not checkonly and not chrom_sizes:
         usage()
+    elif not force and os.path.exists(outfile):
+        sys.stderr.write('ERROR: %s already exists! Not overwriting without force (-f)\n\n' % outfile)
+        sys.exit(1)
+
     else:
         bam_convertregion(infile, outfile, chrom_sizes, overlap, checkonly)
