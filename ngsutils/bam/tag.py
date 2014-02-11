@@ -7,23 +7,26 @@ Tags each read in a BAM file
 Currently supported tags:
   -suffix
   -xs
+  -orig-ref
+  -orig-pos
+  -orig-cigar
 '''
 import sys
 import os
-from ngsutils.bam import bam_iter
+from ngsutils.bam import bam_iter, cigar_tostr
 import pysam
 
 
 class BamWriter(object):
-    def __init__(self, outname, template):
+    def __init__(self, outname, infname):
         self.outname = outname
-        self.template = template
+        self.inbam = pysam.Samfile(infname, "rb")
 
     def run_chain(self, chain):
         tmp = os.path.join(os.path.dirname(self.outname), '.tmp.%s' % os.path.basename(self.outname))
-        outbam = pysam.Samfile(tmp, 'wb', template=self.template)
+        outbam = pysam.Samfile(tmp, 'wb', template=self.inbam)
 
-        for read in chain.filter():
+        for read in chain.filter(self.inbam):
             outbam.write(read)
 
         outbam.close()
@@ -34,11 +37,8 @@ class BamWriter(object):
 
 
 class BamReader(object):
-    def __init__(self, fname):
-        self.bamfile = pysam.Samfile(fname, "rb")
-
-    def filter(self):
-        for read in bam_iter(self.bamfile):
+    def filter(self, bam):
+        for read in bam_iter(bam):
             yield read
 
         self.bamfile.close()
@@ -49,9 +49,42 @@ class Suffix(object):
         self.parent = parent
         self.suffix = suffix
 
-    def filter(self):
+    def filter(self, bam):
         for read in self.parent.filter():
             read.qname = "%s%s" % (read.qname, self.suffix)
+            yield read
+
+
+class OrigRef(object):
+    def __init__(self, parent, tag):
+        self.parent = parent
+        self.tag = tag
+
+    def filter(self, bam):
+        for read in self.parent.filter():
+            read.tags = read.tags + [(self.tag, bam.references[read.tid])]
+            yield read
+
+
+class OrigPos(object):
+    def __init__(self, parent, tag):
+        self.parent = parent
+        self.tag = tag
+
+    def filter(self, bam):
+        for read in self.parent.filter():
+            read.tags = read.tags + [(self.tag, read.pos)]
+            yield read
+
+
+class OrigCIGAR(object):
+    def __init__(self, parent, tag):
+        self.parent = parent
+        self.tag = tag
+
+    def filter(self, bam):
+        for read in self.parent.filter():
+            read.tags = read.tags + [(self.tag, cigar_tostr(read.cigar))]
             yield read
 
 
@@ -72,7 +105,7 @@ class Tag(object):
         if ':' in self.key:
             self.key = self.key.split(':')[0]
 
-    def filter(self):
+    def filter(self, bam):
         for read in self.parent.filter():
             read.tags = read.tags + [(self.key, self.value)]
             yield read
@@ -82,7 +115,7 @@ class CufflinksXS(object):
     def __init__(self, parent):
         self.parent = parent
 
-    def filter(self):
+    def filter(self, bam):
         for read in self.parent.filter():
             if not read.is_unmapped:
                 if read.is_reverse:
@@ -103,10 +136,21 @@ Arguments:
   out.bamfile   The name of the new output BAM file
 
 Options:
-  -suffix suff  A suffix to add to each read name
-  -xs           Add the XS:A tag for +/- strandedness (req'd by Cufflinks)
-  -tag tag      Add an arbitrary tag (ex: -tag XX:Z:test)
-  -f            Force overwriting the output BAM file if it exists
+  -suffix suff     A suffix to add to each read name
+
+  -xs              Add the XS:A tag for +/- strandedness (req'd by Cufflinks)
+
+  -tag tag         Add an arbitrary tag (ex: -tag XX:Z:test)
+
+  -orig-ref tag    Add a new tag with the original reference name (For
+                   example, in a region-based BAM will be converted to
+                   standard coordinates)
+
+  -orig-pos tag    Add a new tag with the original reference pos
+
+  -orig-cigar tag  Add a new tag with the original CIGAR alignment
+
+  -f               Force overwriting the output BAM file if it exists
 """
     sys.exit(1)
 
@@ -127,7 +171,16 @@ if __name__ == "__main__":
         elif last == '-tag':
             args.append([Tag, arg])
             last = None
-        elif arg in ['-suffix', '-tag']:
+        elif last == '-orig-ref':
+            args.append([OrigRef, arg])
+            last = None
+        elif last == '-orig-pos':
+            args.append([OrigPos, arg])
+            last = None
+        elif last == '-orig-cigar':
+            args.append([OrigCIGAR, arg])
+            last = None
+        elif arg in ['-suffix', '-tag', '-orig-ref', '-orig-pos', '-orig-cigar']:
             last = arg
         elif arg == '-xs':
             args.append([CufflinksXS, ])
@@ -143,9 +196,9 @@ if __name__ == "__main__":
         sys.stderr.write('ERROR: %s already exists! Not overwriting without force (-f)\n\n' % outfname)
         sys.exit(1)
 
-    chain = BamReader(infname)
-    writer = BamWriter(outfname, chain.bamfile)
+    writer = BamWriter(outfname, infname)
 
+    chain = BamReader()
     for arg in args:
         chain = arg[0](chain, *arg[1:])
 
