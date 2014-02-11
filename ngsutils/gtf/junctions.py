@@ -102,7 +102,7 @@ class JunctionExporter(object):
                 frag_start = max(start, end - self.fragment_size)
                 frag_end = end + self.fragment_size
 
-                name = '%s:%s-%s' % (chrom, frag_start, frag_end)
+                name = '%s:%s-%s,%s-%s' % (chrom, frag_start, end, end, frag_end)
                 if not name in self._junctions:
                     self._junctions.add(name)
                     seq = self.ref.fetch(chrom, frag_start, frag_end)
@@ -113,7 +113,7 @@ class JunctionExporter(object):
                 frag_start = start - self.fragment_size
                 frag_end = min(end, start + self.fragment_size)
 
-                name = '%s:%s-%s' % (chrom, frag_start, frag_end)
+                name = '%s:%s-%s,%s-%s' % (chrom, frag_start, start, start, frag_end)
                 if not name in self._junctions:
                     self._junctions.add(name)
                     seq = self.ref.fetch(chrom, frag_start, frag_end)
@@ -189,7 +189,7 @@ Options
                     [default 50]
   -known            Only export known junctions
 
-  -scramble         Include potential 3'->5' and self->self junctions
+  -scramble         Include potential circular junctions
   -retain-introns   Include retained introns (retains introns from both the 
                     5' and 3' splice side)
 
