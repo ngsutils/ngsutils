@@ -63,7 +63,10 @@ class OrigRef(object):
     def filter(self, bam):
         refs = list(bam.references)
         for read in self.parent.filter(bam):
-            read.tags = read.tags + [(self.tag, refs[read.tid])]
+            if not read.is_unmapped:
+                read.tags = read.tags + [(self.tag, refs[read.tid])]
+            else:
+                read.tags = read.tags + [(self.tag, '*')]
             yield read
 
 
@@ -74,7 +77,10 @@ class OrigPos(object):
 
     def filter(self, bam):
         for read in self.parent.filter(bam):
-            read.tags = read.tags + [(self.tag, read.pos)]
+            if not read.is_unmapped:
+                read.tags = read.tags + [(self.tag, read.pos)]
+            else:
+                read.tags = read.tags + [(self.tag, -1)]
             yield read
 
 
@@ -85,7 +91,10 @@ class OrigCIGAR(object):
 
     def filter(self, bam):
         for read in self.parent.filter(bam):
-            read.tags = read.tags + [(self.tag, cigar_tostr(read.cigar))]
+            if not read.is_unmapped:
+                read.tags = read.tags + [(self.tag, cigar_tostr(read.cigar))]
+            else:
+                read.tags = read.tags + [(self.tag, '*')]
             yield read
 
 
