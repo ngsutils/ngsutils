@@ -94,10 +94,9 @@ class ExonModel(Model):
         return 'regionstart regionend const_count region_num const_alt count excl_count incl_pct excl_pct alt-index'.split()
 
     def get_regions(self):
-        gtf = GTF(self.fname)
-        eta = ETA(gtf.fsize(), fileobj=gtf)
+        eta = ETA(self.gtf.fsize(), fileobj=self.gtf)
 
-        for gene in gtf.genes:
+        for gene in self.gtf.genes:
             eta.print_status(extra=gene.gene_name)
             starts = []
             ends = []
