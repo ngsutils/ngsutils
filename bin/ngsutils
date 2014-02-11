@@ -31,7 +31,7 @@ if [[ "$SUBDIR" == "ngs" && -e "$DIR"/.git && "$1" == "update" ]]; then
     cd "$DIR"
     
     echo "Updating from current branch"
-    git pull
+    git pull 
 
     exit 0
 fi
@@ -43,11 +43,10 @@ if [[ "$SUBDIR" == "ngs" && -e "$DIR"/.git && "$1" == "switch" ]]; then
         echo "Switching to branch: $2"
         git fetch origin
         if [ "$(git branch -l | grep "$2")" == "" ]; then
-            git checkout -b $2
-        else
-            git checkout $2
+            git branch -t $2 origin/$2
         fi
-        git pull origin $2
+        git checkout $2
+        git pull
     else
         git branch -a
     fi
