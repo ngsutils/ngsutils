@@ -61,7 +61,7 @@ def bam_batch_reads(bam):
     '''
     reads = []
     last = None
-    for read in bam:
+    for read in ngsutils.bam.bam_iter(bam):
         if last and read.qname != last:
             yield reads
             reads = []

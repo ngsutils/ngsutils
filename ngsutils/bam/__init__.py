@@ -501,6 +501,13 @@ def region_pos_to_genomic_pos(name, start, cigar):
     >>> region_pos_to_genomic_pos('chr3R:17630851-17630897,17634338-17634384', 17, [(0, 39)])
     ('chr3R', 17630868, [(0, 29), (3, 3441), (0, 10)])
 
+    >>> region_pos_to_genomic_pos('chr1:1000-1050,2000-2050', 25, [(4, 25), (0, 50), (4, 25)])
+    ('chr1', 1025, [(4, 25), (0, 25), (3, 950), (0, 25), (4, 25)])
+
+    >>> region_pos_to_genomic_pos('chr1:1000-1050,2000-2050', 25, [(5, 25), (0, 75)])
+    ('chr1', 1025, [(5, 25), (0, 25), (3, 950), (0, 50)])
+
+
     '''
 
     if name in __region_cache:
@@ -540,7 +547,7 @@ def region_pos_to_genomic_pos(name, start, cigar):
     cur_pos = chr_start
 
     for op, length in cigar:
-        if op == 1:
+        if op in [1, 4, 5]:
             chr_cigar.append((op, length))
 
         elif op in [0, 2]:
