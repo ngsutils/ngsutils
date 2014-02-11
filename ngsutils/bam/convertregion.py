@@ -42,15 +42,17 @@ Usage: bamutils convertregion {-overlap} in.bam out.bam [chrom.sizes]
 (Note: A samtools faidx file can be used for the chrom.sizes file.)
 
 Options:
-  -f          Force overwriting an existing out.bam file
+  -f             Force overwriting an existing out.bam file
 
-  -overlap    Require that all reads must overlap a splice junction
-              by 4 bases. (Also removes unmapped reads)
+  -overlap       Require that all reads must overlap a splice junction
+                 by 4 bases. (Also removes unmapped reads)
 
-  -checkonly  Don't convert the reference and position, just confirm that
-              the reads correctly overlap a junction.
+  -validateonly  Don't convert the reference and position, just confirm that
+                 the reads correctly overlap a junction. Any reads that don't
+                 overlap a junction will not be written to the out.bam file.
 
-              If -checkonly is set, then the chrom.sizes file isn't required
+                 If -validateonly is set, then the chrom.sizes file isn't
+                 required.
 
 """
     sys.exit(1)
@@ -58,7 +60,7 @@ Options:
 
 def bam_batch_reads(bam):
     '''
-    Batches mapping for the same reads (qname) together, this way
+    Bat`s mapping for the same reads (qname) together, this way
     they can all be compared/converted together.
     '''
     reads = []
@@ -74,10 +76,10 @@ def bam_batch_reads(bam):
         yield reads
 
 
-def bam_convertregion(infile, outfname, chrom_sizes=None, enforce_overlap=False, checkonly=False, quiet=False):
+def bam_convertregion(infile, outfname, chrom_sizes=None, enforce_overlap=False, validateonly=False, quiet=False):
     bamfile = pysam.Samfile(infile, "rb")
 
-    if checkonly:
+    if validateonly:
         outfile = pysam.Samfile('%s.tmp' % outfname, "wb", template=bamfile)
 
     else:
@@ -111,7 +113,7 @@ def bam_convertregion(infile, outfname, chrom_sizes=None, enforce_overlap=False,
 
             chrom, pos, cigar = ngsutils.bam.region_pos_to_genomic_pos(bamfile.getrname(read.tid), read.pos, read.cigar)
 
-            if not checkonly:
+            if not validateonly:
                 read.pos = pos
                 try:
                     read.cigar = cigar
@@ -130,7 +132,7 @@ def bam_convertregion(infile, outfname, chrom_sizes=None, enforce_overlap=False,
                     sys.exit(1)
 
             if not enforce_overlap:
-                if not checkonly:
+                if not validateonly:
                     ngsutils.bam.read_cleancigar(read)
                 outfile.write(read)
                 continue
@@ -162,7 +164,7 @@ def bam_convertregion(infile, outfname, chrom_sizes=None, enforce_overlap=False,
                     newtags.append(('NH', len(outreads)))
 
                 read.tags = newtags
-                if not checkonly:
+                if not validateonly:
                     ngsutils.bam.read_cleancigar(read)
                 outfile.write(read)
         #
@@ -202,7 +204,7 @@ if __name__ == '__main__':
     outfile = None
     chrom_sizes = None
     overlap = False
-    checkonly = False
+    validateonly = False
     force = False
 
     for arg in sys.argv[1:]:
@@ -212,8 +214,8 @@ if __name__ == '__main__':
             overlap = True
         elif arg == '-f':
             force = True
-        elif arg == '-checkonly':
-            checkonly = True
+        elif arg == '-validateonly':
+            validateonly = True
         elif not infile:
             infile = arg
         elif not outfile:
@@ -223,11 +225,11 @@ if __name__ == '__main__':
 
     if not infile or not outfile:
         usage()
-    elif not checkonly and not chrom_sizes:
+    elif not validateonly and not chrom_sizes:
         usage()
     elif not force and os.path.exists(outfile):
         sys.stderr.write('ERROR: %s already exists! Not overwriting without force (-f)\n\n' % outfile)
         sys.exit(1)
 
     else:
-        bam_convertregion(infile, outfile, chrom_sizes, overlap, checkonly)
+        bam_convertregion(infile, outfile, chrom_sizes, overlap, validateonly)
