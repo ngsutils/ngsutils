@@ -1,23 +1,15 @@
 #!/bin/bash
 
-VIRTUALENV=`which virtualenv-2.7`
-if [ "$VIRTUALENV" == "" ]; then
-    VIRTUALENV=`which virtualenv-2.6`
-fi
-if [ "$VIRTUALENV" == "" ]; then
-    VIRTUALENV=`which virtualenv`
-fi
-if [ "$VIRTUALENV" == "" ]; then
-    echo "Missing virtualenv!"
-    exit 1
+# Use embedded virtualenv
+REAL=`python -c 'import os,sys;print os.path.realpath(sys.argv[1])' "$0"`
+VIRTUALENV="python $(dirname $REAL)/support/virtualenv.py"
+
+if [ ! -e venv ]; then 
+    echo "Initializing virtualenv folder (venv)"
+    $VIRTUALENV --no-site-packages venv
 fi
 
-if [ ! -e env ]; then 
-    echo "Initializing virtualenv folder (env)"
-    $VIRTUALENV --no-site-packages env
-fi
-
-. env/bin/activate
+. venv/bin/activate
 
 if [ $(uname -s) == "Darwin" ]; then
     # Mac OS X Mountain Lion compiles with clang by default...

@@ -1,6 +1,7 @@
 *.pyc
 .DS_Store
 env/
+venv/
 build/
 .coverage
 *.sublime-*

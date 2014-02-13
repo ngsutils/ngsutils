@@ -3,7 +3,7 @@ REAL=`python -c 'import os,sys;print os.path.realpath(sys.argv[1])' "$0"`
 DIR=`dirname "$REAL"`
 SUBDIR=$(basename $0 | sed -e 's/utils//')
 
-. "$DIR"/env/bin/activate
+. "$DIR"/venv/bin/activate
 export PYTHONPATH=$PYTHONPATH:"$DIR"
 export HIDE_ETA="1"
 export TESTING="1"
