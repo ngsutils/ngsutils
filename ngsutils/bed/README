@@ -7,12 +7,15 @@ Commands
     sizes        - Extract the sizes of BED regions
     sort         - Sorts a BED file (in place)
     stats        - Calculates simple stats for a BED file
+    subtract     - Subtracts one set of BED regions from another
 
   Conversion
-    bed3to6      - Convert a BED3 file to a BED6 file
+    annotate     - Annotate BED files by adding / altering columns
     frombasecall - Converts a file in basecall format to BED3 format
     fromprimers  - Converts a list of PCR primer pairs to BED regions
     fromvcf      - Converts a file in VCF format to BED6
+    tobed3       - Removes extra columns from a BED (or BED compatible) file
+    tobed6       - Removes extra columns from a BED (or BED compatible) file
     tobedgraph   - BED to BedGraph
     tofasta      - Extract BED regions from a reference FASTA file
 
