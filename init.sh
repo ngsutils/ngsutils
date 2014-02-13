@@ -1,8 +1,12 @@
 #!/bin/bash
 
+if [ "$PYTHON" == "" ]; then
+    PYTHON="python"
+fi
+
 # Use embedded virtualenv
 REAL=`python -c 'import os,sys;print os.path.realpath(sys.argv[1])' "$0"`
-VIRTUALENV="python $(dirname $REAL)/support/virtualenv.py"
+VIRTUALENV="$PYTHON $(dirname $REAL)/support/virtualenv.py"
 
 if [ ! -e venv ]; then 
     echo "Initializing virtualenv folder (venv)"
@@ -22,8 +26,8 @@ if [ $(uname -s) == "Darwin" ]; then
     fi
 fi
 
-PYTHONMAJOR=$(python -V 2>&1 | sed -e 's/\./ /g' | awk '{print $2}')
-PYTHONMINOR=$(python -V 2>&1 | sed -e 's/\./ /g' | awk '{print $3}')
+PYTHONMAJOR=$($PYTHON -V 2>&1 | sed -e 's/\./ /g' | awk '{print $2}')
+PYTHONMINOR=$($PYTHON -V 2>&1 | sed -e 's/\./ /g' | awk '{print $3}')
 
 if [ "$PYTHONMAJOR" -ne 2 ]; then
     echo "Requires Python 2.6+"
