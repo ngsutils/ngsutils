@@ -261,7 +261,7 @@ ATTTAtcgtagt
 
         out = StringIO.StringIO('')
         chain = ngsutils.fastq.filter.FASTQReader(FASTQ(fileobj=fq), verbose=False)
-        chain = ngsutils.fastq.filter.TrimFilter(chain, 'ATTT', 0.8, 3, verbose=False)
+        chain = ngsutils.fastq.filter.TrimFilter(chain, 'ATTT', 1.0, 3, verbose=False)
         ngsutils.fastq.filter.fastq_filter(chain, out=out, quiet=True)
 
         self.assertEqual(out.getvalue(), '''\
@@ -277,6 +277,72 @@ ACGTACGT
 ACGTACGTATTC
 +
 ;;;;;;;;;;;;
+''')
+
+    def testFilterTrim2(self):
+        '''Test to make sure that we don't trim out the middle of a read'''
+        fq = StringIO.StringIO('''\
+@foo
+ACGTACGTACGTATTATT
++
+;;;;;;;;;;;;;;;;;;
+@bar
+CCGGATTAGGCCGGCC
++
+;;;;;;;;;;;;;;;;
+@baz
+CCGGATTATTATTATT
++
+;;;;;;;;;;;;;;;;
+''')
+
+        out = StringIO.StringIO('')
+        chain = ngsutils.fastq.filter.FASTQReader(FASTQ(fileobj=fq), verbose=False)
+        chain = ngsutils.fastq.filter.TrimFilter(chain, 'ATTATT', 1.0, 4, verbose=False)
+        ngsutils.fastq.filter.fastq_filter(chain, out=out, quiet=True)
+
+        self.assertEqual(out.getvalue(), '''\
+@foo #trim
+ACGTACGTACGT
++
+;;;;;;;;;;;;
+@bar
+CCGGATTAGGCCGGCC
++
+;;;;;;;;;;;;;;;;
+@baz #trim
+CCGGATTATT
++
+;;;;;;;;;;
+''')
+
+    def testFilterTrimRepeat(self):
+        '''properly trim repeats'''
+        fq = StringIO.StringIO('''\
+@foo
+ACGTACGTAAAAAAAAAA
++
+;;;;;;;;;;;;;;;;;;
+@bar
+CCGGATTAGGCCCAAA
++
+;;;;;;;;;;;;;;;;
+''')
+
+        out = StringIO.StringIO('')
+        chain = ngsutils.fastq.filter.FASTQReader(FASTQ(fileobj=fq), verbose=False)
+        chain = ngsutils.fastq.filter.TrimFilter(chain, 'AAAAAAAAAAAAAAAAAA', 1.0, 4, verbose=False)
+        ngsutils.fastq.filter.fastq_filter(chain, out=out, quiet=True)
+
+        self.assertEqual(out.getvalue(), '''\
+@foo #trim
+ACGTACGT
++
+;;;;;;;;
+@bar
+CCGGATTAGGCCCAAA
++
+;;;;;;;;;;;;;;;;
 ''')
 
     def testFilterTrimCS(self):

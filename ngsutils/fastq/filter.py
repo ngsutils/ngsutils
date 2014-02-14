@@ -76,42 +76,49 @@ class TrimFilter(object):
             trimmed = False
 
             upseq = seq.upper()
-            for i in xrange(len(seq) - self.min_filter_len):
+            best_match = 0
+            best_i = -1
+
+            for i in xrange(self.min_filter_len, len(seq)+1):
                 matches = 0.0
                 total = 0
-                for s, a in zip(upseq[i:], self.trim_seq):
+                for s, a in zip(upseq[-i:], self.trim_seq):
                     total += 1
                     if s == a or a == 'N':
                         matches += 1
 
-                if (matches / total) >= self.mismatch_pct:
-                    trimmed = True
-                    orig_seq = seq
+                if ((matches / total) >= self.mismatch_pct) and matches >= best_match:
+                    best_match = matches
+                    best_i = i
+                elif best_match:
+                    break
 
-                    if len(seq) == len(qual):  # if colorspace - could include a *single* prefix base
-                        seq = seq[:i]
-                        qual = qual[:i]
-                    else:
-                        seq = seq[:i]
-                        qual = qual[:i - 1]
+            if best_match:
+                orig_seq = seq
+                i = best_i
 
-                    if len(qual) == 0:
-                        self.removed += 1
-                        if self.discard:
-                            self.discard(name)
-                        if self.verbose:
-                            sys.stderr.write('[Trim] %s (removed) seq:%s clipped at:%s (%s/%s)-> %s\n' % (name, orig_seq, i, matches, total, seq[:i]))
-                        break
-                    else:
-                        self.altered += 1
-                        if self.verbose:
-                            sys.stderr.write('[Trim] %s (altered) seq:%s clipped at:%s (%s/%s)-> %s\n' % (name, orig_seq, i, matches, total, seq[:i]))
+                # since we are now trimming from the 3' end, we can
+                # safely ignore if this is a color-space file with a
+                # prefix base
 
-                        yield((name, '%s #trim' % comment, seq, qual))
+                seq = seq[:-i]
+                qual = qual[:-i]
 
-                        break
+                if len(qual) == 0:
+                    self.removed += 1
+                    if self.discard:
+                        self.discard(name)
+                    if self.verbose:
+                        sys.stderr.write('[Trim] %s (removed) seq:%s clipped at:%s (%s/%s)-> %s\n' % (name, orig_seq, i, matches, total, seq[:i]))
+                    break
+                else:
+                    self.altered += 1
+                    if self.verbose:
+                        sys.stderr.write('[Trim] %s (altered) seq:%s clipped at:%s (%s/%s)-> %s\n' % (name, orig_seq, i, matches, total, seq[:i]))
 
-            if not trimmed:
+                    yield((name, '%s #trim' % comment, seq, qual))
+
+            else:
                 self.kept += 1
                 if self.verbose:
                     sys.stderr.write('[Trim] %s (kept)\n' % name)
@@ -253,9 +260,7 @@ class TruncateFilter(object):
 
     def filter(self):
         for name, comment, seq, qual in self.parent.filter():
-            alt = False
             if len(qual) > self.size:
-                alt = True
                 if len(seq) == len(qual):  
                     # basespace or colorspace w/o prefix
                     seq = seq[:self.size]
