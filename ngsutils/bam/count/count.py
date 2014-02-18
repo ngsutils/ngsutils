@@ -152,7 +152,7 @@ class Model(object):
             out.write('## norm %s %s\n' % (norm, float(norm_val_orig)))
             out.write('## CPM-factor %s\n' % norm_val)
 
-        out.write('#')
+        # out.write('#')
         out.write('\t'.join(self.get_headers()))
         out.write('\tlength\tcount')
         if norm_val:
