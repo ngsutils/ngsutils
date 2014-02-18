@@ -434,7 +434,8 @@ def bam_stats(infiles, gtf_file=None, region=None, delim=None, tags=[], show_all
             else:
                 minval = max(vals)
 
-            if last:
+
+            if last and type(last) == int:
                 if asc:
                     last += 1
                     # fill in missing values
