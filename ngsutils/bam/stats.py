@@ -110,6 +110,8 @@ Regions should be be in the format: 'ref:start-end' or 'ref:start' using
 Options:
     -all    Show the stats for all fragments (defaults to just the first fragment)
 
+    -nofill Don't fill in missing values when showing stat distributions
+
     -region chrom:start-end
             Only calculate statistics for this region
 
@@ -327,7 +329,7 @@ class BamStats(object):
             yield (val, count, pct)
 
 
-def bam_stats(infiles, gtf_file=None, region=None, delim=None, tags=[], show_all=False):
+def bam_stats(infiles, gtf_file=None, region=None, delim=None, tags=[], show_all=False, fillin_stats=True):
     if gtf_file:
         gtf = GTF(gtf_file)
     else:
@@ -434,8 +436,7 @@ def bam_stats(infiles, gtf_file=None, region=None, delim=None, tags=[], show_all
             else:
                 minval = max(vals)
 
-
-            if last and type(last) == int:
+            if last and type(last) == int and fillin_stats:
                 if asc:
                     last += 1
                     # fill in missing values
@@ -499,6 +500,7 @@ if __name__ == '__main__':
     region = None
     delim = None
     show_all = False
+    fillin_stats = True
     tags = []
 
     last = None
@@ -519,6 +521,8 @@ if __name__ == '__main__':
             last = None
         elif arg == '-all':
             show_all = True
+        elif arg == '-nofill':
+            fillin_stats = False
         elif arg in ['-gtf', '-delim', '-tags', '-region']:
             last = arg
         elif os.path.exists(arg):
@@ -530,4 +534,4 @@ if __name__ == '__main__':
     if not infiles:
         usage()
     else:
-        bam_stats(infiles, gtf, region, delim, tags, show_all=show_all)
+        bam_stats(infiles, gtf, region, delim, tags, show_all=show_all, fillin_stats=fillin_stats)
