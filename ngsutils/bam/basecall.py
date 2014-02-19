@@ -426,6 +426,8 @@ def bam_basecall(bam, ref_fname, min_qual=0, min_count=0, regions=None, mask=154
     ebi_chr_convert = False
 
     for basepos in bbc.fetch():
+        if basepos.pos < 0:
+            continue
         if profiler and profiler.abort():
             break
 
