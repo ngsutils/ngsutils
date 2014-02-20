@@ -89,7 +89,7 @@ def find_fastq_pairs(fq1, fq2, out1, out2, tmpdir=None, quiet=False):
 def usage(msg=""):
     if msg:
         print '%s\n' % msg
-    print """Usage: fastqutils properpairs filename1.fastq{.gz} filename2.fastq{.gz} output1 output2
+    print """Usage: fastqutils properpairs {opts} filename1.fastq{.gz} filename2.fastq{.gz} output1 output2
 
 Options:
   -f       Force overwriting output file (if it exists)
