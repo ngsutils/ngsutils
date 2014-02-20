@@ -482,7 +482,7 @@ def bam_basecall(bam, ref_fname, min_qual=0, min_count=0, regions=None, mask=154
         else:
             ave_mapping = 0
 
-        consensuscall, minorcall = _calculate_consensus_minor(minorpct, basepos.a, basepos.c, basepos.g, basepos.t)
+        consensuscall, minorcall = _calculate_consensus_minor(minorpct, basepos.a, basepos.c, basepos.g, basepos.t) ##TODO - add inserts and dels here
 
         if variants and consensuscall == refbase:
             continue
