@@ -2,12 +2,12 @@
 ## category General
 ## desc Find properly paired reads (when fragments are filtered separately)
 '''
-
 When you filter paired FASTQ files separately, fragments my be filtered or
 removed from either file. This program will then find all of the properly
 paired reads. Valid pairs will be written to new output files that may be
 optionally gzip compressed.
 
+Caution: this can use up to 2X the disk space of each FASTQ file!
 '''
 
 import os
