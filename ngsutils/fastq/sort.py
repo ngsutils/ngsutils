@@ -26,7 +26,7 @@ def _write_tmp(chunk, tmpdir):
     return tmp
 
 
-def fastq_sort(fastq, byname=True, bysequence=False, tmpdir=None, chunksize=100000, out=sys.stdout, quiet=False):
+def fastq_sort(fastq, byname=True, bysequence=False, tmpdir=None, chunksize=1000000, out=sys.stdout, quiet=False):
     tmpfiles = []
 
     chunk = []
