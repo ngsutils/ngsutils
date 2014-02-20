@@ -99,7 +99,7 @@ class FASTQ(object):
                         eta.print_status(extra=read.name)
                 yield read
 
-            except:
+            except StopIteration:
                 break
 
         if eta:

@@ -17,7 +17,7 @@ from ngsutils.fastq import FASTQ, fastq_read_file
 from eta import ETA
 
 
-def _write_tmp(chunk):
+def _write_tmp(chunk, tmpdir):
     chunk.sort()
     tmp = tempfile.TemporaryFile(dir=tmpdir)
     for sorter, read in chunk:
@@ -40,11 +40,11 @@ def fastq_sort(fastq, byname=True, bysequence=False, tmpdir=None, chunksize=1000
             chunk.append((read.seq, read))
 
         if len(chunk) >= chunksize:
-            tmpfiles.append(_write_tmp(chunk))
+            tmpfiles.append(_write_tmp(chunk, tmpdir))
             chunk = []
 
     if chunk:
-        tmpfiles.append(_write_tmp(chunk))
+        tmpfiles.append(_write_tmp(chunk, tmpdir))
 
     sys.stderr.write('Merging chunks...\n')
     buf = [None, ] * len(tmpfiles)
