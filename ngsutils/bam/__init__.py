@@ -105,7 +105,9 @@ def cigar_tostr(cigar):
     >>> cigar_tostr(((0, 1), (1, 1), (2, 1), (3, 1), (4, 1), (5, 1), (6, 1)))
     '1M1I1D1N1S1H1P'
     '''
+    
     s = ''
+
     for op, size in cigar:
         s += '%s%s' % (size, bam_cigar[op])
 
@@ -507,6 +509,12 @@ def region_pos_to_genomic_pos(name, start, cigar):
     >>> region_pos_to_genomic_pos('chr1:1000-1050,2000-2050', 25, [(5, 25), (0, 75)])
     ('chr1', 1025, [(5, 25), (0, 25), (3, 950), (0, 50)])
 
+    >>> region_pos_to_genomic_pos('chr1:1000-1050,2000-2050', 25, [(5, 25), (0, 75)])
+    ('chr1', 1025, [(5, 25), (0, 25), (3, 950), (0, 50)])
+
+    >>> region_pos_to_genomic_pos('chr7:16829153-16829246,16829246-16829339', 62, cigar_fromstr('83M18S'))
+    ('chr7', 16829215, [(0, 31), (3, 0), (0, 52), (4, 18)])
+
 
     '''
 
@@ -720,33 +728,53 @@ def read_cigar_at_pos(cigar, qpos, is_del):
     return None
 
 
+def cleancigar(cigar):
+    '''
+    Cleans a CIGAR alignment to remove zero length operations
+
+    >>> cigar_tostr(cleancigar(cigar_fromstr('31M0N52M18S')))
+    '83M18S'
+
+    '''
+    newcigar = []
+
+    changed = False
+    zero = False
+
+    for op, size in cigar:
+        if size > 0:
+            if zero and newcigar:
+                if newcigar[-1][0] == op:
+                    newsize = newcigar[-1][1] + size
+                    newcigar[-1] = (op, newsize)
+                zero = 0
+            else:
+                newcigar.append((op, size))
+        else:
+            changed = True
+            zero = True
+
+    if changed:
+        return newcigar
+
+    return None
+
+
+
 def read_cleancigar(read):
     '''
-    Cleans the CIGAR string for a read to remove any operations that are zero length.
+    Replaces the CIGAR string for a read to remove any operations that are zero length.
+
+    This happens to the read in-place
     '''
     if read.is_unmapped:
         return False
 
     newcigar = []
-    changed = False
-    last_op = None
-    size_acc = 0
 
-    for op, size in read.cigar:
-        if size > 0:
-            if last_op == op:
-                size_acc += size
-            else:
-                if last_op:
-                    newcigar.append((last_op, size_acc))
-                last_op = op
-                size_acc = size
-        else:
-            changed = True
+    newcigar = cleancigar(read.cigar)
 
-    newcigar.append((last_op, size_acc))
-
-    if changed:
+    if newcigar:
         read.cigar = newcigar
         return True
 
