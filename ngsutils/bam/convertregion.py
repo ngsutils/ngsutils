@@ -102,6 +102,11 @@ def bam_convertregion(infile, outfname, chrom_sizes=None, overlap=4, validateonl
     invalid_count = 0
     unmapped_count = 0
 
+    inreferences = list(bamfile.references)
+    outreferences = {}
+    for i, name in outfile.references:
+        outreferences[name] = i
+
     for batch in bam_batch_reads(bamfile):
         outreads = []
 
@@ -112,7 +117,7 @@ def bam_convertregion(infile, outfname, chrom_sizes=None, overlap=4, validateonl
                     outfile.write(read)
                 continue
 
-            chrom, pos, cigar = ngsutils.bam.region_pos_to_genomic_pos(bamfile.getrname(read.tid), read.pos, read.cigar)
+            chrom, pos, cigar = ngsutils.bam.region_pos_to_genomic_pos(inreferences[read.tid], read.pos, read.cigar)
 
             if not validateonly:
                 read.pos = pos
@@ -121,16 +126,12 @@ def bam_convertregion(infile, outfname, chrom_sizes=None, overlap=4, validateonl
                 except:
                     print "Error trying to set CIGAR: %s to %s (%s, %s, %s)" % (read.cigar, cigar, read.qname, bamfile.getrname(read.tid), read.pos)
 
-                chrom_found = False
-                for i, name in enumerate(outfile.references):
-                    if name == chrom:
-                        read.tid = i
-                        chrom_found = True
-                        break
-
-                if not chrom_found:
+                if not chrom in outreferences:
                     print "Can't find chrom: %s" % chrom
                     sys.exit(1)
+
+                read.tid = outreferences[chrom]
+
 
             if not overlap:
                 if not validateonly:
