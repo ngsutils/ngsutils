@@ -43,6 +43,7 @@ Usage: bamutils convertregion {-overlap} in.bam out.bam [chrom.sizes]
 
 Options:
   -f             Force overwriting an existing out.bam file
+  -unmapped      Keep all unmapped reads in the output file (including invalid junction reads)
 
   -overlap N     Require that all reads must overlap a splice junction
                  by N bases. This also removes unmapped reads. [default 4]
@@ -77,7 +78,7 @@ def bam_batch_reads(bam):
         yield reads
 
 
-def bam_convertregion(infile, outfname, chrom_sizes=None, overlap=4, validateonly=False, quiet=False):
+def bam_convertregion(infile, outfname, chrom_sizes=None, overlap=4, validateonly=False, keep_unmapped=False, quiet=False):
     bamfile = pysam.Samfile(infile, "rb")
 
     if validateonly:
@@ -109,11 +110,13 @@ def bam_convertregion(infile, outfname, chrom_sizes=None, overlap=4, validateonl
 
     for batch in bam_batch_reads(bamfile):
         outreads = []
+        unmapped_read = None
 
         for read in batch:
             if read.is_unmapped and not read.is_secondary:
+                # read is unmapped, so there aren't multiple mappings to deal with
                 unmapped_count += 1
-                if not overlap:
+                if not overlap or keep_unmapped:
                     outfile.write(read)
                 continue
 
@@ -133,6 +136,7 @@ def bam_convertregion(infile, outfname, chrom_sizes=None, overlap=4, validateonl
                 read.tid = outreferences[chrom]
 
 
+            # just do a conversion, don't check it...
             if not overlap:
                 if not validateonly:
                     ngsutils.bam.read_cleancigar(read)
@@ -144,6 +148,8 @@ def bam_convertregion(infile, outfname, chrom_sizes=None, overlap=4, validateonl
                 converted_count += 1
                 outreads.append(read)
             else:
+                if not unmapped_read:
+                    unmapped_read = ngsutils.bam.read_to_unmapped(read, inreferences[read.tid])
                 invalid_count += 1
 
         if outreads:
@@ -169,6 +175,9 @@ def bam_convertregion(infile, outfname, chrom_sizes=None, overlap=4, validateonl
                 if not validateonly:
                     ngsutils.bam.read_cleancigar(read)
                 outfile.write(read)
+        elif unmapped_read:
+            outfile.write(unmapped_read)
+
         #
         # If a read doesn't overlap, just skip it in the output, don't reset the values
         #
@@ -208,6 +217,7 @@ if __name__ == '__main__':
     overlap = 4
     validateonly = False
     force = False
+    keep_unmapped = False
 
     last = None
 
@@ -223,6 +233,8 @@ if __name__ == '__main__':
             force = True
         elif arg == '-validateonly':
             validateonly = True
+        elif arg == '-unmapped':
+            keep_unmapped = True
         elif arg in ['-overlap']:
             last = arg
         elif not infile:
@@ -241,4 +253,4 @@ if __name__ == '__main__':
         sys.exit(1)
 
     else:
-        bam_convertregion(infile, outfile, chrom_sizes, overlap, validateonly)
+        bam_convertregion(infile, outfile, chrom_sizes, overlap, validateonly, keep_unmapped)
