@@ -15,9 +15,11 @@ def bam_check(fname, quiet=False):
         sys.stdout.write('%s: ' % fname)
         sys.stdout.flush()
     fail = False
+    i = 1
     try:
         bamfile = ngsutils.bam.bam_open(fname)
         for read in ngsutils.bam.bam_iter(bamfile):
+            i += 1
             pass
         bamfile.close()
     except KeyboardInterrupt:
@@ -30,7 +32,7 @@ def bam_check(fname, quiet=False):
 
     if fail:
         if not quiet:
-            sys.stdout.write('ERROR\n')
+            sys.stdout.write('ERROR! (line %s)\n' % (i + 1))
         return False
 
     if not quiet:
