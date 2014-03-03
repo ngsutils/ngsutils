@@ -60,24 +60,6 @@ Options:
     sys.exit(1)
 
 
-def bam_batch_reads(bam):
-    '''
-    Bat`s mapping for the same reads (qname) together, this way
-    they can all be compared/converted together.
-    '''
-    reads = []
-    last = None
-    for read in ngsutils.bam.bam_iter(bam):
-        if last and read.qname != last:
-            yield reads
-            reads = []
-        last = read.qname
-        reads.append(read)
-
-    if reads:
-        yield reads
-
-
 def bam_convertregion(infile, outfname, chrom_sizes=None, overlap=4, validateonly=False, keep_unmapped=False, quiet=False):
     bamfile = pysam.Samfile(infile, "rb")
 
@@ -108,7 +90,7 @@ def bam_convertregion(infile, outfname, chrom_sizes=None, overlap=4, validateonl
     for i, name in enumerate(outfile.references):
         outreferences[name] = i
 
-    for batch in bam_batch_reads(bamfile):
+    for batch in nsgutils.bam.bam_batch_reads(bamfile):
         outreads = []
         unmapped_read = None
 

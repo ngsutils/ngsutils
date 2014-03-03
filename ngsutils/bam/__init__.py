@@ -40,7 +40,6 @@ def bam_iter(bam, quiet=False, show_ref_pos=False, callback=None):
     ['A', 'B', 'E', 'C', 'D', 'F', 'Z']
     '''
 
-    
     if not quiet and bam.filename:
         eta = ETA(os.stat(bam.filename).st_size)
     else:
@@ -69,6 +68,24 @@ def bam_iter(bam, quiet=False, show_ref_pos=False, callback=None):
 
     if eta:
         eta.done()
+
+
+def bam_batch_reads(bam):
+    '''
+    Batch mapping for the same reads (qname) together, this way
+    they can all be compared/converted together.
+    '''
+    reads = []
+    last = None
+    for read in bam_iter(bam):
+        if last and read.qname != last:
+            yield reads
+            reads = []
+        last = read.qname
+        reads.append(read)
+
+    if reads:
+        yield reads
 
 
 bam_cigar = ['M', 'I', 'D', 'N', 'S', 'H', 'P', '=', 'X']
