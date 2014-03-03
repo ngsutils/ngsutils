@@ -38,7 +38,10 @@ Usage: bamutils merge {opts} out.bam in1.bam in2.bam ...
 
 Options
   -tag VAL    Tag to use to determine from which file reads will be taken.
-              (must be type :i or :f) [default: AS]
+              (must be type :i or :f) You may have more than one of these,
+              in which case they will be sorted in order. You can add a +/-
+              at the end of the name to signify sort order (asc/desc). 
+              [default: AS-, NM+]
 
   -discard    Discard reads that aren't mapped in any file.
 
@@ -48,7 +51,7 @@ Options
     sys.exit(1)
 
 
-def bam_merge(fname, infiles, tag='AS', discard=False, keepall=False, quiet=False):
+def bam_merge(fname, infiles, tags=['AS', 'NM'], discard=False, keepall=False, quiet=False):
     bams = []
     last_reads = []
     bamgens = []
@@ -96,7 +99,12 @@ def bam_merge(fname, infiles, tag='AS', discard=False, keepall=False, quiet=Fals
                     match = True
 
                     if not read.is_unmapped:
-                        tag_val = int(read.opt(tag))
+                        tag_val = []
+                        for tag in tags:
+                            val = float(read.opt(tag[:2]))
+                            if tag[-1] == '-':
+                                val = -val
+                            tag_val.append(val)
 
                         if keepall:
                             if not (read.tid, read.pos) in mappings:
@@ -117,7 +125,7 @@ def bam_merge(fname, infiles, tag='AS', discard=False, keepall=False, quiet=Fals
             for k in mappings:
                 outs.append(mappings[k])
 
-            for tagval, i, read in sorted(outs, reverse=True):
+            for tagval, i, read in sorted(outs):
                 counts[i] += 1
                 outfile.write(read)
 
@@ -148,13 +156,13 @@ if __name__ == '__main__':
     last = None
     discard = False
     keepall = False
-    tag = 'AS'
+    tags = []
 
     for arg in sys.argv[1:]:
         if arg == '-h':
             usage()
         elif last == '-tag':
-            tag = arg
+            tags.append(arg)
             last = None
         elif arg in ['-tag']:
             last = arg
@@ -167,7 +175,10 @@ if __name__ == '__main__':
         elif os.path.exists(arg):
             infiles.append(arg)
 
+    if not tags:
+        tags = ['AS-', 'NM+']
+
     if not infiles or not outfile:
         usage()
     else:
-        bam_merge(outfile, infiles, tag, discard, keepall)
+        bam_merge(outfile, infiles, tags, discard, keepall)
