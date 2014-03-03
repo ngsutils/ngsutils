@@ -102,7 +102,7 @@ def bam_merge(fname, infiles, tags=['AS', 'NM'], discard=False, keepall=False, q
                         tag_val = []
                         for tag in tags:
                             val = float(read.opt(tag[:2]))
-                            if tag[-1] == '-':
+                            if tag[-1] == '+':
                                 val = -val
                             tag_val.append(val)
 

@@ -53,7 +53,7 @@ def bam_best(infile, outfile, failfile=None, tags=['AS', 'NM'], quiet=False):
                 tag_val = []
                 for tag in tags:
                     val = float(read.opt(tag[:2]))
-                    if tag[-1] == '-':
+                    if tag[-1] == '+':
                         val = -val
                     tag_val.append(val)
 
