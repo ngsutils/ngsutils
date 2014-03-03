@@ -14,14 +14,14 @@ However, the secondary files *may* have missing lines, so long as they are in
 the same order as the first file.
 
 The value of the attribute/tag given will be used to determine which reads
-should be kept and which should be discarded. The tag should be a numberic
+should be kept and which should be discarded. The tag should be a numeric
 (int/float) type. This defaults to 'AS'.
 
-Additionally, each file can have more than one record for each read, but they
-should all have the same value for the tag used in determining which reads to
-keep. For example, if the AS tag is used (default), then each read in a file
-should have the same AS value. Reads in different files will have different
-values.
+Additionally, each file can have more than one record for each read, that may
+all have the same value for the tag used in determining which reads to keep.
+For example, if the AS tag is used (default), then each read in a file
+may have the same AS value. In this case, all reads with the best AS score
+will be kept.
 
 """
 
@@ -83,7 +83,7 @@ def bam_merge(fname, infiles, tags=['AS', 'NM'], discard=False, keepall=False, q
             break
 
         best_val = None
-        best_reads = None
+        best_reads = []
         best_source = 0
 
         mappings = {}
@@ -114,9 +114,10 @@ def bam_merge(fname, infiles, tags=['AS', 'NM'], discard=False, keepall=False, q
                         else:        
                             if not best_val or tag_val > best_val:
                                 best_val = tag_val
-                                best_reads = last_reads[i]
+                                best_reads = [read]
                                 best_source = i
-                                break
+                            elif tag_val == best_val:
+                                best_reads.append(read)
             if match:
                 last_reads[i] = None
 
