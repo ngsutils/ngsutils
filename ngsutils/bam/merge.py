@@ -28,6 +28,7 @@ values.
 import os
 import sys
 import pysam
+import ngsutils.bam
 
 
 def usage():
@@ -43,20 +44,6 @@ Options
     sys.exit(1)
 
 
-def bam_reads_batch(bam):
-    reads = []
-    last = None
-    for read in bam:
-        if last and read.qname != last:
-            yield reads
-            reads = []
-        last = read.qname
-        reads.append(read)
-
-    if reads:
-        yield reads
-
-
 def bam_merge(fname, infiles, tag='AS', discard=False, quiet=False):
     bams = []
     last_reads = []
@@ -69,7 +56,7 @@ def bam_merge(fname, infiles, tag='AS', discard=False, quiet=False):
         last_reads.append(None)
         bams.append(bam)
         counts.append(0)
-        bamgens.append(bam_reads_batch(bam))
+        bamgens.append(ngsutils.bam.bam_batch_reads(bam))
 
     outfile = pysam.Samfile('%s.tmp' % fname, "wb", template=bams[0])
 
