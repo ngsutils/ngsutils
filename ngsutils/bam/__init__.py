@@ -798,17 +798,17 @@ def read_cleancigar(read):
     return False
 
 
-def read_to_unmapped(read, ref):
+def read_to_unmapped(read, ref=None):
     '''
     Converts a read from mapped to unmapped.
 
-    Sets the 'ZR' tag to indicate the original ref/pos/cigar
-
+    Sets the 'ZR' tag to indicate the original ref/pos/cigar (if ref is passed)
     '''
 
     newread = pysam.AlignedRead()
 
-    tags = [('ZR', '%s:%s:%s' % (ref, read.pos, cigar_tostr(read.cigar)))]
+    if ref:
+        tags = [('ZR', '%s:%s:%s' % (ref, read.pos, cigar_tostr(read.cigar)))]
 
     newread.is_unmapped = True
 
