@@ -43,6 +43,7 @@ Usage: bamutils convertregion {-overlap} in.bam out.bam [chrom.sizes]
 
 Options:
   -f             Force overwriting an existing out.bam file
+  -unmapped      Keep all unmapped reads in the output file (including invalid junction reads)
 
   -overlap N     Require that all reads must overlap a splice junction
                  by N bases. This also removes unmapped reads. [default 4]
@@ -77,7 +78,7 @@ def bam_batch_reads(bam):
         yield reads
 
 
-def bam_convertregion(infile, outfname, chrom_sizes=None, overlap=4, validateonly=False, quiet=False):
+def bam_convertregion(infile, outfname, chrom_sizes=None, overlap=4, validateonly=False, keep_unmapped=False, quiet=False):
     bamfile = pysam.Samfile(infile, "rb")
 
     if validateonly:
@@ -102,17 +103,24 @@ def bam_convertregion(infile, outfname, chrom_sizes=None, overlap=4, validateonl
     invalid_count = 0
     unmapped_count = 0
 
+    inreferences = list(bamfile.references)
+    outreferences = {}
+    for i, name in outfile.references:
+        outreferences[name] = i
+
     for batch in bam_batch_reads(bamfile):
         outreads = []
+        unmapped_read = None
 
         for read in batch:
             if read.is_unmapped and not read.is_secondary:
+                # read is unmapped, so there aren't multiple mappings to deal with
                 unmapped_count += 1
-                if not overlap:
+                if not overlap or keep_unmapped:
                     outfile.write(read)
                 continue
 
-            chrom, pos, cigar = ngsutils.bam.region_pos_to_genomic_pos(bamfile.getrname(read.tid), read.pos, read.cigar)
+            chrom, pos, cigar = ngsutils.bam.region_pos_to_genomic_pos(inreferences[read.tid], read.pos, read.cigar)
 
             if not validateonly:
                 read.pos = pos
@@ -121,17 +129,14 @@ def bam_convertregion(infile, outfname, chrom_sizes=None, overlap=4, validateonl
                 except:
                     print "Error trying to set CIGAR: %s to %s (%s, %s, %s)" % (read.cigar, cigar, read.qname, bamfile.getrname(read.tid), read.pos)
 
-                chrom_found = False
-                for i, name in enumerate(outfile.references):
-                    if name == chrom:
-                        read.tid = i
-                        chrom_found = True
-                        break
-
-                if not chrom_found:
+                if not chrom in outreferences:
                     print "Can't find chrom: %s" % chrom
                     sys.exit(1)
 
+                read.tid = outreferences[chrom]
+
+
+            # just do a conversion, don't check it...
             if not overlap:
                 if not validateonly:
                     ngsutils.bam.read_cleancigar(read)
@@ -143,6 +148,8 @@ def bam_convertregion(infile, outfname, chrom_sizes=None, overlap=4, validateonl
                 converted_count += 1
                 outreads.append(read)
             else:
+                if not unmapped_read:
+                    unmapped_read = ngsutils.bam.read_to_unmapped(read, inreferences[read.tid])
                 invalid_count += 1
 
         if outreads:
@@ -168,6 +175,9 @@ def bam_convertregion(infile, outfname, chrom_sizes=None, overlap=4, validateonl
                 if not validateonly:
                     ngsutils.bam.read_cleancigar(read)
                 outfile.write(read)
+        elif unmapped_read:
+            outfile.write(unmapped_read)
+
         #
         # If a read doesn't overlap, just skip it in the output, don't reset the values
         #
@@ -207,6 +217,7 @@ if __name__ == '__main__':
     overlap = 4
     validateonly = False
     force = False
+    keep_unmapped = False
 
     last = None
 
@@ -222,6 +233,8 @@ if __name__ == '__main__':
             force = True
         elif arg == '-validateonly':
             validateonly = True
+        elif arg == '-unmapped':
+            keep_unmapped = True
         elif arg in ['-overlap']:
             last = arg
         elif not infile:
@@ -240,4 +253,4 @@ if __name__ == '__main__':
         sys.exit(1)
 
     else:
-        bam_convertregion(infile, outfile, chrom_sizes, overlap, validateonly)
+        bam_convertregion(infile, outfile, chrom_sizes, overlap, validateonly, keep_unmapped)

@@ -3,6 +3,7 @@ import os
 import re
 import pysam
 from eta import ETA
+import ngsutils.support
 
 
 def bam_open(fname, mode='r', *args, **kwargs):
@@ -760,7 +761,6 @@ def cleancigar(cigar):
     return None
 
 
-
 def read_cleancigar(read):
     '''
     Replaces the CIGAR string for a read to remove any operations that are zero length.
@@ -779,6 +779,33 @@ def read_cleancigar(read):
         return True
 
     return False
+
+
+def read_to_unmapped(read, ref):
+    '''
+    Converts a read from mapped to unmapped.
+    '''
+
+    newread = pysam.AlignedRead()
+
+    tags = [('ZR', '%s:%s:%s' % (ref, read.pos, cigar_tostr(read.cigar)))]
+
+    newread.is_unmapped = True
+
+    if read.is_paired:
+        newread.is_paired = True
+
+    if not read.is_unmapped and read.is_reverse:
+        newread.seq = ngsutils.support.revcomp(read.seq)
+        newread.qual = read.qual[::-1]
+    else:        
+        newread.seq = read.seq
+        newread.qual = read.qual
+
+    newread.tags = tags
+
+    return newread
+
 
 
 if __name__ == '__main__':
