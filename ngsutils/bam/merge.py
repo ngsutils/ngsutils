@@ -39,12 +39,16 @@ Usage: bamutils merge {opts} out.bam in1.bam in2.bam ...
 Options
   -tag VAL    Tag to use to determine from which file reads will be taken
               (must be type :i or :f) [default: AS]
+
   -discard    Discard reads that aren't mapped in any file.
+
+  -keepall    Keep all mappings for each read, not just the best one
+              (Note: only one mapping to each ref/pos will be kept)
 """
     sys.exit(1)
 
 
-def bam_merge(fname, infiles, tag='AS', discard=False, quiet=False):
+def bam_merge(fname, infiles, tag='AS', discard=False, keepall=False, quiet=False):
     bams = []
     last_reads = []
     bamgens = []
@@ -79,26 +83,45 @@ def bam_merge(fname, infiles, tag='AS', discard=False, quiet=False):
         best_reads = None
         best_source = 0
 
+        mappings = {}
+
         first_group = last_reads[0]
         for i in xrange(len(last_reads)):
             if not last_reads[i]:
                 continue
 
             match = False
-            for read in last_reads[i]:
+            for read in last_reads[i]:                        
                 if read.qname == first_group[0].qname:
                     match = True
+
                     if not read.is_unmapped:
                         tag_val = int(read.opt(tag))
-                        if not best_val or tag_val > best_val:
-                            best_val = tag_val
-                            best_reads = last_reads[i]
-                            best_source = i
-                            break
+
+                        if keepall:
+                            if not (read.tid, read.pos) in mappings:
+                                mappings[(read.tid, read.pos)] = (tag_val, i, read)
+                            elif tag_val > mappings[(read.tid, read.pos)][0]:
+                                mappings[(read.tid, read.pos)] = (tag_val, i, read)
+                        else:        
+                            if not best_val or tag_val > best_val:
+                                best_val = tag_val
+                                best_reads = last_reads[i]
+                                best_source = i
+                                break
             if match:
                 last_reads[i] = None
 
-        if best_reads:
+        if keepall:
+            outs = []
+            for k in mappings:
+                outs.append(mappings[k])
+
+            for tagval, i, read in sorted(outs):
+                counts[i] += 1
+                outfile.write(read)
+
+        elif best_reads:
             counts[best_source] += 1
             for read in best_reads:
                 outfile.write(read)
@@ -124,6 +147,7 @@ if __name__ == '__main__':
     outfile = None
     last = None
     discard = False
+    keepall = False
     tag = 'AS'
 
     for arg in sys.argv[1:]:
@@ -134,6 +158,8 @@ if __name__ == '__main__':
             last = None
         elif arg in ['-tag']:
             last = arg
+        elif arg == '-keepall':
+            keepall = True
         elif arg == '-discard':
             discard = True
         elif not outfile:
@@ -144,4 +170,4 @@ if __name__ == '__main__':
     if not infiles or not outfile:
         usage()
     else:
-        bam_merge(outfile, infiles, tag, discard)
+        bam_merge(outfile, infiles, tag, discard, keepall)
