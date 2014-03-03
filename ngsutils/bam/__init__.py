@@ -70,14 +70,14 @@ def bam_iter(bam, quiet=False, show_ref_pos=False, callback=None):
         eta.done()
 
 
-def bam_batch_reads(bam):
+def bam_batch_reads(bam, quiet=False):
     '''
     Batch mapping for the same reads (qname) together, this way
     they can all be compared/converted together.
     '''
     reads = []
     last = None
-    for read in bam_iter(bam):
+    for read in bam_iter(bam, quiet=quiet):
         if last and read.qname != last:
             yield reads
             reads = []
