@@ -801,6 +801,9 @@ def read_cleancigar(read):
 def read_to_unmapped(read, ref):
     '''
     Converts a read from mapped to unmapped.
+
+    Sets the 'ZR' tag to indicate the original ref/pos/cigar
+
     '''
 
     newread = pysam.AlignedRead()
