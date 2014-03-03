@@ -90,7 +90,7 @@ def bam_convertregion(infile, outfname, chrom_sizes=None, overlap=4, validateonl
     for i, name in enumerate(outfile.references):
         outreferences[name] = i
 
-    for batch in nsgutils.bam.bam_batch_reads(bamfile):
+    for batch in ngsutils.bam.bam_batch_reads(bamfile):
         outreads = []
         unmapped_read = None
 
