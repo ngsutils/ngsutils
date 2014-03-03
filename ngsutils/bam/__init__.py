@@ -791,6 +791,14 @@ def read_to_unmapped(read, ref):
     tags = [('ZR', '%s:%s:%s' % (ref, read.pos, cigar_tostr(read.cigar)))]
 
     newread.is_unmapped = True
+    newread.mapq = 0
+    newread.tlen = 0
+    newread.pos = -1
+    newread.pnext = -1
+    newread.rnext = -1
+    newread.tid = -1
+
+    newread.qname = read.qname
 
     if read.is_paired:
         newread.is_paired = True
