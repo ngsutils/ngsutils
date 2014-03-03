@@ -37,12 +37,12 @@ def usage():
 Usage: bamutils merge {opts} out.bam in1.bam in2.bam ...
 
 Options
-  -tag VAL    Tag to use to determine from which file reads will be taken
+  -tag VAL    Tag to use to determine from which file reads will be taken.
               (must be type :i or :f) [default: AS]
 
   -discard    Discard reads that aren't mapped in any file.
 
-  -keepall    Keep all mappings for each read, not just the best one
+  -keepall    Keep all mappings for each read, not just the best one.
               (Note: only one mapping to each ref/pos will be kept)
 """
     sys.exit(1)
@@ -117,7 +117,7 @@ def bam_merge(fname, infiles, tag='AS', discard=False, keepall=False, quiet=Fals
             for k in mappings:
                 outs.append(mappings[k])
 
-            for tagval, i, read in sorted(outs):
+            for tagval, i, read in sorted(outs, reverse=True):
                 counts[i] += 1
                 outfile.write(read)
 
