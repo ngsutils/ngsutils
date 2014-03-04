@@ -28,7 +28,7 @@ Options
               (must be type :i or :f) You may have more than one of these,
               in which case they will be sorted in order. You can add a +/-
               at the end of the name to signify sort order (asc/desc). 
-              [default: AS-, NM+]
+              [default: AS+, NM-]
 
   -fail filename.bam    Write all failed mappings to this file.
 
