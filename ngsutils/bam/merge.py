@@ -118,6 +118,8 @@ def bam_merge(fname, infiles, tags=['AS', 'NM'], discard=False, keepall=False, q
                                 best_source = i
                             elif tag_val == best_val:
                                 best_reads.append(read)
+                    elif keepall:
+                        mappings['unmapped'] = (None, i, read)
             if match:
                 last_reads[i] = None
 
