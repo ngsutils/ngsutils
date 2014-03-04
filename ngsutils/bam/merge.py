@@ -87,6 +87,7 @@ def bam_merge(fname, infiles, tags=['AS', 'NM'], discard=False, keepall=False, q
         best_source = 0
 
         mappings = {}
+        unmapped = None
 
         first_group = last_reads[0]
         for i in xrange(len(last_reads)):
@@ -119,18 +120,21 @@ def bam_merge(fname, infiles, tags=['AS', 'NM'], discard=False, keepall=False, q
                             elif tag_val == best_val:
                                 best_reads.append(read)
                     elif keepall:
-                        mappings['unmapped'] = (None, i, read)
+                        unmapped = read
             if match:
                 last_reads[i] = None
 
         if keepall:
-            outs = []
-            for k in mappings:
-                outs.append(mappings[k])
+            if not mappings and unmapped:
+                outfile.write(unmapped)
+            else:
+                outs = []
+                for k in mappings:
+                    outs.append(mappings[k])
 
-            for tagval, i, read in sorted(outs):
-                counts[i] += 1
-                outfile.write(read)
+                for tagval, i, read in sorted(outs):
+                    counts[i] += 1
+                    outfile.write(read)
 
         elif best_reads:
             counts[best_source] += 1
