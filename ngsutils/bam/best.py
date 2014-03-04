@@ -7,7 +7,7 @@ will remove all but the best mapping.
 
 The value of the attribute/tag given will be used to determine which reads
 should be kept and which should be discarded. The tag should be a numeric
-(int/float) type. Multiple tags may be used. This defaults to 'AS-, NM+'.
+(int/float) type. Multiple tags may be used. This defaults to 'AS+, NM-'.
 """
 
 import os
@@ -36,7 +36,7 @@ Options
     sys.exit(1)
 
 
-def bam_best(infile, outfile, failfile=None, tags=['AS', 'NM'], quiet=False):
+def bam_best(infile, outfile, failfile=None, tags=['AS+', 'NM-'], quiet=False):
     inbam = pysam.Samfile(infile, "rb")
     outbam = pysam.Samfile('%s.tmp' % outfile, "wb", template=inbam)
 
@@ -53,7 +53,7 @@ def bam_best(infile, outfile, failfile=None, tags=['AS', 'NM'], quiet=False):
                 tag_val = []
                 for tag in tags:
                     val = float(read.opt(tag[:2]))
-                    if tag[-1] == '+':
+                    if tag[-1] == '-':
                         val = -val
                     tag_val.append(val)
 
@@ -111,7 +111,7 @@ if __name__ == '__main__':
             usage('Unknown option: %s' % arg)
 
     if not tags:
-        tags = ['AS-', 'NM+']
+        tags = ['AS+', 'NM-']
 
     if not infile or not outfile:
         usage()

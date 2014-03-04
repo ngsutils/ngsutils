@@ -15,7 +15,7 @@ the same order as the first file.
 
 The value of the attribute/tag given will be used to determine which reads
 should be kept and which should be discarded. The tag should be a numeric
-(int/float) type. This defaults to 'AS'.
+(int/float) type. More than one tag may be used. This defaults to ['AS+', 'NM-'].
 
 Additionally, each file can have more than one record for each read, that may
 all have the same value for the tag used in determining which reads to keep.
@@ -41,7 +41,7 @@ Options
               (must be type :i or :f) You may have more than one of these,
               in which case they will be sorted in order. You can add a +/-
               at the end of the name to signify sort order (asc/desc). 
-              [default: AS-, NM+]
+              [default: AS+, NM-]
 
   -discard    Discard reads that aren't mapped in any file.
 
@@ -51,7 +51,7 @@ Options
     sys.exit(1)
 
 
-def bam_merge(fname, infiles, tags=['AS', 'NM'], discard=False, keepall=False, quiet=False):
+def bam_merge(fname, infiles, tags=['AS+', 'NM-'], discard=False, keepall=False, quiet=False):
     bams = []
     last_reads = []
     bamgens = []
@@ -103,7 +103,7 @@ def bam_merge(fname, infiles, tags=['AS', 'NM'], discard=False, keepall=False, q
                         tag_val = []
                         for tag in tags:
                             val = float(read.opt(tag[:2]))
-                            if tag[-1] == '+':
+                            if tag[-1] == '-':
                                 val = -val
                             tag_val.append(val)
 
@@ -183,7 +183,7 @@ if __name__ == '__main__':
             infiles.append(arg)
 
     if not tags:
-        tags = ['AS-', 'NM+']
+        tags = ['AS+', 'NM-']
 
     if not infiles or not outfile:
         usage()
