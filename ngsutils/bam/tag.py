@@ -10,6 +10,7 @@ Currently supported tags:
   -orig-ref
   -orig-pos
   -orig-cigar
+  -junction
 '''
 import sys
 import os
@@ -52,6 +53,27 @@ class Suffix(object):
     def filter(self, bam):
         for read in self.parent.filter(bam):
             read.qname = "%s%s" % (read.qname, self.suffix)
+            yield read
+
+
+class PredictJunction(object):
+    def __init__(self, parent, tag):
+        self.parent = parent
+        self.tag = tag
+
+    def filter(self, bam):
+        for read in self.parent.filter(bam):
+            pos = read.pos
+            juncs = []
+            for op, size in read.cigar:
+                if op == 0 or op == 2:
+                    pos += size
+                elif op == 3:
+                    juncs.append('%s:%s>%s' % (bam.references[read.tid], pos, pos+size))
+
+            if junc:
+                read.tags = read.tags + [(self.tag, ','.join(juncs))]
+
             yield read
 
 
@@ -152,6 +174,8 @@ Options:
 
   -tag tag         Add an arbitrary tag (ex: -tag XX:Z:test)
 
+  -junction tag    Predicts junction spans from CIGAR alignment
+
   -orig-ref tag    Add a new tag with the original reference name (For
                    example, in a region-based BAM will be converted to
                    standard coordinates)
@@ -190,7 +214,10 @@ if __name__ == "__main__":
         elif last == '-orig-cigar':
             args.append([OrigCIGAR, arg])
             last = None
-        elif arg in ['-suffix', '-tag', '-orig-ref', '-orig-pos', '-orig-cigar']:
+        elif last == '-junction':
+            args.append([PredictJunction, arg])
+            last = None
+        elif arg in ['-suffix', '-tag', '-orig-ref', '-orig-pos', '-orig-cigar', '-junction']:
             last = arg
         elif arg == '-xs':
             args.append([CufflinksXS, ])
