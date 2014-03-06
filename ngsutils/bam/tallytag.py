@@ -57,9 +57,6 @@ def bam_tallytag(infile, primary_tag, secondary_tags=None, quiet=False):
         except KeyError:
             continue
 
-        if not val:
-            val = '*missing*'
-
         if not val in counts:
             counts[val] = { 'count': 0 }
             for tag in secondary_tags:
