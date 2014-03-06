@@ -71,7 +71,7 @@ class PredictJunction(object):
                 elif op == 3:
                     juncs.append('%s:%s>%s' % (bam.references[read.tid], pos, pos+size))
 
-            if junc:
+            if juncs:
                 read.tags = read.tags + [(self.tag, ','.join(juncs))]
 
             yield read
