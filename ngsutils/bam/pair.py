@@ -183,6 +183,7 @@ def bam_pair(out_fname, read1_fname, read2_fname, tags=['AS+', 'NM-'], min_size=
             continue
 
         pairs, failed_reads1, failed_reads2 = find_pairs(reads1, reads2, min_size, max_size, tags)
+        written = set()
         if pairs:
             pairs.sort()  # default: max AS, min NM, min size
 
@@ -229,19 +230,37 @@ def bam_pair(out_fname, read1_fname, read2_fname, tags=['AS+', 'NM-'], min_size=
 
                 out.write(r1)
                 out.write(r2)
+                written.add((1, r1.tid, r1.pos))
+                written.add((2, r2.tid, r2.pos))
+
+        for tag_val, size, r1, r2 in pairs[1:]:
+            if fail1:
+                if (1,r1.tid, r1.pos) not in written:
+                    written.add((1,r1.tid, r1.pos))
+                    r1.is_paired = True
+                    r1.is_proper_pair = False
+                    r1.is_read1 = True
+                    fail1.write(r1)
+            if fail2:
+                if (2,r2.tid, r2.pos) not in written:
+                    written.add((2,r2.tid, r2.pos))
+                    r2.is_paired = True
+                    r2.is_proper_pair = False
+                    r2.is_read2 = True
+                    fail2.write(r2)
 
         if failed_reads1 and fail1:
-            for r in failed_reads1:
-                r.is_paired = True
-                r.is_proper_pair = False
-                r.is_read1 = True
-                fail1.write(r)
+            for r1 in failed_reads1:
+                r1.is_paired = True
+                r1.is_proper_pair = False
+                r1.is_read1 = True
+                fail1.write(r1)
         if failed_reads2 and fail2:
-            for r in failed_reads2:
-                r.is_paired = True
-                r.is_proper_pair = False
-                r.is_read2 = True
-                fail2.write(r)
+            for r2 in failed_reads2:
+                r2.is_paired = True
+                r2.is_proper_pair = False
+                r2.is_read1 = True
+                fail2.write(r2)
 
         reads1 = None
         reads2 = None
