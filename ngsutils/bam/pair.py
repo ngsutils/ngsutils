@@ -40,6 +40,7 @@ Options
 
   -fail1 fname.bam    Write all failed mappings from read1 to this file
   -fail2 fname.bam    Write all failed mappings from read1 to this file
+                      (Note: -fail1 and -fail2 can be the same file.)
 
   -size low-high      The minimum/maximum insert size to accept. By default,
                       this will attempt to minimize the distance between
@@ -133,8 +134,12 @@ def bam_pair(out_fname, read1_fname, read2_fname, tags=['AS+', 'NM-'], min_size=
 
     if fail1_fname:
         fail1 = pysam.Samfile('%s.tmp' % fail1_fname, "wb", template=bam1)
+
     if fail2_fname:
-        fail2 = pysam.Samfile('%s.tmp' % fail2_fname, "wb", template=bam1)
+        if fail2_fname == fail1_fname:
+            fail2 = fail1
+        else:
+            fail2 = pysam.Samfile('%s.tmp' % fail2_fname, "wb", template=bam1)
 
     gen1 = ngsutils.bam.bam_batch_reads(bam1, quiet=quiet)
     gen2 = ngsutils.bam.bam_batch_reads(bam2, quiet=True)
@@ -239,9 +244,11 @@ def bam_pair(out_fname, read1_fname, read2_fname, tags=['AS+', 'NM-'], min_size=
     if fail1:
         fail1.close()
         os.rename('%s.tmp' % fail1_fname, fail1_fname)
+
     if fail2:
-        fail2.close()
-        os.rename('%s.tmp' % fail2_fname, fail2_fname)
+        if fail2_fname != fail1_fname:
+            fail2.close()
+            os.rename('%s.tmp' % fail2_fname, fail2_fname)
 
 if __name__ == '__main__':
     out_fname = None
