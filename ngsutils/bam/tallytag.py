@@ -34,7 +34,7 @@ Options
     sys.exit(1)
 
 
-def SecondaryCounter(object):
+class SecondaryCounter(object):
     def __init__(self):
         self.acc = 0
         self.count = 0
@@ -52,7 +52,10 @@ def bam_tallytag(infile, primary_tag, secondary_tags=None, quiet=False):
     inbam = pysam.Samfile(infile, "rb")
 
     for read in ngsutils.bam.bam_iter(inbam, quiet=quiet):
-        val = read.opt(primary_tag)
+        try:
+            val = read.opt(primary_tag)
+        except KeyError:
+            continue
 
         if not val:
             val = '*missing*'
@@ -64,7 +67,10 @@ def bam_tallytag(infile, primary_tag, secondary_tags=None, quiet=False):
 
         counts[val]['count'] += 1
         for tag in secondary_tags:
-            counts[val][tag].add(read.opt(tag))
+            try:
+                counts[val][tag].add(read.opt(tag))
+            except KeyError:
+                continue
 
     sys.stdout.write('%s\tcount' % primary_tag)
     for sec_tag in secondary_tags:
