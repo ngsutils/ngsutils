@@ -95,7 +95,7 @@ def find_pairs(reads1, reads2, min_size, max_size, tags):
                     ins_size = r2.aend - r1.pos
                 else:
                     ins_size = r1.aend - r2.pos
-
+                
                 junctionstarts = set()
 
                 pos = r1.pos
@@ -106,6 +106,7 @@ def find_pairs(reads1, reads2, min_size, max_size, tags):
                         junctionstarts.add(pos)
                         ins_size -= size
 
+                pos = r2.pos
                 for op, size in r2.cigar:
                     if op == 0 or op == 2:
                         pos += size
@@ -229,13 +230,13 @@ def bam_pair(out_fname, read1_fname, read2_fname, tags=['AS+', 'NM-'], min_size=
                 out.write(r1)
                 out.write(r2)
 
-        if failed_reads1:
+        if failed_reads1 and fail1:
             for r in failed_reads1:
                 r.is_paired = True
                 r.is_proper_pair = False
                 r.is_read1 = True
                 fail1.write(r)
-        if failed_reads2:
+        if failed_reads2 and fail2:
             for r in failed_reads2:
                 r.is_paired = True
                 r.is_proper_pair = False
