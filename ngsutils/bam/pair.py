@@ -226,9 +226,15 @@ def bam_pair(out_fname, read1_fname, read2_fname, tags=['AS+', 'NM-'], min_size=
 
         if failed_reads1:
             for r in failed_reads1:
+                r.is_paired = True
+                r.is_proper_pair = False
+                r.is_read1 = True
                 fail1.write(r)
         if failed_reads2:
             for r in failed_reads2:
+                r.is_paired = True
+                r.is_proper_pair = False
+                r.is_read2 = True
                 fail2.write(r)
 
         reads1 = None
