@@ -96,13 +96,22 @@ def find_pairs(reads1, reads2, min_size, max_size, tags):
                 else:
                     ins_size = r1.aend - r2.pos
 
+                junctionstarts = set()
+
+                pos = r1.pos
                 for op, size in r1.cigar:
-                    if op == 3:
+                    if op == 0 or op == 2:
+                        pos += size
+                    elif op == 3:
+                        junctionstarts.add(pos)
                         ins_size -= size
 
                 for op, size in r2.cigar:
-                    if op == 3:
-                        ins_size -= size
+                    if op == 0 or op == 2:
+                        pos += size
+                    elif op == 3:
+                        if not pos in junctionstarts:
+                            ins_size -= size
 
                 if ins_size < min_size or ins_size > max_size:
                     continue
