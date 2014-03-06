@@ -45,10 +45,10 @@ Options
   -size low-high      The minimum/maximum insert size to accept. By default,
                       this will attempt to minimize the distance between
                       reads, upto the lower-bound. Any pair over the upper
-                      bound will be discarded. Note: for RNA, you should
-                      select a very large upper bound to account for splicing
-                      (for example: 50-1000000).
-                      Default: 50-1000.
+                      bound will be discarded. Note: for RNA, long gaps
+                      in the CIGAR alignment will be subtracted from the
+                      insert size.
+                      Default: 50-10000
 
 """
     sys.exit(1)
@@ -92,11 +92,19 @@ def find_pairs(reads1, reads2, min_size, max_size, tags):
         for r2 in reads2:
             if is_valid_pair(r1, r2):
                 if r1.pos < r2.pos:
-                    size = r2.aend - r1.pos
+                    ins_size = r2.aend - r1.pos
                 else:
-                    size = r1.aend - r2.pos
+                    ins_size = r1.aend - r2.pos
 
-                if size < min_size or size > max_size:
+                for op, size in r1.cigar:
+                    if op == 3:
+                        ins_size -= size
+
+                for op, size in r2.cigar:
+                    if op == 3:
+                        ins_size -= size
+
+                if ins_size < min_size or ins_size > max_size:
                     continue
 
                 tag_val = []
@@ -109,7 +117,7 @@ def find_pairs(reads1, reads2, min_size, max_size, tags):
                         val = -val
                     tag_val.append(val)
 
-                possible.append((tag_val, size, r1, r2))
+                possible.append((tag_val, ins_size, r1, r2))
                 valid.add((1, r1.tid, r1.pos))
                 valid.add((2, r2.tid, r2.pos))
 
@@ -206,20 +214,8 @@ def bam_pair(out_fname, read1_fname, read2_fname, tags=['AS+', 'NM-'], min_size=
                 r1.pnext = r2.pos
                 r2.pnext = r1.pos
 
-                r1tags = []
-                for k,v in r1.tags:
-                    if k == 'NH':
-                        v = len(best_pairs)
-                    r1tags.append((k,v))
-
-                r2tags = []
-                for k,v in r2.tags:
-                    if k == 'NM':
-                        v = len(best_pairs)
-                    r2tags.append((k,v))
-
-                r1.tags = r1tags
-                r2.tags = r2tags
+                r1.tags = r1.tags + [('NH', len(best_pairs))]
+                r2.tags = r2.tags + [('NH', len(best_pairs))]
 
                 out.write(r1)
                 out.write(r2)
@@ -263,7 +259,7 @@ if __name__ == '__main__':
     fail1_fname = None
     fail2_fname = None
     min_size = 50
-    max_size = 1000
+    max_size = 10000
     tags = []
 
     last = None
