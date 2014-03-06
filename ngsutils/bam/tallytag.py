@@ -30,6 +30,8 @@ Options
                    be determined for each read that matches the primary. (In this
                    case, the primary tag is similar to the SQL GROUP BY clause).
 
+  -readonce        If each read of a fragment have the same tag value, then if
+                   this is set, both reads will be counted as one.
 """
     sys.exit(1)
 
@@ -47,15 +49,25 @@ class SecondaryCounter(object):
         return float(self.acc) / self.count
 
 
-def bam_tallytag(infile, primary_tag, secondary_tags=None, quiet=False):
+def bam_tallytag(infile, primary_tag, secondary_tags=None, readonce=False, quiet=False):
     counts = {}
     inbam = pysam.Samfile(infile, "rb")
+
+    paircache = {}
 
     for read in ngsutils.bam.bam_iter(inbam, quiet=quiet):
         try:
             val = read.opt(primary_tag)
         except KeyError:
             continue
+
+        if readonce:
+            if read.qname in paircache:
+                if paircache[read.qname] == val:
+                    continue
+                del paircache[read.qname]
+
+            paircache[read.qname] = val
 
         if not val in counts:
             counts[val] = { 'count': 0 }
@@ -84,6 +96,7 @@ def bam_tallytag(infile, primary_tag, secondary_tags=None, quiet=False):
 
 if __name__ == '__main__':
     infile = None
+    read_counts_once = False
     primary_tag = None
     secondary_tags = []
     last = None
@@ -99,6 +112,8 @@ if __name__ == '__main__':
             last = None
         elif arg in ['-tag', '-secondary']:
             last = arg
+        elif arg == '-readonce':
+            read_counts_once = True
         elif not infile and os.path.exists(arg):
             infile = arg
         else:
@@ -107,4 +122,4 @@ if __name__ == '__main__':
     if not primary_tag or not infile:
         usage()
 
-    bam_tallytag(infile, primary_tag, secondary_tags)
+    bam_tallytag(infile, primary_tag, secondary_tags, read_counts_once)
