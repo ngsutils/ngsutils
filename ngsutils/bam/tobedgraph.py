@@ -25,11 +25,51 @@ def write_bedgraph(chrom, start, end, count, normalize=None, out=sys.stdout):
             out.write('%s\t%s\t%s\t%s\n' % (chrom, start, end, count))
 
 
+class NoGapCache(object):
+    def __init__(self):
+        self.cache = {}
+
+    def pileupread_ingap(self, read):
+        in_gap = False
+        if read.alignment.qname not in self.cache:
+            self.cache[read.alignment.qname] = []
+            pos = 0
+
+            for op, length in read.alignment.cigar:
+                if op == 0:
+                    pos += length
+                elif op == 1:
+                    pos += length
+                elif op == 2:
+                    pass
+                elif op == 3:
+                    self.cache[read.alignment.qname].append((pos, pos + length))
+                elif op == 4:
+                    pos += length
+                elif op == 5:
+                    pass
+                else:
+                    raise ValueError("Unsupported CIGAR operation: %s" % op)
+
+        in_gap = False
+        for start, end in self.cache[read.alignment.qname]:
+            if start < read.qpos < end:
+                in_gap = True
+
+        if read.qpos == (len(read.alignment.qual)-1):
+            del self.cache[read.alignment.qname]
+
+        return in_gap
+
+
+
 def bam_tobedgraph(bamfile, strand=None, normalize=None, nogaps=False, out=sys.stdout):
     last_chrom = None
     last_count = 0
     last_start = None
     last_end = None
+
+    gap_cache = NoGapCache()
 
     for pileup in bam_pileup_iter(bamfile):
         # sys.stdin.readline()
@@ -47,8 +87,7 @@ def bam_tobedgraph(bamfile, strand=None, normalize=None, nogaps=False, out=sys.s
                 count = pileup.n
             else:
                 for read in pileup.pileups:
-                    op = read_cigar_at_pos(read.alignment.cigar, read.qpos, read.is_del)
-                    if op != 3:
+                    if not gap_cache.pileupread_ingap(read):
                         count += 1
         else:
             #
@@ -58,18 +97,14 @@ def bam_tobedgraph(bamfile, strand=None, normalize=None, nogaps=False, out=sys.s
                 if not read.alignment.is_reverse and strand == '+':
                     if not nogaps:
                         count += 1
-                    else:
-                        op = read_cigar_at_pos(read.alignment.cigar, read.qpos, read.is_del)
-                        if op != 3:
-                            count += 1
+                    elif not gap_cache.pileupread_ingap(read):
+                        count += 1
 
                 elif read.alignment.is_reverse and strand == '-':
                     if not nogaps:
                         count += 1
-                    else:
-                        op = read_cigar_at_pos(read.alignment.cigar, read.qpos, read.is_del)
-                        if op != 3:
-                            count += 1
+                    elif not gap_cache.pileupread_ingap(read):
+                        count += 1
 
             # print pileup.pos,count,last_start,last_end
         if count != last_count or not last_end or (pileup.pos - last_end) > 1:

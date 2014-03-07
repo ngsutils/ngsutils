@@ -735,6 +735,8 @@ def read_cigar_at_pos(cigar, qpos, is_del):
             pass
         elif op == 4:
             pos += length
+        elif op == 5:
+            pass
         else:
             raise ValueError("Unsupported CIGAR operation: %s" % op)
 
