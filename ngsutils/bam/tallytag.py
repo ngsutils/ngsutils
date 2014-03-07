@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 ## category General
 ## desc Count the number of reads containing a certain tag
+## experimental
 """
 Counts the number of reads containing unique tag values.
 
@@ -30,7 +31,7 @@ Options
                    be determined for each read that matches the primary. (In this
                    case, the primary tag is similar to the SQL GROUP BY clause).
 
-  -readonce        If each read of a fragment have the same tag value, then if
+  -fragment        If each read of a fragment have the same tag value, then if
                    this is set, both reads will be counted as one.
 """
     sys.exit(1)
@@ -49,7 +50,24 @@ class SecondaryCounter(object):
         return float(self.acc) / self.count
 
 
-def bam_tallytag(infile, primary_tag, secondary_tags=None, readonce=False, quiet=False):
+class TagTally(object):
+    def __init__(self, secondary_tag_names):
+        self.counts = {}
+        self.secondary_tag_names = secondary_tag_names
+
+    def add(self, primary_tag, secondary_tags):
+        if not primary_tag in self.counts:
+            self.counts[primary_tag] = { 'count': 0 }
+            for tag in self.secondary_tag_names:
+                self.counts[primary_tag][tag] = SecondaryCounter()
+
+        self.counts[primary_tag]['count'] += 1
+
+        for tag, val in zip(self.secondary_tag_names, secondary_tags):
+            self.counts[val][tag].add(val)
+
+
+def bam_tallytag(infile, primary_tag, secondary_tags=None, fragment_count=False, quiet=False):
     counts = {}
     inbam = pysam.Samfile(infile, "rb")
 
@@ -61,25 +79,36 @@ def bam_tallytag(infile, primary_tag, secondary_tags=None, readonce=False, quiet
         except KeyError:
             continue
 
-        if readonce:
-            if read.qname in paircache:
-                if paircache[read.qname] == val:
-                    continue
-                del paircache[read.qname]
-
-            paircache[read.qname] = val
-
         if not val in counts:
             counts[val] = { 'count': 0 }
             for tag in secondary_tags:
                 counts[val][tag] = SecondaryCounter()
 
-        counts[val]['count'] += 1
-        for tag in secondary_tags:
-            try:
-                counts[val][tag].add(read.opt(tag))
-            except KeyError:
-                continue
+        count = 1
+        if fragment_count:
+            if read.qname in paircache:
+                if paircache[read.qname] != val:
+                    counts[val]['count'] += 1
+
+                del paircache[read.qname]
+            else:
+                counts[val]['count'] += 1
+                tag_vals = []
+                for tag in secondary_tags:
+                    try:
+                        tag_val = read.opt(tag)
+                        tag_vals.append(tag_val)
+                        counts[val][tag].add(tag_val)
+                    except KeyError:
+                        continue
+                paircache[read.qname] = val
+        else:
+            counts[val]['count'] += 1
+            for tag in secondary_tags:
+                try:
+                    counts[val][tag].add(read.opt(tag))
+                except KeyError:
+                    continue
 
     sys.stdout.write('%s\tcount' % primary_tag)
     for sec_tag in secondary_tags:
@@ -96,7 +125,7 @@ def bam_tallytag(infile, primary_tag, secondary_tags=None, readonce=False, quiet
 
 if __name__ == '__main__':
     infile = None
-    read_counts_once = False
+    fragment_count = False
     primary_tag = None
     secondary_tags = []
     last = None
@@ -112,8 +141,8 @@ if __name__ == '__main__':
             last = None
         elif arg in ['-tag', '-secondary']:
             last = arg
-        elif arg == '-readonce':
-            read_counts_once = True
+        elif arg == '-fragment':
+            fragment_count = True
         elif not infile and os.path.exists(arg):
             infile = arg
         else:
@@ -122,4 +151,4 @@ if __name__ == '__main__':
     if not primary_tag or not infile:
         usage()
 
-    bam_tallytag(infile, primary_tag, secondary_tags, read_counts_once)
+    bam_tallytag(infile, primary_tag, secondary_tags, fragment_count)
