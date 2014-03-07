@@ -119,7 +119,7 @@ def find_pairs(reads1, reads2, min_size, max_size, tags):
                             ins_size -= size
 
                 if ins_size < min_size or ins_size > max_size:
-                    reasons.add('size')
+                    reasons.add('size %s' % ins_size)
                     continue
 
                 tag_val = []
