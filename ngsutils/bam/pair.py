@@ -67,14 +67,14 @@ def is_valid_pair(read1, read2):
 
     if read1.is_reverse == read2.is_reverse:
         # in opposite orientations
-        return False, 'invalid orientation'
+        return False, 'orientation'
 
     # sequenced towards each other
     if read1.pos < read2.pos and read1.is_reverse:
-        return False, 'wrong direction'
+        return False, 'direction'
 
     if read2.pos < read1.pos and read2.is_reverse:
-        return False, 'wrong direction'
+        return False, 'direction'
 
     return True, ''
 
@@ -89,7 +89,7 @@ def find_pairs(reads1, reads2, min_size, max_size, tags):
     fail2 = []
 
     valid = set()
-    reasons = set()
+    reasons = {}
 
     for r1 in reads1:
         for r2 in reads2:
@@ -123,7 +123,13 @@ def find_pairs(reads1, reads2, min_size, max_size, tags):
                 #             ins_size -= size
 
                 if ins_size < min_size or ins_size > max_size:
-                    reasons.add('size %s' % ins_size)
+                    if not (1, r1.tid, r1.pos) in reasons:
+                        reasons[(1, r1.tid, r1.pos)] = []
+                    if not (2, r2.tid, r2.pos) in reasons:
+                        reasons[(2, r2.tid, r2.pos)] = []
+
+                    reasons[(1, r1.tid, r1.pos)].append('size-%s' % ins_size)
+                    reasons[(2, r2.tid, r2.pos)].append('size-%s' % ins_size)
                     continue
 
                 tag_val = []
@@ -140,15 +146,21 @@ def find_pairs(reads1, reads2, min_size, max_size, tags):
                 valid.add((1, r1.tid, r1.pos))
                 valid.add((2, r2.tid, r2.pos))
             else:
-                reasons.add(reason)
+                if not (1, r1.tid, r1.pos) in reasons:
+                    reasons[(1, r1.tid, r1.pos)] = []
+                if not (2, r2.tid, r2.pos) in reasons:
+                    reasons[(2, r2.tid, r2.pos)] = []
+
+                reasons[(1, r1.tid, r1.pos)].append(reason)
+                reasons[(2, r2.tid, r2.pos)].append(reason)
 
     for r1 in reads1:
         if not (1, r1.tid, r1.pos) in valid:
-            fail1.append((r1, reasons))
+            fail1.append((r1, reasons[(1, r1.tid, r1.pos)]))
 
     for r2 in reads2:
         if not (2, r2.tid, r2.pos) in valid:
-            fail2.append((r2, reasons))
+            fail2.append((r2, reasons[(2, r2.tid, r2.pos)]))
 
     return possible, fail1, fail2
 
