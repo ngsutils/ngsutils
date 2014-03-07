@@ -41,9 +41,9 @@ Options
   -size low-high      The minimum/maximum insert size to accept. By default,
                       this will attempt to minimize the distance between
                       reads, upto the lower-bound. Any pair over the upper
-                      bound will be discarded. Note: for RNA, long gaps
-                      in the CIGAR alignment will be subtracted from the
-                      insert size.
+                      bound will be discarded. Note: for RNA, because it is
+                      impossible to detect junctions that are between the
+                      reads, this should be a very big range (ex: 50-1000000)
                       Default: 50-10000
 
   -fail1 fname.bam    Write all failed mappings from read1 to this file
@@ -95,28 +95,32 @@ def find_pairs(reads1, reads2, min_size, max_size, tags):
         for r2 in reads2:
             is_valid, reason = is_valid_pair(r1, r2)
             if is_valid:
-                if r1.pos < r2.pos:
-                    ins_size = r2.aend - r1.pos
-                else:
-                    ins_size = r1.aend - r2.pos
-                
-                junctionstarts = set()
+                # there can be some strange edge cases for insert size, so we'll just look
+                # for the biggest
+                ins_size = max(r2.aend - r1.pos, r1.aend - r2.pos)
 
-                pos = r1.pos
-                for op, size in r1.cigar:
-                    if op == 0 or op == 2:
-                        pos += size
-                    elif op == 3:
-                        junctionstarts.add(pos)
-                        ins_size -= size
 
-                pos = r2.pos
-                for op, size in r2.cigar:
-                    if op == 0 or op == 2:
-                        pos += size
-                    elif op == 3:
-                        if not pos in junctionstarts:
-                            ins_size -= size
+                # This doesn't work for RNA reads - you can still have hidden introns
+                # between the two reads. I'm leaving this here so that when I'm tempted
+                # to add this check again, I'll remember why it's a bad idea.
+
+                # junctionstarts = set()
+
+                # pos = r1.pos
+                # for op, size in r1.cigar:
+                #     if op == 0 or op == 2:
+                #         pos += size
+                #     elif op == 3:
+                #         junctionstarts.add(pos)
+                #         ins_size -= size
+
+                # pos = r2.pos
+                # for op, size in r2.cigar:
+                #     if op == 0 or op == 2:
+                #         pos += size
+                #     elif op == 3:
+                #         if not pos in junctionstarts:
+                #             ins_size -= size
 
                 if ins_size < min_size or ins_size > max_size:
                     reasons.add('size %s' % ins_size)
