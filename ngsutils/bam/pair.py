@@ -38,10 +38,6 @@ Options
                       signify sort order (asc/desc). 
                       Default: AS+, NM-
 
-  -fail1 fname.bam    Write all failed mappings from read1 to this file
-  -fail2 fname.bam    Write all failed mappings from read1 to this file
-                      (Note: -fail1 and -fail2 can be the same file.)
-
   -size low-high      The minimum/maximum insert size to accept. By default,
                       this will attempt to minimize the distance between
                       reads, upto the lower-bound. Any pair over the upper
@@ -50,6 +46,12 @@ Options
                       insert size.
                       Default: 50-10000
 
+  -fail1 fname.bam    Write all failed mappings from read1 to this file
+  -fail2 fname.bam    Write all failed mappings from read1 to this file
+                      (Note: -fail1 and -fail2 can be the same file.)
+
+  -reason tag         Write the reason for failure to this tag (only for
+                      failed reads/mappings) Must be a valid two char name.
 """
     sys.exit(1)
 
@@ -57,24 +59,24 @@ Options
 def is_valid_pair(read1, read2):
     if read1.is_unmapped or read2.is_unmapped:
         # both must be mapped
-        return False
+        return False, 'unmapped'
 
     if read1.tid != read2.tid:
         # to the same chromosome/reference
-        return False
+        return False, 'chromosome'
 
     if read1.is_reverse == read2.is_reverse:
         # in opposite orientations
-        return False
+        return False, 'invalid orientation'
 
     # sequenced towards each other
     if read1.pos < read2.pos and read1.is_reverse:
-        return False
+        return False, 'wrong direction'
 
     if read2.pos < read1.pos and read2.is_reverse:
-        return False
+        return False, 'wrong direction'
 
-    return True
+    return True, ''
 
 
 def find_pairs(reads1, reads2, min_size, max_size, tags):
@@ -87,10 +89,12 @@ def find_pairs(reads1, reads2, min_size, max_size, tags):
     fail2 = []
 
     valid = set()
+    reasons = set()
 
     for r1 in reads1:
         for r2 in reads2:
-            if is_valid_pair(r1, r2):
+            is_valid, reason = is_valid_pair(r1, r2)
+            if is_valid:
                 if r1.pos < r2.pos:
                     ins_size = r2.aend - r1.pos
                 else:
@@ -130,19 +134,21 @@ def find_pairs(reads1, reads2, min_size, max_size, tags):
                 possible.append((tag_val, ins_size, r1, r2))
                 valid.add((1, r1.tid, r1.pos))
                 valid.add((2, r2.tid, r2.pos))
+            else:
+                reasons.add(reason)
 
     for r1 in reads1:
         if not (1, r1.tid, r1.pos) in valid:
-            fail1.append(r1)
+            fail1.append(r1, reasons)
 
     for r2 in reads2:
         if not (2, r2.tid, r2.pos) in valid:
-            fail2.append(r2)
+            fail2.append(r2, reasons)
 
     return possible, fail1, fail2
 
 
-def bam_pair(out_fname, read1_fname, read2_fname, tags=['AS+', 'NM-'], min_size=50, max_size=1000, fail1_fname=None, fail2_fname=None, quiet=False):
+def bam_pair(out_fname, read1_fname, read2_fname, tags=['AS+', 'NM-'], min_size=50, max_size=1000, fail1_fname=None, fail2_fname=None, reason_tag=None, quiet=False):
     bam1 = pysam.Samfile(read1_fname, "rb")
     bam2 = pysam.Samfile(read2_fname, "rb")
     out = pysam.Samfile('%s.tmp' % out_fname, "wb", template=bam1)
@@ -240,6 +246,8 @@ def bam_pair(out_fname, read1_fname, read2_fname, tags=['AS+', 'NM-'], min_size=
                     r1.is_paired = True
                     r1.is_proper_pair = False
                     r1.is_read1 = True
+                    if reason_tag:
+                        r1.tags = r1.tags + [(reason_tag, 'suboptimal')]
                     fail1.write(r1)
             if fail2:
                 if (2,r2.tid, r2.pos) not in written:
@@ -247,19 +255,25 @@ def bam_pair(out_fname, read1_fname, read2_fname, tags=['AS+', 'NM-'], min_size=
                     r2.is_paired = True
                     r2.is_proper_pair = False
                     r2.is_read2 = True
+                    if reason_tag:
+                        r2.tags = r2.tags + [(reason_tag, 'suboptimal')]
                     fail2.write(r2)
 
         if failed_reads1 and fail1:
-            for r1 in failed_reads1:
+            for r1, reasons in failed_reads1:
                 r1.is_paired = True
                 r1.is_proper_pair = False
                 r1.is_read1 = True
+                if reason_tag:
+                    r1.tags = r1.tags + [(reason_tag, ','.join(reasons))]
                 fail1.write(r1)
         if failed_reads2 and fail2:
-            for r2 in failed_reads2:
+            for r2, reasons in failed_reads2:
                 r2.is_paired = True
                 r2.is_proper_pair = False
                 r2.is_read1 = True
+                if reason_tag:
+                    r2.tags = r2.tags + [(reason_tag, ','.join(reasons))]
                 fail2.write(r2)
 
         reads1 = None
@@ -289,6 +303,7 @@ if __name__ == '__main__':
     fail2_fname = None
     min_size = 50
     max_size = 10000
+    reason_tag = None
     tags = []
 
     last = None
@@ -308,7 +323,10 @@ if __name__ == '__main__':
         elif last == '-tag':
             tags.append(arg)
             last = None
-        elif arg in ['-tag', '-fail1', '-fail2', '-size']:
+        elif last == '-reason':
+            reason_tag = arg
+            last = None
+        elif arg in ['-tag', '-fail1', '-fail2', '-size', '-reason']:
             last = arg
         elif not out_fname:
             out_fname = arg
@@ -325,4 +343,4 @@ if __name__ == '__main__':
     if not read1_fname or not read2_fname or not out_fname:
         usage()
     else:
-        bam_pair(out_fname, read1_fname, read2_fname, tags, min_size, max_size, fail1_fname, fail2_fname)
+        bam_pair(out_fname, read1_fname, read2_fname, tags, min_size, max_size, fail1_fname, fail2_fname, reason_tag)
