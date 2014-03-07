@@ -183,24 +183,35 @@ def stats_counts(counts):
         acc += (idx * count)
         total += count
 
-    mean = acc / total
-    acc = 0.0
-    sdacc = 0.0
+    if total > 0:
+        mean = acc / total
 
-    for idx, count in enumerate(counts):
-        sdacc += count * ((idx - mean) ** 2)
-        acc += count
-        if not pct25 and acc / total > 0.25:
-            pct25 = idx
-        if not pct50 and acc / total > 0.5:
-            pct50 = idx
-        if not pct75 and acc / total > 0.75:
-            pct75 = idx
+        acc = 0.0
+        sdacc = 0.0
 
-    if total > 2:
-        stdev = (sdacc / (total - 1)) ** 0.5
+        for idx, count in enumerate(counts):
+            sdacc += count * ((idx - mean) ** 2)
+            acc += count
+            if not pct25 and acc / total > 0.25:
+                pct25 = idx
+            if not pct50 and acc / total > 0.5:
+                pct50 = idx
+            if not pct75 and acc / total > 0.75:
+                pct75 = idx
+
+        if total > 2:
+            stdev = (sdacc / (total - 1)) ** 0.5
+        else:
+            stdev = 0.0
+
     else:
-        stdev = 0.0
+        mean = 0
+        stdev = 0
+        min_val = 0
+        pct25 = 0
+        pct75 = 0
+        max_val = 0
+
     return StatsValues(mean, stdev, min_val, pct25, pct50, pct75, max_val, total)
 
 
