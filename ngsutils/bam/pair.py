@@ -120,6 +120,7 @@ def find_pairs(reads1, reads2, min_size, max_size, tags):
 
                 if ins_size < min_size or ins_size > max_size:
                     reasons.add('size')
+                    continue
 
                 tag_val = []
                 for tag in tags:
