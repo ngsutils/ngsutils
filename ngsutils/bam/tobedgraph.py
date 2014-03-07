@@ -63,7 +63,7 @@ class NoGapCache(object):
 
 
 
-def bam_tobedgraph(bamfile, strand=None, normalize=None, nogaps=False, out=sys.stdout):
+def bam_tobedgraph(bamfile, strand=None, normalize=None, nogaps=False, fast=False, out=sys.stdout):
     last_chrom = None
     last_count = 0
     last_start = None
@@ -87,8 +87,13 @@ def bam_tobedgraph(bamfile, strand=None, normalize=None, nogaps=False, out=sys.s
                 count = pileup.n
             else:
                 for read in pileup.pileups:
-                    if not gap_cache.pileupread_ingap(read):
-                        count += 1
+                    if fast:
+                        if not gap_cache.pileupread_ingap(read):
+                            count += 1
+                    else:
+                        op = read_cigar_at_pos(read.alignment.cigar, read.qpos, read.is_del)
+                        if op != 3:
+                            count += 1
         else:
             #
             #  TODO - add rev_read2 option
@@ -97,14 +102,26 @@ def bam_tobedgraph(bamfile, strand=None, normalize=None, nogaps=False, out=sys.s
                 if not read.alignment.is_reverse and strand == '+':
                     if not nogaps:
                         count += 1
-                    elif not gap_cache.pileupread_ingap(read):
-                        count += 1
+                    else:
+                        if fast:
+                            if not gap_cache.pileupread_ingap(read):
+                                count += 1
+                        else:
+                            op = read_cigar_at_pos(read.alignment.cigar, read.qpos, read.is_del)
+                            if op != 3:
+                                count += 1
 
                 elif read.alignment.is_reverse and strand == '-':
                     if not nogaps:
                         count += 1
-                    elif not gap_cache.pileupread_ingap(read):
-                        count += 1
+                    else:
+                        if fast:
+                            if not gap_cache.pileupread_ingap(read):
+                                count += 1
+                        else:
+                            op = read_cigar_at_pos(read.alignment.cigar, read.qpos, read.is_del)
+                            if op != 3:
+                                count += 1
 
             # print pileup.pos,count,last_start,last_end
         if count != last_count or not last_end or (pileup.pos - last_end) > 1:
