@@ -139,11 +139,11 @@ def find_pairs(reads1, reads2, min_size, max_size, tags):
 
     for r1 in reads1:
         if not (1, r1.tid, r1.pos) in valid:
-            fail1.append(r1, reasons)
+            fail1.append((r1, reasons))
 
     for r2 in reads2:
         if not (2, r2.tid, r2.pos) in valid:
-            fail2.append(r2, reasons)
+            fail2.append((r2, reasons))
 
     return possible, fail1, fail2
 
