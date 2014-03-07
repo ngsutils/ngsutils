@@ -124,12 +124,12 @@ def find_pairs(reads1, reads2, min_size, max_size, tags):
 
                 if ins_size < min_size or ins_size > max_size:
                     if not (1, r1.tid, r1.pos) in reasons:
-                        reasons[(1, r1.tid, r1.pos)] = []
+                        reasons[(1, r1.tid, r1.pos)] = set()
                     if not (2, r2.tid, r2.pos) in reasons:
-                        reasons[(2, r2.tid, r2.pos)] = []
+                        reasons[(2, r2.tid, r2.pos)] = set()
 
-                    reasons[(1, r1.tid, r1.pos)].append('size-%s' % ins_size)
-                    reasons[(2, r2.tid, r2.pos)].append('size-%s' % ins_size)
+                    reasons[(1, r1.tid, r1.pos)].add('size')
+                    reasons[(2, r2.tid, r2.pos)].add('size')
                     continue
 
                 tag_val = []
@@ -147,12 +147,12 @@ def find_pairs(reads1, reads2, min_size, max_size, tags):
                 valid.add((2, r2.tid, r2.pos))
             else:
                 if not (1, r1.tid, r1.pos) in reasons:
-                    reasons[(1, r1.tid, r1.pos)] = []
+                    reasons[(1, r1.tid, r1.pos)] = set()
                 if not (2, r2.tid, r2.pos) in reasons:
-                    reasons[(2, r2.tid, r2.pos)] = []
+                    reasons[(2, r2.tid, r2.pos)] = set()
 
-                reasons[(1, r1.tid, r1.pos)].append(reason)
-                reasons[(2, r2.tid, r2.pos)].append(reason)
+                reasons[(1, r1.tid, r1.pos)].add(reason)
+                reasons[(2, r2.tid, r2.pos)].add(reason)
 
     for r1 in reads1:
         if not (1, r1.tid, r1.pos) in valid:
