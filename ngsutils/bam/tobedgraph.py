@@ -2,7 +2,7 @@
 ## category Conversion
 ## desc Convert BAM coverage to bedGraph (for visualization)
 '''
-Convert BAM coverage to bedGraph based on read coverage. This will take into
+Convert BAM coverage to bedGraph based on read depth. This will take into
 account gaps in RNAseq alignments and not display any coverage across introns.
 
 This can optionally normalize the counts by a given factor or display only
