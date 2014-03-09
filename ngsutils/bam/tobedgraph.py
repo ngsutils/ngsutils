@@ -2,10 +2,11 @@
 ## category Conversion
 ## desc Convert BAM coverage to bedGraph (for visualization)
 '''
-Convert BAM coverage to bedGraph based on pileup counts
+Convert BAM coverage to bedGraph based on read coverage. This will take into
+account gaps in RNAseq alignments and not display any coverage across introns.
 
-Takes a BAM file and produces a bedGraph file.  This can optionally
-normalize the counts by a given factor.
+This can optionally normalize the counts by a given factor or display only
+coverage for a specific strand.
 
  See: http://genome.ucsc.edu/goldenPath/help/bedgraph.html
       http://genome.ucsc.edu/goldenPath/help/bigWig.html
