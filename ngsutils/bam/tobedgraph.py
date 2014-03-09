@@ -13,6 +13,7 @@ normalize the counts by a given factor.
 
 import sys
 import os
+from array import array
 from ngsutils.bam import bam_pileup_iter, cigar_tostr, read_cigar_at_pos, bam_iter
 import pysam
 
@@ -29,7 +30,7 @@ class BamCounter(object):
     def __init__(self, normalization_factor=1, strand=None, out=sys.stdout):
         self.normalization_factor = normalization_factor
 
-        self.pos_counts = []
+        self.pos_counts = array('L')
 
         self.cur_tid = None
         self.cur_pos = None
@@ -87,7 +88,7 @@ class BamCounter(object):
                         self.write(self.cur_pos + i, count)
                     self.flush()
 
-                self.pos_counts = []
+                self.pos_counts = array('L')
                 self.read_cache = set()
 
                 self.cur_pos = 0
