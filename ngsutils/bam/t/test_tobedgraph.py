@@ -24,7 +24,9 @@ class ToBEDGraphTest(unittest.TestCase):
         ngsutils.bam.tobedgraph.bam_tobedgraph(self.bam, out=sio)
         self.assertEqual(sio.getvalue(), '''\
 chr1\t99\t149\t1
-chr1\t174\t724\t2
+chr1\t174\t199\t2
+chr1\t399\t499\t1
+chr1\t699\t724\t2
 chr1\t724\t774\t1
 ''')
         sio.close()
@@ -35,7 +37,9 @@ chr1\t724\t774\t1
         ngsutils.bam.tobedgraph.bam_tobedgraph(self.bam, strand='+', out=sio)
         self.assertEqual(sio.getvalue(), '''\
 chr1\t99\t149\t1
-chr1\t174\t724\t2
+chr1\t174\t199\t2
+chr1\t399\t499\t1
+chr1\t699\t724\t2
 ''')
         sio.close()
 
