@@ -66,6 +66,8 @@ def bam_iter(bam, quiet=False, show_ref_pos=False, ref=None, start=None, end=Non
                 else:
                     eta.print_status(bgz_offset, extra='%s' % read.qname)
 
+            yield read
+
     else:
         working_chrom = None
         if ref in bam.references:
