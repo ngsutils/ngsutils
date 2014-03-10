@@ -2,122 +2,99 @@
 ## category General
 ## desc Find properly paired reads (when fragments are filtered separately)
 '''
-
 When you filter paired FASTQ files separately, fragments my be filtered or
 removed from either file. This program will then find all of the properly
 paired reads. Valid pairs will be written to new output files that may be
 optionally gzip compressed.
 
+Caution: this can use up to 2X the disk space of each FASTQ file!
 '''
 
 import os
 import sys
 import gzip
 
-import Queue
+import tempfile
 
 from ngsutils.fastq import FASTQ
 
+import ngsutils.fastq.sort
 
-def find_fastq_pairs(fq1, fq2, out1, out2, quiet=False):
-    buffer1 = Queue.Queue()
-    buffer2 = Queue.Queue()
 
-    readnames1 = set()
-    readnames2 = set()
+def find_fastq_pairs(fq1, fq2, out1, out2, tmpdir=None, quiet=False):
+    tmp1 = tempfile.NamedTemporaryFile(delete=False, prefix='.tmp', suffix='.gz', dir=tmpdir if tmpdir else os.path.dirname(fq1.fname))
+    tmp1_fname = tmp1.name
+    tmp1_out = gzip.GzipFile(fileobj=tmp1)
 
-    total1 = 0
-    total2 = 0
-    matched = 0
-    removed = 0
+    ngsutils.fastq.sort.fastq_sort(fq1, out=tmp1_out, tmpdir=tmpdir if tmpdir else os.path.dirname(fq1.fname))
+    tmp1_out.close()
+    tmp1.close()
 
-    def callback():
-        return 'ma/rm:%s/%s' % (matched, removed)
+    tmp2 = tempfile.NamedTemporaryFile(delete=False, prefix='.tmp', suffix='.gz', dir=tmpdir if tmpdir else os.path.dirname(fq2.fname))
+    tmp2_fname = tmp2.name
+    tmp2_out = gzip.GzipFile(fileobj=tmp2)
 
-    gen1 = fq1.fetch(quiet=quiet, callback=callback)
-    gen2 = fq2.fetch(quiet=True)
+    ngsutils.fastq.sort.fastq_sort(fq2, out=tmp2_out, tmpdir=tmpdir if tmpdir else os.path.dirname(fq2.fname))
+    tmp2_out.close()
+    tmp2.close()
 
-    while True:
+    sys.stderr.write('Finding properly paired FASTQ reads...\n')
 
-        try:
-            read1 = gen1.next()
-            total1 += 1
+    fq_tmp1 = FASTQ(tmp1_fname)
+    fq_tmp2 = FASTQ(tmp2_fname)
 
-        except:
-            read1 = None
+    reader1 = fq_tmp1.fetch(quiet=quiet)
+    reader2 = fq_tmp2.fetch(quiet=True)
 
-        try:
-            read2 = gen2.next()
-            total2 += 1
-        except:
-            read2 = None
+    read1 = reader1.next()
+    read2 = reader2.next()
 
-        if read1 is None and read2 is None:
-            break
+    pairs = 0
+    discarded_1 = 0
+    discarded_2 = 0
 
-        if read1 and read2 and read1.name == read2.name:
+    while read1 and read2:
+        if read1.name == read2.name:
             read1.write(out1)
             read2.write(out2)
-            matched += 1
 
-        elif read1 and read1.name in readnames2:
-            read1.write(out1)
-            buffer1 = Queue.Queue()
-            readnames1 = set()
-            matched += 1
+            try:
+                read1 = reader1.next()
+                read2 = reader2.next()
+            except StopIteration:
+                break
 
-            cur = None
-            while cur is None or cur.name != read1.name:
-                if cur:
-                    removed += 1
-                cur = buffer2.get()
-                readnames2.remove(cur.name)
+            pairs += 1
+        elif read1.name < read2.name:
+            discarded_1 += 1
+            try:
+                read1 = reader1.next()
+            except StopIteration:
+                break
+        else:
+            discarded_2 += 1
+            try:
+                read2 = reader2.next()
+            except StopIteration:
+                break
 
-            if cur:
-                cur.write(out2)
+    fq_tmp1.close()
+    fq_tmp2.close()
 
-            if read2:
-                buffer2.put(read2)
-                readnames2.add(read2.name)
+    os.unlink(tmp1_fname)
+    os.unlink(tmp2_fname)
 
-        elif read2 and read2.name in readnames1:
-            read2.write(out2)
-            buffer2 = Queue.Queue()
-            readnames2 = set()
-            matched += 1
-
-            cur = None
-            while cur is None or cur.name != read2.name:
-                if cur:
-                    removed += 1
-                cur = buffer1.get()
-                readnames1.remove(cur.name)
-
-            if cur:
-                cur.write(out1)
-
-            if read1:
-                buffer1.put(read1)
-                readnames1.add(read1.name)
-
-        elif read1 and read2:
-            buffer1.put(read1)
-            buffer2.put(read2)
-
-            readnames1.add(read1.name)
-            readnames2.add(read2.name)
-
-    return total1, total2, matched
-
+    return pairs, discarded_1, discarded_2
 
 def usage(msg=""):
     if msg:
         print '%s\n' % msg
-    print """Usage: fastqutils properpairs filename1.fastq{.gz} filename2.fastq{.gz} output1 output2
+    print """Usage: fastqutils properpairs {opts} filename1.fastq{.gz} filename2.fastq{.gz} output1 output2
 
 Options:
-  -f    Force overwriting output file (if it exists)
-  -z    Output files should be gzip compressed
+  -f       Force overwriting output file (if it exists)
+  -z       Output files should be gzip compressed
+  -t dir   Use {dir} for temporary files
 """
     sys.exit(1)
 
@@ -126,15 +103,27 @@ if __name__ == '__main__':
     fqname2 = None
     outname1 = None
     outname2 = None
+    tmpdir = None
     force = False
 
     gz = False
+
+    last = None
 
     for arg in sys.argv[1:]:
         if arg == '-z':
             gz = True
         elif arg == '-f':
             force = True
+        elif last == '-t':
+            if os.path.exists(arg) and os.path.isdir(arg):
+                tmpdir = arg
+            else:
+                usage('%s is not a valid temp-directory!' % arg)
+
+            last = None
+        elif arg in ['-t']:
+            last = arg
         elif not fqname1:
             if not os.path.exists(arg):
                 usage("File %s doesn't exist!" % arg)
@@ -166,10 +155,11 @@ if __name__ == '__main__':
         out1 = open(outname1, 'w')
         out2 = open(outname2, 'w')
 
-    total1, total2, matched = find_fastq_pairs(fq1, fq2, out1, out2)
+    paired, discard_1, discard_2 = find_fastq_pairs(fq1, fq2, out1, out2, tmpdir)
 
-    print "Totals: %s, %s" % (total1, total2)
-    print "Proper pairs: %s" % matched
+    print "Proper pairs: %s" % paired
+    print "Discarded 1 : %s" % discard_1
+    print "Discarded 2 : %s" % discard_2
 
     fq1.close()
     fq2.close()

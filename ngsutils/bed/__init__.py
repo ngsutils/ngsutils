@@ -10,21 +10,11 @@ class BedStreamer(object):
     Note - this can only be used once! There is no mechanism to seek the stream.
     '''
 
-    def __init__(self, fname=None, fileobj=None):
+    def __init__(self, fname=None, fileobj=None, quiet=False):
         if not fname and not fileobj:
             raise ValueError("You must specify either fname or fileobj!")
 
-        self.fname = fname
-        if fileobj:
-            self.fileobj = fileobj
-        else:
-            self.fileobj = ngsutils.support.ngs_utils.gzip_opener(fname)
-
-    def tell(self):
-        return self.fileobj.tell()
-
-    def close(self):
-        self.fileobj.close()
+        self.reader = ngsutils.support.gzip_reader(fname=fname, quiet=quiet, fileobj=fileobj)
 
     def __iter__(self):
         return self
@@ -32,8 +22,7 @@ class BedStreamer(object):
     def next(self):
         try:
             while True:
-                line = self.fileobj.next().strip()
-
+                line = self.reader.next().strip()
                 if line and line[0] != '#':
                     cols = line.split('\t')
                     while len(cols) < 6:

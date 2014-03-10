@@ -12,21 +12,25 @@ as the original file (unless otherwise specified).
 import os
 import sys
 import tempfile
+import gzip
 
 from ngsutils.fastq import FASTQ, fastq_read_file
 from eta import ETA
 
 
-def _write_tmp(chunk):
+def _write_tmp(chunk, tmpdir):
     chunk.sort()
-    tmp = tempfile.TemporaryFile(dir=tmpdir)
+    tmp = tempfile.NamedTemporaryFile(prefix='.tmp',dir=tmpdir, delete=False)
+    tmp_fname = tmp.name
+    gz = gzip.GzipFile(fileobj=tmp)
     for sorter, read in chunk:
-        read.write(tmp)
-    tmp.seek(0)
-    return tmp
+        read.write(gz)
+    gz.close()
+    tmp.close()
+    return tmp_fname
 
 
-def fastq_sort(fastq, byname=True, bysequence=False, tmpdir=None, chunksize=100000, out=sys.stdout, quiet=False):
+def fastq_sort(fastq, byname=True, bysequence=False, tmpdir=None, chunksize=1000000, out=sys.stdout, quiet=False):
     tmpfiles = []
 
     chunk = []
@@ -40,11 +44,11 @@ def fastq_sort(fastq, byname=True, bysequence=False, tmpdir=None, chunksize=1000
             chunk.append((read.seq, read))
 
         if len(chunk) >= chunksize:
-            tmpfiles.append(_write_tmp(chunk))
+            tmpfiles.append(_write_tmp(chunk, tmpdir))
             chunk = []
 
     if chunk:
-        tmpfiles.append(_write_tmp(chunk))
+        tmpfiles.append(_write_tmp(chunk, tmpdir))
 
     sys.stderr.write('Merging chunks...\n')
     buf = [None, ] * len(tmpfiles)
@@ -54,11 +58,11 @@ def fastq_sort(fastq, byname=True, bysequence=False, tmpdir=None, chunksize=1000
 
     j=0
     writing = True
-
+    tmpfobjs = [gzip.open(x) for x in tmpfiles]
     while writing:
         j+=1
         eta.print_status(j)
-        for i, fobj in enumerate(tmpfiles):
+        for i, fobj in enumerate(tmpfobjs):
             if not buf[i] and not skip[i]:
                 try:
                     read = fastq_read_file(fobj)
@@ -85,9 +89,11 @@ def fastq_sort(fastq, byname=True, bysequence=False, tmpdir=None, chunksize=1000
             break
     eta.done()
 
+    for fobj in tmpfobjs:
+        fobj.close()
 
-
-
+    for tmpfile in tmpfiles:
+        os.unlink(tmpfile)
 
 def usage():
     print __doc__

@@ -35,6 +35,9 @@ Note: using an exact size may make a region smaller!
 
 def bed_extend(stream, ext_5=None, ext_3=None, exact=False, out=sys.stdout):
     for region in stream:
+        start = region.start
+        end = region.end
+
         if region.strand == '+' or not region.strand:
             if ext_5:
                 if exact:
@@ -42,7 +45,7 @@ def bed_extend(stream, ext_5=None, ext_3=None, exact=False, out=sys.stdout):
                 else:
                     start = region.start - ext_5
 
-            elif ext_3:
+            if ext_3:
                 if exact:
                     end = region.start + ext_3
                 else:
@@ -55,7 +58,7 @@ def bed_extend(stream, ext_5=None, ext_3=None, exact=False, out=sys.stdout):
                 else:
                     end = region.end + ext_5
 
-            elif ext_3:
+            if ext_3:
                 if exact:
                     start = region.end - ext_3
                 else:

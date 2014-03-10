@@ -96,5 +96,4 @@ if __name__ == '__main__':
 
     bed_subtract(bed1, bed2, stranded)
 
-    bed1.close()
     bed2.close()

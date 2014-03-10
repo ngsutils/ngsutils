@@ -3,6 +3,7 @@ import os
 import re
 import pysam
 from eta import ETA
+import ngsutils.support
 
 
 def bam_open(fname, mode='r', *args, **kwargs):
@@ -33,41 +34,91 @@ def bam_pileup_iter(bam, mask=1796, quiet=False, callback=None):
         eta.done()
 
 
-def bam_iter(bam, quiet=False, show_ref_pos=False, callback=None):
+def bam_iter(bam, quiet=False, show_ref_pos=False, ref=None, start=None, end=None, callback=None):
     '''
     >>> [x.qname for x in bam_iter(bam_open(os.path.join(os.path.dirname(__file__), 't', 'test.bam')), quiet=True)]
     ['A', 'B', 'E', 'C', 'D', 'F', 'Z']
     '''
-
-    
-    if not quiet and bam.filename:
-        eta = ETA(os.stat(bam.filename).st_size)
-    else:
-        eta = None
 
     if os.path.exists('%s.bai' % bam.filename):
         # This is an indexed file, so it is ref sorted...
         # Meaning that we should show chrom:pos, instead of read names
         show_ref_pos = True
 
-    for read in bam:
-        pos = bam.tell()
-        bgz_offset = pos >> 16
+    eta = None
 
-        if not quiet and eta:
-            if callback:
-                eta.print_status(bgz_offset, extra=callback(read))
-            elif (show_ref_pos):
-                if read.tid > -1:
-                    eta.print_status(bgz_offset, extra='%s:%s %s' % (bam.getrname(read.tid), read.pos, read.qname))
+    if not ref:
+        if not quiet and bam.filename:
+            eta = ETA(os.stat(bam.filename).st_size)
+
+        for read in bam:
+            pos = bam.tell()
+            bgz_offset = pos >> 16
+
+            if not quiet and eta:
+                if callback:
+                    eta.print_status(bgz_offset, extra=callback(read))
+                elif (show_ref_pos):
+                    if read.tid > -1:
+                        eta.print_status(bgz_offset, extra='%s:%s %s' % (bam.getrname(read.tid), read.pos, read.qname))
+                    else:
+                        eta.print_status(bgz_offset, extra='unmapped %s' % (read.qname))
                 else:
-                    eta.print_status(bgz_offset, extra='unmapped %s' % (read.qname))
-            else:
-                eta.print_status(bgz_offset, extra='%s' % read.qname)
-        yield read
+                    eta.print_status(bgz_offset, extra='%s' % read.qname)
+
+            yield read
+
+    else:
+        working_chrom = None
+        if ref in bam.references:
+            working_chrom = ref
+        elif ref[0:3] == 'chr':
+            # compensate for Ensembl vs UCSC ref naming
+            if ref[3:] in bam.references:
+                working_chrom = ref[3:]
+
+        if not working_chrom:
+            raise ValueError('Missing reference: %s' % ref)
+
+        tid = bam.gettid(working_chrom)
+
+        if not start:
+            start = 0
+        if not end:
+            end = bam.lengths[tid]
+
+        if not quiet and bam.filename:
+            eta = ETA(end - start)
+
+        for read in bam.fetch(working_chrom, start, end):
+            if not quiet and eta:
+                if callback:
+                    eta.print_status(read.pos - start, extra=callback(read))
+                else:
+                    eta.print_status(read.pos - start, extra='%s:%s %s' % (bam.getrname(read.tid), read.pos, read.qname))
+
+            yield read
 
     if eta:
         eta.done()
+
+
+def bam_batch_reads(bam, quiet=False):
+    '''
+    Batch mapping for the same reads (qname) together, this way
+    they can all be compared/converted together.
+    '''
+    reads = []
+    last = None
+    for read in bam_iter(bam, quiet=quiet):
+        if last and read.qname != last:
+            yield reads
+            reads = []
+        last = read.qname
+        reads.append(read)
+
+    if reads:
+        yield reads
 
 
 bam_cigar = ['M', 'I', 'D', 'N', 'S', 'H', 'P', '=', 'X']
@@ -717,6 +768,8 @@ def read_cigar_at_pos(cigar, qpos, is_del):
             pass
         elif op == 4:
             pos += length
+        elif op == 5:
+            pass
         else:
             raise ValueError("Unsupported CIGAR operation: %s" % op)
 
@@ -760,7 +813,6 @@ def cleancigar(cigar):
     return None
 
 
-
 def read_cleancigar(read):
     '''
     Replaces the CIGAR string for a read to remove any operations that are zero length.
@@ -779,6 +831,44 @@ def read_cleancigar(read):
         return True
 
     return False
+
+
+def read_to_unmapped(read, ref=None):
+    '''
+    Converts a read from mapped to unmapped.
+
+    Sets the 'ZR' tag to indicate the original ref/pos/cigar (if ref is passed)
+    '''
+
+    newread = pysam.AlignedRead()
+
+    if ref:
+        tags = [('ZR', '%s:%s:%s' % (ref, read.pos, cigar_tostr(read.cigar)))]
+
+    newread.is_unmapped = True
+    newread.mapq = 0
+    newread.tlen = 0
+    newread.pos = -1
+    newread.pnext = -1
+    newread.rnext = -1
+    newread.tid = -1
+
+    newread.qname = read.qname
+
+    if read.is_paired:
+        newread.is_paired = True
+
+    if not read.is_unmapped and read.is_reverse:
+        newread.seq = ngsutils.support.revcomp(read.seq)
+        newread.qual = read.qual[::-1]
+    else:        
+        newread.seq = read.seq
+        newread.qual = read.qual
+
+    newread.tags = tags
+
+    return newread
+
 
 
 if __name__ == '__main__':
