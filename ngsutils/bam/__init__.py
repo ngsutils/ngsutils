@@ -91,6 +91,8 @@ def bam_iter(bam, quiet=False, show_ref_pos=False, ref=None, start=None, end=Non
         for read in bam.fetch(working_chrom, start, end):
             if not quiet and eta:
                 if callback:
+                    eta.print_status(read.pos - start, extra=callback(read))
+                else:
                     eta.print_status(read.pos - start, extra='%s:%s %s' % (bam.getrname(read.tid), read.pos, read.qname))
 
             yield read
