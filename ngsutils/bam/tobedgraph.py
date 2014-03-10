@@ -152,6 +152,7 @@ Options:
     -ref name         Only count reads mapping to this reference (chrom)
 
     -region chr:start-end    Count reads mapping to this genome region
+                             (start is 1-based)
 """
     sys.exit(1)
 
@@ -176,6 +177,7 @@ if __name__ == "__main__":
         elif last == '-region':
             ref, se = arg.split(':')
             start, end = [int(x) for x in se.split('-')]
+            start = start - 1
             last = None
         elif arg in ['-norm', '-ref', '-region']:
             last = arg
