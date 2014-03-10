@@ -70,8 +70,8 @@ class BamCounter(object):
                 refpos += size
             pass
 
-    def get_counts(self, bam, quiet=False):
-        for read in bam_iter(bam, quiet=quiet):
+    def get_counts(self, bam, ref=None, start=None, end=None, quiet=False):
+        for read in bam_iter(bam, ref=ref, start=start, end=end, quiet=quiet):
             if read.is_unmapped:
                 continue
             if self.strand:
@@ -129,32 +129,39 @@ class BamCounter(object):
         self._last_pos = None
 
 
-def bam_tobedgraph(bamfile, strand=None, normalize=None, out=sys.stdout):
+def bam_tobedgraph(bamfile, strand=None, normalize=None, ref=None, start=None, end=None, out=sys.stdout):
     if normalize is None:
         normalize = 1
     counter = BamCounter(normalize, strand, out)
-    counter.get_counts(bamfile)
+    counter.get_counts(bamfile, ref, start, end)
 
 
 def usage():
     print __doc__
     print """\
-Usage: bamutils tobedgraph [-plus | -minus] {-norm N} bamfile
+Usage: bamutils tobedgraph {opts} bamfile
 
 Options:
-    -plus             only count reads on the plus strand
+    -plus             Only count reads on the plus strand
                       (default: count all reads)
-    -minus            only count reads on the minus strand
+    -minus            Only count reads on the minus strand
 
-    -norm VAL         the count at every position is calculated as:
+    -norm VAL         The count at every position is calculated as:
                       floor(count * VAL).
+
+    -ref name         Only count reads mapping to this reference (chrom)
+
+    -region chr:start-end    Count reads mapping to this genome region
 """
     sys.exit(1)
 
 if __name__ == "__main__":
     bam = None
     strand = None
-    norm = 1 
+    norm = 1
+    ref = None
+    start = None
+    end = None
 
     last = None
     for arg in sys.argv[1:]:
@@ -163,7 +170,14 @@ if __name__ == "__main__":
         if last == '-norm':
             norm = float(arg)
             last = None
-        elif arg in ['-norm']:
+        elif last == '-ref':
+            ref = arg
+            last = None
+        elif last == '-region':
+            ref, se = arg.split(':')
+            start, end = [int(x) for x in se.split('-')]
+            last = None
+        elif arg in ['-norm', '-ref', '-region']:
             last = arg
         elif arg == '-plus':
             strand = '+'
