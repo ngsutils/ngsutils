@@ -40,20 +40,31 @@ def bam_iter(bam, quiet=False, show_ref_pos=False, ref=None, start=None, end=Non
     ['A', 'B', 'E', 'C', 'D', 'F', 'Z']
     '''
 
-    if not quiet and bam.filename:
-        eta = ETA(os.stat(bam.filename).st_size)
-    else:
-        eta = None
-
     if os.path.exists('%s.bai' % bam.filename):
         # This is an indexed file, so it is ref sorted...
         # Meaning that we should show chrom:pos, instead of read names
         show_ref_pos = True
 
+    eta = None
+
     if not ref:
-        def gen():
-            for read in bam:
-                yield read
+        if not quiet and bam.filename:
+            eta = ETA(os.stat(bam.filename).st_size)
+
+        for read in bam:
+            pos = bam.tell()
+            bgz_offset = pos >> 16
+
+            if not quiet and eta:
+                if callback:
+                    eta.print_status(bgz_offset, extra=callback(read))
+                elif (show_ref_pos):
+                    if read.tid > -1:
+                        eta.print_status(bgz_offset, extra='%s:%s %s' % (bam.getrname(read.tid), read.pos, read.qname))
+                    else:
+                        eta.print_status(bgz_offset, extra='unmapped %s' % (read.qname))
+                else:
+                    eta.print_status(bgz_offset, extra='%s' % read.qname)
 
     else:
         working_chrom = None
@@ -67,26 +78,22 @@ def bam_iter(bam, quiet=False, show_ref_pos=False, ref=None, start=None, end=Non
         if not working_chrom:
             raise ValueError('Missing reference: %s' % ref)
 
-        def gen():
-            for read in bam.fetch(ref, start, end):
-                yield read
+        tid = bam.gettid(working_chrom)
 
+        if not start:
+            start = 0
+        if not end:
+            end = bam.lengths[tid]
 
-    for read in gen():
-        pos = bam.tell()
-        bgz_offset = pos >> 16
+        if not quiet and bam.filename:
+            eta = ETA(end - start)
 
-        if not quiet and eta:
-            if callback:
-                eta.print_status(bgz_offset, extra=callback(read))
-            elif (show_ref_pos):
-                if read.tid > -1:
-                    eta.print_status(bgz_offset, extra='%s:%s %s' % (bam.getrname(read.tid), read.pos, read.qname))
-                else:
-                    eta.print_status(bgz_offset, extra='unmapped %s' % (read.qname))
-            else:
-                eta.print_status(bgz_offset, extra='%s' % read.qname)
-        yield read
+        for read in bam.fetch(working_chrom, start, end):
+            if not quiet and eta:
+                if callback:
+                    eta.print_status(read.pos - start, extra='%s:%s %s' % (bam.getrname(read.tid), read.pos, read.qname))
+
+            yield read
 
     if eta:
         eta.done()
