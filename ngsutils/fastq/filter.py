@@ -110,7 +110,6 @@ class TrimFilter(object):
                         self.discard(name)
                     if self.verbose:
                         sys.stderr.write('[Trim] %s (removed) seq:%s clipped at:%s (%s/%s)-> %s\n' % (name, orig_seq, i, matches, total, seq[:i]))
-                    break
                 else:
                     self.altered += 1
                     if self.verbose:
