@@ -31,7 +31,8 @@ class BamCounter(object):
     def __init__(self, normalization_factor=1, strand=None, out=sys.stdout):
         self.normalization_factor = normalization_factor
 
-        self.pos_counts = array('L')
+        self.pos_counts = array('I')
+        self.idx = 0
 
         self.cur_tid = None
         self.cur_pos = None
@@ -44,17 +45,26 @@ class BamCounter(object):
         self.out = out
         self.strand = strand
 
+        self.__TRIMLENGTH = 10000000
+
     def _clear_pos_counts(self, readpos):
         if self.cur_pos == readpos:
             return
 
         i = 0
-        while i < len(self.pos_counts) and i < readpos - self.cur_pos:
-            self.write(self.cur_pos + i, self.pos_counts[i])
+        while i + self.idx < len(self.pos_counts) and i < (readpos - self.cur_pos):
+            self.write(self.cur_pos + i, self.pos_counts[i+ self.idx])
             i += 1
 
-        self.pos_counts = self.pos_counts[i:]
+        self.idx += i
+
+        if self.idx > self.__TRIMLENGTH:
+            self._reset_pos_counts(self.idx)
         self.cur_pos = readpos
+
+    def _reset_pos_counts(self, i):
+        self.pos_counts = self.pos_counts[i:]
+        self.idx = 0
 
     def _add_read(self, read):
         refpos = read.pos
@@ -71,7 +81,7 @@ class BamCounter(object):
             pass
 
     def get_counts(self, bam, ref=None, start=None, end=None, quiet=False):
-        for read in bam_iter(bam, ref=ref, start=start, end=end, quiet=quiet):
+        for read in bam_iter(bam, ref=ref, start=start, end=end, quiet=quiet, callback=lambda x: '%s:%s (%s, %s)' % (bam.getrname(x.tid), x.pos, self.idx, len(self.pos_counts))):
             if read.is_unmapped:
                 continue
             if self.strand:
@@ -82,12 +92,13 @@ class BamCounter(object):
 
             if self.cur_tid is None or read.tid != self.cur_tid:
                 if self.pos_counts:
-                    for i, count in enumerate(self.pos_counts):
+                    for i, count in enumerate(self.pos_counts[self.idx:]):
                         self.write(self.cur_pos + i, count)
                     self.flush()
 
-                self.pos_counts = array('L')
+                self.pos_counts = array('I', [0,] * self.__TRIMLENGTH * 10)
                 self.read_cache = set()
+                self.idx = 0
 
                 self.cur_pos = 0
                 self.cur_tid = read.tid
@@ -96,7 +107,7 @@ class BamCounter(object):
             self._clear_pos_counts(read.pos)
             self._add_read(read)
 
-        for i, count in enumerate(self.pos_counts):
+        for i, count in enumerate(self.pos_counts[self.idx:]):
             self.write(self.cur_pos + i, count)
         self.flush()
 
@@ -104,11 +115,11 @@ class BamCounter(object):
         if not end:
             end = start
        
-        if len(self.pos_counts) < end:
-            self.pos_counts.extend([0,] * (end+1-self.cur_pos+len(self.pos_counts)))
+        while len(self.pos_counts) - self.idx < end - self.cur_pos:
+            self.pos_counts.extend([0,] * 1000)
 
         for pos in xrange(start, end):
-            self.pos_counts[pos - self.cur_pos] += 1
+            self.pos_counts[self.idx + pos - self.cur_pos] += 1
 
     def write(self, pos, val):
         if val == self._last_val:
