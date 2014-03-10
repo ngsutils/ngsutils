@@ -193,5 +193,5 @@ if __name__ == "__main__":
         usage()
 
     bamfile = pysam.Samfile(bam, "rb")
-    bam_tobedgraph(bamfile, strand, norm, out=sys.stdout)
+    bam_tobedgraph(bamfile, strand, norm, ref, start, end, out=sys.stdout)
     bamfile.close()
