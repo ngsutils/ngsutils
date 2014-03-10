@@ -34,7 +34,7 @@ def bam_pileup_iter(bam, mask=1796, quiet=False, callback=None):
         eta.done()
 
 
-def bam_iter(bam, quiet=False, show_ref_pos=False, callback=None):
+def bam_iter(bam, quiet=False, show_ref_pos=False, ref=None, start=None, end=None, callback=None):
     '''
     >>> [x.qname for x in bam_iter(bam_open(os.path.join(os.path.dirname(__file__), 't', 'test.bam')), quiet=True)]
     ['A', 'B', 'E', 'C', 'D', 'F', 'Z']
@@ -50,7 +50,29 @@ def bam_iter(bam, quiet=False, show_ref_pos=False, callback=None):
         # Meaning that we should show chrom:pos, instead of read names
         show_ref_pos = True
 
-    for read in bam:
+    if not ref:
+        def gen():
+            for read in bam:
+                yield read
+
+    else:
+        working_chrom = None
+        if ref in bam.references:
+            working_chrom = ref
+        elif ref[0:3] == 'chr':
+            # compensate for Ensembl vs UCSC ref naming
+            if ref[3:] in bam.references:
+                working_chrom = ref[3:]
+
+        if not working_chrom:
+            raise ValueError('Missing reference: %s' % ref)
+
+        def gen():
+            for read in bam.fetch(ref, start, end):
+                yield read
+
+
+    for read in gen():
         pos = bam.tell()
         bgz_offset = pos >> 16
 
