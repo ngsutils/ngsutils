@@ -103,7 +103,12 @@ class BamCounter(object):
         for i, count in enumerate(self.pos_counts):
             self.write(i, count)
 
-        self.write(i+1, 0)
+        if self._last_val:
+            self.out.write('%s\t%s\t%s\t%s\n' % (self.cur_chrom, self._last_start, self._last_pos+1, (self._last_val * self.normalization_factor)))
+
+        self._last_val = 0
+        self._last_start = None
+        self._last_pos = None
 
 
 def bam_tobedgraph(bamfile, strand=None, normalize=None, ref=None, start=None, end=None, out=sys.stdout):
