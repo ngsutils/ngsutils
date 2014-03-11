@@ -103,6 +103,8 @@ class BamCounter(object):
         for i, count in enumerate(self.pos_counts):
             self.write(i, count)
 
+        self.write(i+1, 0)
+
 
 def bam_tobedgraph(bamfile, strand=None, normalize=None, ref=None, start=None, end=None, out=sys.stdout):
     if normalize is None:
