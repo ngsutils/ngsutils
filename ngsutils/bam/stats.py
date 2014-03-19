@@ -288,15 +288,23 @@ class BamStats(object):
                     # note: this doesn't work for RNA mapped to a reference genome...
                     # for RNA, you'd need to map to a transcript library (refseq) to get
                     # an accurate template length
-                    if read.is_reverse:
-                        k = -read.tlen
-                    else:
-                        k = read.tlen
 
-                    if not k in tlen_counts:
-                        tlen_counts[k] = 1
-                    else:
-                        tlen_counts[k] += 1
+                    has_gap = False
+                    for op, size in read.cigar:
+                        if op == 3:
+                            has_gap = True
+                            break
+
+                    if not has_gap:
+                        if read.is_reverse:
+                            k = -read.tlen
+                        else:
+                            k = read.tlen
+
+                        if not k in tlen_counts:
+                            tlen_counts[k] = 1
+                        else:
+                            tlen_counts[k] += 1
 
                 if delim:
                     refs[bamfile.getrname(read.rname).split(delim)[0]] += 1
