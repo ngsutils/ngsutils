@@ -18,9 +18,9 @@ from ngsutils.fastq import FASTQ, fastq_read_file
 from eta import ETA
 
 
-def _write_tmp(chunk, tmpdir):
+def _write_tmp(chunk, tmpdir, tmpprefix='.tmp'):
     chunk.sort()
-    tmp = tempfile.NamedTemporaryFile(prefix='.tmp',dir=tmpdir, delete=False)
+    tmp = tempfile.NamedTemporaryFile(prefix=tmpprefix,dir=tmpdir, delete=False)
     tmp_fname = tmp.name
     gz = gzip.GzipFile(fileobj=tmp)
     for sorter, read in chunk:
@@ -30,25 +30,27 @@ def _write_tmp(chunk, tmpdir):
     return tmp_fname
 
 
-def fastq_sort(fastq, byname=True, bysequence=False, tmpdir=None, chunksize=1000000, out=sys.stdout, quiet=False):
+def fastq_sort(fastq, bysequence=False, tmpdir=None, chunksize=1000000, out=sys.stdout, quiet=False):
     tmpfiles = []
-
     chunk = []
+
+    tmpprefix = '.tmp.%s' % (os.basename(fastq))
+
     sys.stderr.write('Sorting FASTQ file into chunks...\n')
     count = 0
     for read in fastq.fetch(quiet):
         count += 1 
-        if byname:
-            chunk.append((read.name, read))
         if bysequence:
             chunk.append((read.seq, read))
+        else:
+            chunk.append((read.name, read))
 
         if len(chunk) >= chunksize:
-            tmpfiles.append(_write_tmp(chunk, tmpdir))
+            tmpfiles.append(_write_tmp(chunk, tmpdir, tmpprefix))
             chunk = []
 
     if chunk:
-        tmpfiles.append(_write_tmp(chunk, tmpdir))
+        tmpfiles.append(_write_tmp(chunk, tmpdir, tmpprefix))
 
     sys.stderr.write('Merging chunks...\n')
     buf = [None, ] * len(tmpfiles)
@@ -66,10 +68,10 @@ def fastq_sort(fastq, byname=True, bysequence=False, tmpdir=None, chunksize=1000
             if not buf[i] and not skip[i]:
                 try:
                     read = fastq_read_file(fobj)
-                    if byname:
-                        buf[i] = (read.name, i, read)
                     if bysequence:
                         buf[i] = (read.seq, i, read)
+                    else:
+                        buf[i] = (read.name, i, read)
                 except:
                     buf[i] = None
                     skip[i] = True
@@ -97,34 +99,42 @@ def fastq_sort(fastq, byname=True, bysequence=False, tmpdir=None, chunksize=1000
 
 def usage():
     print __doc__
-    print "fastqutils sort [-name | -seq] {-T dir} filename.fastq"
+    print '''
+Usage: fastqutils sort {opts} filename.fastq
+
+Options:
+    -seq      Sort by read sequence (by default it sorts by name)
+
+    -T dir    Use this directory for temporary output
+    -cs num   Output this many reads in each temporary file (default: 1000000)
+'''
     sys.exit(1)
 
 if __name__ == '__main__':
-    byname = False
     bysequence = False
     tmpdir = None
+    chunksize = 1000000
     fname = None
     last = None
     for arg in sys.argv[1:]:
         if last == '-T':
             tmpdir = arg
             last = None
-        elif arg in ['-T']:
+        elif last == '-cs':
+            chunksize = int(arg)
+        elif arg in ['-T', '-cs']:
             last = arg
-        elif arg == '-name':
-            byname = True
         elif arg == '-seq':
             bysequence = True
         elif not fname and (os.path.exists(arg) or arg == '-'):
             fname = arg
 
-    if not fname or (not byname and not bysequence) or (byname and bysequence):
+    if not fname:
         usage()
 
     if not tmpdir:
         tmpdir = os.path.dirname(fname)
 
     fq = FASTQ(fname)
-    fastq_sort(fq, byname=byname, bysequence=bysequence, tmpdir=tmpdir)
+    fastq_sort(fq, bysequence=bysequence, tmpdir=tmpdir, chunksize=chunksize)
     fq.close()
