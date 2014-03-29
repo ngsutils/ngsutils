@@ -813,8 +813,8 @@ class TagEqual(_TagCompare):
 _criteria = {
     'mapped': Mapped,
     'unmapped': Unmapped,
-    'properpail': ProperPair,
-    'noproperpail': NoProperPair,
+    'properpair': ProperPair,
+    'noproperpair': NoProperPair,
     'noqcfail': QCFailFlag,
     'nosecondary': SecondaryFlag,
     'nopcrdup': PCRDupFlag,
