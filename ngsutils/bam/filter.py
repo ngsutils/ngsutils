@@ -16,6 +16,11 @@ Currently, the available filters are:
     -minlen val                Remove reads that are smaller than {val}
     -maxlen val                Remove reads that are larger than {val}
     -mapped                    Keep only mapped reads
+    -unmapped                  Keep only unmapped reads
+    -properpair                Keep only properly paired reads (both mapped, 
+                               correct orientation, flag set in BAM)
+    -noproperpair              Keep only not-properly paired reads
+
     -mask bitmask              Remove reads that match the mask (base 10/hex)
     -uniq {length}             Remove reads that are have the same sequence
                                Note: BAM file should be sorted
@@ -580,6 +585,62 @@ class Mapped(object):
         pass
 
 
+class Unmapped(object):
+    def __init__(self):
+        pass
+
+    def filter(self, bam, read):
+        if read.is_paired and (read.is_unmapped or read.mate_is_unmapped):
+            return True
+        elif read.is_unmapped:
+            return True
+        return False
+
+    def __repr__(self):
+        return 'is unmapped'
+
+    def close(self):
+        pass
+
+
+class ProperPair(object):
+    def __init__(self):
+        pass
+
+    def filter(self, bam, read):
+        if not read.is_paired:
+            return False
+
+        if read.is_unmapped or read.mate_is_unmapped:
+            return False
+
+        if read.is_reverse == read.mate_is_reverse:
+            return False
+
+        return read.is_proper_pair
+
+    def __repr__(self):
+        return 'proper pair'
+
+    def close(self):
+        pass
+
+
+class NoProperPair(object):
+    def __init__(self):
+        self.proper = ProperPair()
+        pass
+
+    def filter(self, bam, read):
+        return not self.proper.filter(bam, read)
+
+    def __repr__(self):
+        return 'not proper pairs'
+
+    def close(self):
+        pass
+
+
 class MaskFlag(object):
     def __init__(self, value):
         if type(value) == type(1):
@@ -751,6 +812,9 @@ class TagEqual(_TagCompare):
 
 _criteria = {
     'mapped': Mapped,
+    'unmapped': Unmapped,
+    'properpail': ProperPair,
+    'noproperpail': NoProperPair,
     'noqcfail': QCFailFlag,
     'nosecondary': SecondaryFlag,
     'nopcrdup': PCRDupFlag,
