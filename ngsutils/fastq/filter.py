@@ -279,6 +279,48 @@ class TruncateFilter(object):
             yield (name, comment, seq, qual)
 
 
+class PrefixFilter(object):
+    def __init__(self, parent, size, verbose=False, discard=None):
+        self.parent = parent
+        self.size = size
+        self.verbose = verbose
+
+        self.altered = 0
+        self.removed = 0
+        self.kept = 0
+
+        self.discard = discard
+
+    def filter(self):
+        for name, comment, seq, qual in self.parent.filter():
+            if len(qual) > self.size:
+                if len(seq) == len(qual):  
+                    # basespace or colorspace w/o prefix
+                    seq = seq[self.size:]
+                    qual = qual[self.size:]
+                else:
+                    # colorspace with prefix
+                    # can not be trimmed this way
+                    sys.stderr.write('You can not trim the prefix away with colorspace data!')
+                    sys.exit(1)
+
+                if self.verbose:
+                    if seq and qual:
+                        sys.stderr.write('[Prefix] %s (altered)\n' % (name,))
+                        self.altered += 1
+                        comment = '%s #trunc' % comment
+                    else:
+                        sys.stderr.write('[Prefix] %s (removed)\n' % (name,))
+                        self.removed += 1
+                        if self.discard:
+                            self.discard(name)
+                        continue
+            else:
+                self.kept += 1
+
+            yield (name, comment, seq, qual)
+
+
 class WildcardFilter(object):
     def __init__(self, parent, max_num, verbose=False, discard=None):
         self.parent = parent
@@ -395,6 +437,8 @@ Filters:
                               below a threshold (floating average over
                               window_size)
 
+  -prefix size                Trim away [size] bases from the 5' end
+
   -suffixqual minval          Trim away bases from the 3' end with low quality
                               value should be given as a character (in Sanger
                               scale)(like Illumina B-trim)
@@ -434,6 +478,9 @@ if __name__ == '__main__':
         elif last == '-truncate':
             filters_config.append((TruncateFilter, int(arg)))
             last = None
+        elif last == '-prefix':
+            filters_config.append((PrefixFilter, int(arg)))
+            last = None
         elif last == '-suffixqual':
             filters_config.append((SuffixQualFilter, arg))
             last = None
@@ -471,7 +518,7 @@ if __name__ == '__main__':
         elif last == '-discard':
             discard_fname = arg
             last = None
-        elif arg in ['-wildcard', '-size', '-qual', '-suffixqual', '-trim', '-stats', '-discard', '-whitelist', '-truncate']:
+        elif arg in ['-wildcard', '-size', '-qual', '-suffixqual', '-trim', '-stats', '-discard', '-whitelist', '-truncate', '-prefix']:
             last = arg
         elif arg == '-illumina':
             illumina = True
