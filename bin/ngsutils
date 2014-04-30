@@ -84,15 +84,14 @@ elif [ "$1" == "profile" ]; then
     fi
     shift
 
-    ARGS=()
-    i=0
-    for arg in "$@"; do
-        ARGS[$i]="$arg"
-        ((++i))
-    done
+#    i=0
+#    for arg in "$@"; do
+#        ARGS[$i]="$arg"
+#        ((++i))
+#    done
     
     echo "Saving profile information to profile.output" 1>&2
-    exec python -m cProfile -o profile.output "$DIR"/ngsutils/$SUBDIR/$action "${ARGS[@]}"
+    exec python -m cProfile -o profile.output "$DIR"/ngsutils/$SUBDIR/$action "$@"
 else
     action=$1.py
 
@@ -105,12 +104,5 @@ else
     fi
     shift
 
-    ARGS=()
-    i=0
-    for arg in "$@"; do
-        ARGS[$i]="$arg"
-        ((++i))
-    done
-    
-    exec "$DIR"/ngsutils/$SUBDIR/$action "${ARGS[@]}"
+    exec "$DIR"/ngsutils/$SUBDIR/$action "$@"
 fi
