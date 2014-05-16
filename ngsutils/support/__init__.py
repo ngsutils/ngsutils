@@ -200,7 +200,8 @@ class Counts(object):
             acc += (i * val)
             count += val
 
-        return float(acc) / count
+        if count > 0:
+            return float(acc) / count
 
     def max(self):
         return len(self.bins) - 1
