@@ -108,7 +108,7 @@ class BedFile(object):
             if not (region.chrom, bin) in self._bins:
                 self._bin_list.append((region.chrom, bin))
                 self._bins[(region.chrom, bin)] = []
-        self._bins[(region.chrom, bin)].append(region)
+            self._bins[(region.chrom, bin)].append(region)
 
     def fetch(self, chrom, start, end, strand=None):
         '''
