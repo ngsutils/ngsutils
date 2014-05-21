@@ -59,7 +59,7 @@ def gtf_junc_5_tobed(gtf, out=sys.stdout):
                         continue
 
                     if not end in sites:
-                        out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, end, end + 1, '%s.%s' % (gene.gene_name, i), 0, gene.strand]]))
+                        out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, end, end + 1, '%s/%s' % (gene.gene_name, i), 0, gene.strand]]))
                         sites.add(end)
             else:
                 for j, (start, end) in enumerate(txscr.exons):
@@ -67,7 +67,7 @@ def gtf_junc_5_tobed(gtf, out=sys.stdout):
                         continue
 
                     if not start in sites:
-                        out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, start - 1, start, '%s.%s' % (gene.gene_name, i), 0, gene.strand]]))
+                        out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, start - 1, start, '%s/%s' % (gene.gene_name, i), 0, gene.strand]]))
                         sites.add(end)
 
 
@@ -81,7 +81,7 @@ def gtf_junc_3_tobed(gtf, out=sys.stdout):
                         continue
 
                     if not end in sites:
-                        out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, end, end + 1, '%s.%s' % (gene.gene_name, i), 0, gene.strand]]))
+                        out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, end, end + 1, '%s/%s' % (gene.gene_name, i), 0, gene.strand]]))
                         sites.add(end)
             else:
                 for j, (start, end) in enumerate(txscr.exons):
@@ -89,7 +89,7 @@ def gtf_junc_3_tobed(gtf, out=sys.stdout):
                         continue
 
                     if not start in sites:
-                        out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, start - 1, start, '%s.%s' % (gene.gene_name, i), 0, gene.strand]]))
+                        out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, start - 1, start, '%s/%s' % (gene.gene_name, i), 0, gene.strand]]))
                         sites.add(end)
 
 
@@ -104,11 +104,11 @@ def gtf_promoter_tobed(gtf, promoter_up, promoter_down, out=sys.stdout):
         for i, txscr in enumerate(gene.transcripts):
             if gene.strand == '+':
                 if not txscr.start in sites:
-                    out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.start - promoter_up, txscr.start + promoter_down, '%s.%s' % (gene.gene_name, i), 0, gene.strand]]))
+                    out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.start - promoter_up, txscr.start + promoter_down, '%s/%s' % (gene.gene_name, i), 0, gene.strand]]))
                     sites.add(txscr.start)
             else:
                 if not txscr.end in sites:
-                    out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.end - promoter_down, txscr.end + promoter_up, '%s.%s' % (gene.gene_name, i), 0, gene.strand]]))
+                    out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.end - promoter_down, txscr.end + promoter_up, '%s/%s' % (gene.gene_name, i), 0, gene.strand]]))
                     sites.add(txscr.end)
 
 def gtf_tss_tobed(gtf, out=sys.stdout):
@@ -117,11 +117,11 @@ def gtf_tss_tobed(gtf, out=sys.stdout):
         for i, txscr in enumerate(gene.transcripts):
             if gene.strand == '+':
                 if not txscr.start in sites:
-                    out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.start, txscr.start + 3, '%s.%s' % (gene.gene_name, i), 0, gene.strand]]))
+                    out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.start, txscr.start + 3, '%s/%s' % (gene.gene_name, i), 0, gene.strand]]))
                     sites.add(txscr.start)
             else:
                 if not txscr.end in sites:
-                    out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.end - 3, txscr.end, '%s.%s' % (gene.gene_name, i), 0, gene.strand]]))
+                    out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.end - 3, txscr.end, '%s/%s' % (gene.gene_name, i), 0, gene.strand]]))
                     sites.add(txscr.end)
 
 
@@ -131,11 +131,11 @@ def gtf_txs_tobed(gtf, out=sys.stdout):
         for i, txscr in enumerate(gene.transcripts):
             if gene.strand == '-':
                 if not txscr.start in sites:
-                    out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.start, txscr.start + 3, '%s.%s' % (gene.gene_name, i), 0, gene.strand]]))
+                    out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.start, txscr.start + 3, '%s/%s' % (gene.gene_name, i), 0, gene.strand]]))
                     sites.add(txscr.start)
             else:
                 if not txscr.end in sites:
-                    out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.end - 3, txscr.end, '%s.%s' % (gene.gene_name, i), 0, gene.strand]]))
+                    out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.end - 3, txscr.end, '%s/%s' % (gene.gene_name, i), 0, gene.strand]]))
                     sites.add(txscr.end)
 
 
@@ -147,7 +147,7 @@ def gtf_tlss_tobed(gtf, out=sys.stdout):
             if not txscr.has_cds:
                 continue
             if not txscr.start_codon in sites:
-                out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.start_codon[0], txscr.start_codon[1], '%s.%s' % (gene.gene_name, i), 0, gene.strand]]))
+                out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.start_codon[0], txscr.start_codon[1], '%s/%s' % (gene.gene_name, i), 0, gene.strand]]))
                 sites.add(txscr.start_codon)
 
 
@@ -159,7 +159,7 @@ def gtf_tlxs_tobed(gtf, out=sys.stdout):
             if not txscr.has_cds:
                 continue
             if not txscr.stop_codon in sites:
-                out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.stop_codon[0], txscr.stop_codon[1], '%s.%s' % (gene.gene_name, i), 0, gene.strand]]))
+                out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.stop_codon[0], txscr.stop_codon[1], '%s/%s' % (gene.gene_name, i), 0, gene.strand]]))
                 sites.add(txscr.start_codon)
 
 
@@ -197,7 +197,7 @@ def gtf_regions_tobed(gtf, out=sys.stdout):
             source_count = 0
             for n in names.split(','):
                 source_count += 1
-            out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, start, end, '%s.%s.%s' % (gene.gene_name, 'const' if const else 'alt', i), source_count, gene.strand]]))
+            out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, start, end, '%s/%s.%s' % (gene.gene_name, 'const' if const else 'alt', i), source_count, gene.strand]]))
 
 
 if __name__ == '__main__':
