@@ -293,8 +293,9 @@ if __name__ == '__main__':
         elif arg == '-junc3':
             junc_3 = True
         elif arg in ['-promoter', '-whitelist']:
-            promoter = True
             last = arg
+            if arg == '-promoter':
+                promoter = True
         elif not filename and os.path.exists(arg):
             filename = arg
 
