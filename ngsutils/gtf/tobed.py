@@ -181,7 +181,7 @@ def gtf_introns_tobed(gtf, out=sys.stdout):
         
         for txscr in gene.transcripts:
             last = None
-           for start, end in txscr.exons:
+            for start, end in txscr.exons:
                 if last:
                     introns.add((last, start))
                 last = end
