@@ -171,7 +171,7 @@ def gtf_exons_tobed(gtf, out=sys.stdout):
             exons.update(txscr.exons)
 
         for i, (start, end) in enumerate(sorted(exons)):
-            out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, start, end, '%s.e%s' % (gene.gene_name, i + 1), 0, gene.strand]]))
+            out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, start, end, '%s/e%s' % (gene.gene_name, i + 1), 0, gene.strand]]))
 
 
 def gtf_introns_tobed(gtf, out=sys.stdout):
@@ -181,13 +181,13 @@ def gtf_introns_tobed(gtf, out=sys.stdout):
         
         for txscr in gene.transcripts:
             last = None
-            for start, end in txscr.exons:
+           for start, end in txscr.exons:
                 if last:
                     introns.add((last, start))
                 last = end
 
         for i, (start, end) in enumerate(sorted(introns)):
-            out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, start, end, '%s.i.%s' % (gene.gene_name, i + 1), 0, gene.strand]]))
+            out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, start, end, '%s/i%s' % (gene.gene_name, i + 1), 0, gene.strand]]))
 
 
 def gtf_regions_tobed(gtf, out=sys.stdout):
