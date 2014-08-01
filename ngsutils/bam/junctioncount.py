@@ -38,6 +38,9 @@ def bam_junction_count(bam, ref=None, start=None, end=None, out=sys.stdout, quie
                 hasgap = True
                 end = pos + size
                 break
+            elif op == 4:
+                pos += size
+
 
         if not hasgap:
             continue
