@@ -77,12 +77,21 @@ def gtf_annotate(gtf, infile, ref_col=1, pos_col=2, gene_name=False, gene_locati
                         found = False
                         for start, end in txpt.exons:
                             if start < pos < end:
-                                if pos < txpt.start_codon:
-                                    locs.append("5'UTR")
-                                elif pos > txpt.stop_codon:
-                                    locs.append("3'UTR")
+                                if txpt.strand == '+':
+                                    if pos < txpt.start_codon:
+                                        locs.append("5'UTR")
+                                    elif pos > txpt.stop_codon:
+                                        locs.append("3'UTR")
+                                    else:
+                                        locs.append('coding')
                                 else:
-                                    locs.append('coding')
+                                    if pos > txpt.start_codon:
+                                        locs.append("5'UTR")
+                                    elif pos < txpt.stop_codon:
+                                        locs.append("3'UTR")
+                                    else:
+                                        locs.append('coding')
+                                    
                                 found = True
                                 break
                         if not found:

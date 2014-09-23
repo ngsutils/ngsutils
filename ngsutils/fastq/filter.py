@@ -448,7 +448,7 @@ Filters:
                               percentage [pct] (0.0-1.0)
 
   -paired                     Only keep reads that are correctly paired
-                              (Requires an interlaced FASTQ file)
+                              (Requires an interleaved FASTQ file)
 
   -whitelist keeplist.txt     Only keep reads whose name is in the keeplist
 

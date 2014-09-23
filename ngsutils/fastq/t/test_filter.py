@@ -246,7 +246,7 @@ ACGTACGTACGTATTT
 +
 ;;;;;;;;;;;;;;;;
 @bar
-ACGTACGTattt
+ACGTatttACGT
 +
 ;;;;;;;;;;;;
 @baz
@@ -270,9 +270,9 @@ ACGTACGTACGT
 +
 ;;;;;;;;;;;;
 @bar #trim
-ACGTACGT
+ACGT
 +
-;;;;;;;;
+;;;;
 @baz
 ACGTACGTATTC
 +

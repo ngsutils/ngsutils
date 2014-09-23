@@ -61,7 +61,7 @@ class GTF(object):
             if not quiet:
                 sys.stderr.write('Reading GTF file... (%s) \n' % filename)
 
-            for line in fobj:
+            for linenum, line in enumerate(fobj):
                 try:
                     idx = line.find('#')
                     if idx > -1:
@@ -73,12 +73,14 @@ class GTF(object):
                     start = int(start) - 1  # Note: 1-based
                     end = int(end)
                     attributes = {}
-                    for key, val in [x.split(' ', 1) for x in [x.strip() for x in attrs.split(';')] if x]:
+
+                    for key, val in [x.split(' ', 1) for x in [x.strip() for x in attrs.split(';')] if x and ' ' in x]:
                         if val[0] == '"' and val[-1] == '"':
                             val = val[1:-1]
                         attributes[key] = val
 
                     gid = None
+
                     if 'isoform_id' in attributes:
                         gid = attributes['isoform_id']
 
@@ -88,12 +90,40 @@ class GTF(object):
                     # elif 'tss_id' in attributes:  # iGenomes GTF files... are strange. use gene_name first.
                     #     gid = attributes['tss_id']
 
-                    else:
+                    elif 'gene_id' in attributes:
                         gid = attributes['gene_id']
                         if not warned and not quiet:
                             sys.stderr.write('\nGTF file potentially missing isoform annotation! Each transcript may be treated separately. (%s)\n' % gid)
                             sys.stderr.write('%s\n\n' % (str(attributes)))
                             warned = True
+                    else:
+                        if not warned and not quiet:
+                            sys.stderr.write('\nNot a valid GTF file! Maybe GFF?\n')
+                            sys.stderr.write('%s\n\n' % (str(attributes)))
+                            warned = True
+
+                        first_key = None
+                        attributes = {}
+                        for key, val in [x.split('=', 1) for x in [x.strip() for x in attrs.split(';')] if x and '=' in x]:
+                            if not first_key:
+                                first_key = key
+                            if val[0] == '"' and val[-1] == '"':
+                                val = val[1:-1]
+                            attributes[key] = val
+
+                        if not attributes:
+                            gid = 'id_%s' % linenum
+                            if not warned and not quiet:
+                                sys.stderr.write('\nGTF file missing annotations! Using line numbers as IDs\n')
+                                warned = True
+                        else:
+                            gid = attributes[first_key]
+                            if not warned and not quiet:
+                                sys.stderr.write('\nGTF file missing annotations (gene_id, transcript_id)! Assuming GFF? Taking first attribute as ID (%s=%s)\n' % (first_key, gid))
+                                sys.stderr.write('%s\n\n' % (str(attributes)))
+                                warned = True
+
+
                     if eta:
                         eta.print_status(extra=gid)
                 except:
@@ -114,7 +144,7 @@ class GTF(object):
                         if gid != attributes['gene_id']:
                             self._gene_ids[attributes['gene_id']] = gid
 
-                self._genes[gid].add_feature(attributes['transcript_id'], feature, start, end, strand)
+                self._genes[gid].add_feature(attributes['transcript_id'] if 'transcript_id' in attributes else gid, feature, start, end, strand)
 
             if eta:
                 eta.done()
@@ -248,9 +278,9 @@ class _GTFGene(object):
 
     """
 
-    def __init__(self, gid, chrom, source, gene_id, gene_name=None, **attributes):
+    def __init__(self, gid, chrom, source, gene_id=None, gene_name=None, **attributes):
         self.gid = gid
-        self.gene_id = gene_id
+        self.gene_id = gene_id if gene_id else gid
         self.gene_name = gene_name if gene_name else gene_id
         self.attributes = attributes
 
