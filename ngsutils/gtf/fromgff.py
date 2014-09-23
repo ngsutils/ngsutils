@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+## category Conversion
+## desc Converts a GFF annotation file to GTF
+## experimental
 '''
 Converts a GFF annotation file to GTF, concentrating on the data elements
 that are important for gene annotations (gene, exons, CDS, etc). It will also
@@ -207,6 +210,8 @@ if __name__ == '__main__':
             last = None
         elif arg in ['-err']:
             last = arg
+        elif arg == '-h':
+            usage()
         elif arg == '-rnas':
             export_rna = True
         elif arg == '-genes':

@@ -20,4 +20,5 @@ Commands
     csencode      - Converts color-space FASTQ file to encoded FASTQ
     fromfasta     - Converts (cs)FASTA/qual files to FASTQ format
     fromqseq      - Converts Illumina qseq (export/sorted) files to FASTQ
+    tobam         - Converts to BAM format (unmapped)
     tofasta       - Converts to FASTA format (seq or qual)

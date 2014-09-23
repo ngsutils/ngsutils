@@ -78,7 +78,7 @@ if __name__ == '__main__':
         elif not read2_fname and os.path.exists(arg):
             read2_fname = arg
 
-    if not outname or read1_fname:
+    if not outname or not read1_fname:
         usage()
 
     read1 = FASTQ(read1_fname)

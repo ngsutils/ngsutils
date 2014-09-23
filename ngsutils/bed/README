@@ -2,6 +2,7 @@ Commands
   General
     clean        - Cleans a BED file (score should be integers)
     extend       - Extends BED regions (3')
+    overlap      - Find overlapping BED regions from a query and target file
     reduce       - Merges overlapping BED regions
     refcount     - Given a number of BED files, calculate the number of samples that overlap regions in a reference BED file
     sizes        - Extract the sizes of BED regions
