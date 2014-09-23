@@ -12,7 +12,7 @@ import ngsutils.bam
 from ngsutils.bed import BedFile
 
 
-def find_nearest(inbed, refbed, maxdist=100000, out=sys.stdout):
+def find_nearest(inbed, refbed, maxdist=100000, restrict_name=False, nostrand=False, out=sys.stdout):
     for qregion in inbed:
 
         dists = []  # will be an list tuples: (abs_val of the distance, 'up/down') (respective to + strand)
@@ -20,7 +20,11 @@ def find_nearest(inbed, refbed, maxdist=100000, out=sys.stdout):
         start = max(0, qregion.start - maxdist)
         end = qregion.end + maxdist
 
-        for region in refbed.fetch(qregion.chrom, start, end, qregion.strand):
+        for region in refbed.fetch(qregion.chrom, start, end, qregion.strand if not nostrand else None):
+            if restrict_name:
+                if restrict_name and qregion.name not in region.name:
+                    continue
+
             if region.start <= qregion.start <= region.end:
                 # start is w/in region
                 dists.append((0, '', region))
@@ -47,9 +51,9 @@ def find_nearest(inbed, refbed, maxdist=100000, out=sys.stdout):
             region = dists[0][2]
 
             if distance > 0:
-                if region.strand == '+' and orient == 'down':
+                if qregion.strand == '+' and orient == 'down':
                     distance = -distance
-                elif region.strand == '-' and orient == 'up':
+                elif qregion.strand == '-' and orient == 'up':
                     distance = -distance
                     
 
@@ -69,6 +73,9 @@ Options:
   -max    The maximal distance to look for a nearest region
           (default: 100K)
 
+  -match  Only use regions in the reference that contain the name
+          from the query file.
+
 ''')
 
     sys.exit(1)
@@ -77,6 +84,8 @@ if __name__ == '__main__':
     qbed_fname = None
     refbed_fname = None
     maxdist = 100000
+    match = False
+    nostrand = False
 
     last = None
 
@@ -86,6 +95,10 @@ if __name__ == '__main__':
             last = None
         elif arg in ['-max']:
             last = arg
+        elif arg == '-match':
+            match = True
+        elif arg == '-nostrand':
+            nostrand = True
         elif not qbed_fname and (os.path.exists(arg) or arg == '-'):
             qbed_fname = arg
         elif not refbed_fname and os.path.exists(arg):
@@ -96,4 +109,4 @@ if __name__ == '__main__':
 
     qbed = BedFile(qbed_fname)
     refbed = BedFile(refbed_fname)
-    find_nearest(qbed, refbed, maxdist)
+    find_nearest(qbed, refbed, maxdist, match, nostrand)
