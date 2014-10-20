@@ -18,9 +18,8 @@ def bam_junction_count(bam, ref=None, start=None, end=None, out=sys.stdout, quie
         if read.is_unmapped:
             continue
 
-        hasgap = False
         pos = read.pos
-        end = None
+        posend = None
         for op, size in read.cigar:
             if op == 0:
                 pos += size
@@ -29,21 +28,20 @@ def bam_junction_count(bam, ref=None, start=None, end=None, out=sys.stdout, quie
             elif op == 2:
                 pos += size
             elif op == 3:
-                hasgap = True
-                end = pos + size
+                posend = pos + size
                 break
 
-        if not hasgap:
+        if posend is None:
             continue
 
-        junction = '%s:%s-%s' % (bam.references[read.tid], pos, end)
+        junction = (bam.references[read.tid], pos, posend)
         if not junction in junctions:
             junctions[junction] = set()
 
         junctions[junction].add(read.qname)
 
-    for junction in junctions:
-        sys.stdout.write('%s\t%s\n' % (junction, len(junctions[junction])))
+    for r, s, e in sorted(junctions):
+        sys.stdout.write('%s:%s-%s\t%s\n' % (r, s, e, len(junctions[(r,s,e)])))
 
 
 
@@ -76,7 +74,7 @@ if __name__ == "__main__":
             else:
                 usage("%s doesn't exist!")
         else:
-            chrom, se = arg.split(':')
+            ref, se = arg.split(':')
             start, end = [int(x) for x in se.split('-')]
             start = start - 1
 
