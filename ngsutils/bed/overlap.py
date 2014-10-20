@@ -25,6 +25,7 @@ def bed_reduce(target_bed, query_bed, stranded=True, exact=False, out=sys.stdout
         for tregion in target_bed.fetch(qregion.chrom, qregion.start, qregion.end, qregion.strand if stranded else None):
             if not exact or (qregion.start == tregion.start and qregion.end == tregion.end):
                 qregion.write(out)
+                break
 
 
 if __name__ == '__main__':
