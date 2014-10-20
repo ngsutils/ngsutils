@@ -79,7 +79,7 @@ class ToUCSCChrom(GTFFilter):
 
 class ToEnsemblChrom(GTFFilter):
     def __init__(self):
-        self.valid = set(['chr%s' % x for x in '1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 X Y MT'.split()])
+        self.valid = set(['chr%s' % x for x in '1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 X Y M'.split()])
 
     def process(self, cols):
         if cols[0] in self.valid:
@@ -87,7 +87,7 @@ class ToEnsemblChrom(GTFFilter):
             if cols[0] == 'chrM':
                 out[0] = 'MT'
             else:
-                cols[0] = cols[0][3:]
+                out[0] = cols[0][3:]
             return out
         return None
 
@@ -115,7 +115,5 @@ if __name__ == '__main__':
 
     if not fname or not filters:
         usage()
-
-
 
     gtf_filter(fname, filters)
