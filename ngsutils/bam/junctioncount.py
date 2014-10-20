@@ -9,14 +9,20 @@ You can specify a particular genome range to scan (like a gene region).
 
 import sys
 import os
-from ngsutils.bam import bam_iter, cigar_tostr, bam_open
-
+from ngsutils.bam import bam_iter, bam_open
 
 def bam_junction_count(bam, ref=None, start=None, end=None, out=sys.stdout, quiet=False):
+    last_tid = None
     junctions = {}
     for read in bam_iter(bam, ref=ref, start=start, end=end, quiet=quiet):
         if read.is_unmapped:
             continue
+
+        if read.tid != last_tid and junctions:
+            for junction in junctions:
+                sys.stdout.write('%s\t%s\n' % (junction, len(junctions[junction])))
+            junctions = {}
+            last_tid = read.tid
 
         pos = read.pos
         posend = None
@@ -30,6 +36,9 @@ def bam_junction_count(bam, ref=None, start=None, end=None, out=sys.stdout, quie
             elif op == 3:
                 posend = pos + size
                 break
+            elif op == 4:
+                pos += size
+
 
         if posend is None:
             continue
@@ -42,8 +51,6 @@ def bam_junction_count(bam, ref=None, start=None, end=None, out=sys.stdout, quie
 
     for r, s, e in sorted(junctions):
         sys.stdout.write('%s:%s-%s\t%s\n' % (r, s, e, len(junctions[(r,s,e)])))
-
-
 
 
 def usage(msg=""):

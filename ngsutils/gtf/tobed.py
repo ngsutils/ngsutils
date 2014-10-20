@@ -20,7 +20,7 @@ def usage(msg=None):
         print '%s\n' % msg
     print __doc__
     print '''\
-Usage: gtfutils tobed {options} [type] filename.gtf{.gz}
+Usage: gtfutils tobed [type] filename.gtf{.gz}
 
 Where type is one of:
     -genes    The gene from start to end (including introns)
@@ -33,6 +33,8 @@ Where type is one of:
     -tlxs     Translational stop sites (unique stop codons)
     -junc5    Splice junction 5' donor
     -junc3    Splice junction 3' acceptor
+    -utr5     5' UTR (including introns)
+    -utr3     3' UTR (including introns)
 
     -promoter length    Promoter region from the gene [length] upstream of TSS
                         
@@ -45,20 +47,12 @@ Where type is one of:
                         "-promoter 200,100" would yield a BED region of:
                         chr1   800    1100
 
-Valid options:
-    -whitelist file     A text file with one gene name per line indicating which genes should
-                        be exported.
-
 '''
     sys.exit(1)
 
-def gene_filter_pass(gene):
-    return True
 
-def gtf_junc_5_tobed(gtf, gene_filter=gene_filter_pass, out=sys.stdout):
+def gtf_junc_5_tobed(gtf, out=sys.stdout):
     for gene in gtf.genes:
-        if not gene_filter(gene):
-            continue
         sites = set()
         for i, txscr in enumerate(gene.transcripts):
             if gene.strand == '+':
@@ -79,10 +73,8 @@ def gtf_junc_5_tobed(gtf, gene_filter=gene_filter_pass, out=sys.stdout):
                         sites.add(end)
 
 
-def gtf_junc_3_tobed(gtf, gene_filter=gene_filter_pass, out=sys.stdout):
+def gtf_junc_3_tobed(gtf, out=sys.stdout):
     for gene in gtf.genes:
-        if not gene_filter(gene):
-            continue
         sites = set()
         for i, txscr in enumerate(gene.transcripts):
             if gene.strand == '-':
@@ -103,17 +95,13 @@ def gtf_junc_3_tobed(gtf, gene_filter=gene_filter_pass, out=sys.stdout):
                         sites.add(end)
 
 
-def gtf_genes_tobed(gtf, gene_filter=gene_filter_pass, out=sys.stdout):
+def gtf_genes_tobed(gtf, out=sys.stdout):
     for gene in gtf.genes:
-        if not gene_filter(gene):
-            continue
-        out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, gene.start, gene.end, gene.gene_name, 0, gene.strand]]))
+        out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, gene.start, gene.end, gene.gene_name if gene.gene_name else gene.gid, 0, gene.strand]]))
 
 
-def gtf_promoter_tobed(gtf, promoter_up, promoter_down, gene_filter=gene_filter_pass, out=sys.stdout):
+def gtf_promoter_tobed(gtf, promoter_up, promoter_down, out=sys.stdout):
     for gene in gtf.genes:
-        if not gene_filter(gene):
-            continue
         sites = set()
         for i, txscr in enumerate(gene.transcripts):
             if gene.strand == '+':
@@ -125,10 +113,8 @@ def gtf_promoter_tobed(gtf, promoter_up, promoter_down, gene_filter=gene_filter_
                     out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.end - promoter_down, txscr.end + promoter_up, '%s/%s' % (gene.gene_name, i), 0, gene.strand]]))
                     sites.add(txscr.end)
 
-def gtf_tss_tobed(gtf, gene_filter=gene_filter_pass, out=sys.stdout):
+def gtf_tss_tobed(gtf, out=sys.stdout):
     for gene in gtf.genes:
-        if not gene_filter(gene):
-            continue
         sites = set()
         for i, txscr in enumerate(gene.transcripts):
             if gene.strand == '+':
@@ -141,10 +127,8 @@ def gtf_tss_tobed(gtf, gene_filter=gene_filter_pass, out=sys.stdout):
                     sites.add(txscr.end)
 
 
-def gtf_txs_tobed(gtf, gene_filter=gene_filter_pass, out=sys.stdout):
+def gtf_txs_tobed(gtf, out=sys.stdout):
     for gene in gtf.genes:
-        if not gene_filter(gene):
-            continue
         sites = set()
         for i, txscr in enumerate(gene.transcripts):
             if gene.strand == '-':
@@ -157,11 +141,9 @@ def gtf_txs_tobed(gtf, gene_filter=gene_filter_pass, out=sys.stdout):
                     sites.add(txscr.end)
 
 
-def gtf_tlss_tobed(gtf, gene_filter=gene_filter_pass, out=sys.stdout):
+def gtf_tlss_tobed(gtf, out=sys.stdout):
     'Outputs all exons (from all transcripts)'
     for gene in gtf.genes:
-        if not gene_filter(gene):
-            continue
         sites = set()
         for i, txscr in enumerate(gene.transcripts):
             if not txscr.has_cds:
@@ -171,74 +153,87 @@ def gtf_tlss_tobed(gtf, gene_filter=gene_filter_pass, out=sys.stdout):
                 sites.add(txscr.start_codon)
 
 
-def gtf_tlxs_tobed(gtf, gene_filter=gene_filter_pass, out=sys.stdout):
-    'Outputs all exons (from all transcripts)'
+def gtf_utr5_tobed(gtf, out=sys.stdout):
+    'Outputs all 5\'UTR regions (from all transcripts)'
     for gene in gtf.genes:
-        if not gene_filter(gene):
-            continue
+        sites = set()
+        for i, txscr in enumerate(gene.transcripts):
+            if not txscr.has_cds:
+                continue
+            if gene.strand == '+':
+                if not (txscr.start,txscr.start_codon) in sites:
+                    out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.start, txscr.start_codon[0], '%s/%s' % (gene.gene_name, i), 0, gene.strand]]))
+                    sites.add((txscr.start,txscr.start_codon))
+            else:
+                if not (txscr.end,txscr.start_codon) in sites:
+                    out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.start_codon[1]+1, txscr.end, '%s/%s' % (gene.gene_name, i), 0, gene.strand]]))
+                    sites.add((txscr.end,txscr.start_codon))
+
+
+def gtf_utr3_tobed(gtf, out=sys.stdout):
+    'Outputs all 3\'UTR regions (from all transcripts)'
+    for gene in gtf.genes:
+        sites = set()
+        for i, txscr in enumerate(gene.transcripts):
+            if not txscr.has_cds:
+                continue
+
+            if gene.strand == '+':
+                if not (txscr.stop_codon,txscr.end) in sites:
+                    out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.stop_codon[1]+1, txscr.end, '%s/%s' % (gene.gene_name, i), 0, gene.strand]]))
+                    sites.add((txscr.start,txscr.start_codon))
+            else:
+                if not (txscr.start, txscr.stop_codon) in sites:
+                    out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.start, txscr.stop_codon[0], '%s/%s' % (gene.gene_name, i), 0, gene.strand]]))
+                    sites.add((txscr.start, txscr.stop_codon))
+
+def gtf_tlxs_tobed(gtf, out=sys.stdout):
+    'Outputs all translational stop sites (from all transcripts)'
+    for gene in gtf.genes:
         sites = set()
         for i, txscr in enumerate(gene.transcripts):
             if not txscr.has_cds:
                 continue
             if not txscr.stop_codon in sites:
                 out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, txscr.stop_codon[0], txscr.stop_codon[1], '%s/%s' % (gene.gene_name, i), 0, gene.strand]]))
-                sites.add(txscr.start_codon)
+                sites.add(txscr.stop_codon)
 
 
-def gtf_exons_tobed(gtf, gene_filter=gene_filter_pass, out=sys.stdout):
+def gtf_exons_tobed(gtf, out=sys.stdout):
     'Outputs all exons (from all transcripts)'
     for gene in gtf.genes:
-        if not gene_filter(gene):
-            continue
         exons = set()
         for txscr in gene.transcripts:
             exons.update(txscr.exons)
 
         for i, (start, end) in enumerate(sorted(exons)):
-            out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, start, end, '%s.e%s' % (gene.gene_name, i + 1), 0, gene.strand]]))
+            out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, start, end, '%s/e%s' % (gene.gene_name, i + 1), 0, gene.strand]]))
 
 
-def gtf_introns_tobed(gtf, gene_filter=gene_filter_pass, out=sys.stdout):
+def gtf_introns_tobed(gtf, out=sys.stdout):
     'Outputs all introns (from all transcripts)'
     for gene in gtf.genes:
-        if not gene_filter(gene):
-            continue
         introns = set()
         
         for txscr in gene.transcripts:
             last = None
-            for start, end in txscr.exons:
+            for start, end in sorted(txscr.exons):
                 if last:
                     introns.add((last, start))
                 last = end
 
         for i, (start, end) in enumerate(sorted(introns)):
-            out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, start, end, '%s.i.%s' % (gene.gene_name, i + 1), 0, gene.strand]]))
+            out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, start, end, '%s/i%s' % (gene.gene_name, i + 1), 0, gene.strand]]))
 
 
-def gtf_regions_tobed(gtf, gene_filter=gene_filter_pass, out=sys.stdout):
+def gtf_regions_tobed(gtf, out=sys.stdout):
     'Outputs all regions (from all transcripts)'
     for gene in gtf.genes:
-        if not gene_filter(gene):
-            continue
         for i, start, end, const, names in gene.regions:
             source_count = 0
             for n in names.split(','):
                 source_count += 1
             out.write('%s\n' % '\t'.join([str(x) for x in [gene.chrom, start, end, '%s/%s.%s' % (gene.gene_name, 'const' if const else 'alt', i), source_count, gene.strand]]))
-
-
-def gene_filter_whitelist(whitelist):
-    white = set()
-    with open(whitelist) as f:
-        for line in f:
-            white.add(line.strip())
-
-    def gene_filter(gene):
-        if gene.gene_name in white:
-            return True
-        return False
-
 
 
 if __name__ == '__main__':
@@ -252,20 +247,19 @@ if __name__ == '__main__':
     tlxs = False
     junc_5 = False
     junc_3 = False
+    utr_5 = False
+    utr_3 = False
     promoter = False
     promoter_up = 0
     promoter_down = 0
     last = None
 
-    whitelist = None
     filename = None
+
 
     for arg in sys.argv[1:]:
         if arg == '-h':
             usage()
-        elif last == '-whitelist':
-            whitelist = arg
-            last = None
         elif last == '-promoter':
             if ',' in arg:
                 promoter_up, promoter_down = [int(x) for x in arg.split(',')]
@@ -288,19 +282,22 @@ if __name__ == '__main__':
             txs = True
         elif arg == '-tlxs':
             tlxs = True
+        elif arg == '-utr5':
+            utr_5 = True
+        elif arg == '-utr3':
+            utr_3 = True
         elif arg == '-junc5':
             junc_5 = True
         elif arg == '-junc3':
             junc_3 = True
-        elif arg in ['-promoter', '-whitelist']:
+        elif arg in ['-promoter']:
+            promoter = True
             last = arg
-            if arg == '-promoter':
-                promoter = True
         elif not filename and os.path.exists(arg):
             filename = arg
 
     i = 0
-    for arg in [genes, exons, introns, regions, tss, tlss, txs, tlxs, junc_5, junc_3, promoter]:
+    for arg in [genes, exons, introns, regions, tss, tlss, txs, tlxs, utr_5, utr_3, junc_5, junc_3, promoter]:
         if arg:
             i += 1
 
@@ -313,34 +310,32 @@ if __name__ == '__main__':
     elif promoter and not (promoter_down or promoter_up):
         usage('You must specify a valid promoter length!')
 
-    if whitelist:
-        gene_filter = gene_filter_whitelist(whitelist)
-    else:
-        gene_filter = gene_filter_pass
-
-
     gtf = GTF(filename)
 
     if genes:
-        gtf_genes_tobed(gtf, gene_filter)
+        gtf_genes_tobed(gtf)
     elif exons:
-        gtf_exons_tobed(gtf, gene_filter)
+        gtf_exons_tobed(gtf)
     elif introns:
-        gtf_introns_tobed(gtf, gene_filter)
+        gtf_introns_tobed(gtf)
     elif regions:
-        gtf_regions_tobed(gtf, gene_filter)
+        gtf_regions_tobed(gtf)
     elif tss:
-        gtf_tss_tobed(gtf, gene_filter)
+        gtf_tss_tobed(gtf)
     elif tlss:
-        gtf_tlss_tobed(gtf, gene_filter)
+        gtf_tlss_tobed(gtf)
     elif txs:
-        gtf_txs_tobed(gtf, gene_filter)
+        gtf_txs_tobed(gtf)
     elif tlxs:
-        gtf_tlxs_tobed(gtf, gene_filter)
+        gtf_tlxs_tobed(gtf)
+    elif utr_5:
+        gtf_utr5_tobed(gtf)
+    elif utr_3:
+        gtf_utr3_tobed(gtf)
     elif junc_5:
-        gtf_junc_5_tobed(gtf, gene_filter)
+        gtf_junc_5_tobed(gtf)
     elif junc_3:
-        gtf_junc_3_tobed(gtf, gene_filter)
+        gtf_junc_3_tobed(gtf)
     elif promoter:
-        gtf_promoter_tobed(gtf, promoter_up, promoter_down, gene_filter)
+        gtf_promoter_tobed(gtf, promoter_up, promoter_down)
 
