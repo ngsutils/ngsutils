@@ -168,7 +168,8 @@ flag_descriptions = {
     0x80: 'Last fragment',
     0x100: 'Secondary alignment',
     0x200: 'QC Fail',
-    0x400: 'PCR/Optical duplicate'
+    0x400: 'PCR/Optical duplicate',
+    0x800: 'Supplementary'
 }
 
 
