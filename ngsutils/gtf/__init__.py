@@ -104,7 +104,7 @@ class GTF(object):
 
                         first_key = None
                         attributes = {}
-                        for key, val in [x.split('=', 1) for x in [x.strip() for x in attrs.split(';')] if x and '=' in x]:
+                        for key, val in [x.split('=', 1) for x in [x.strip() for x in quoted_split(attrs, ';')] if x and '=' in x]:
                             if not first_key:
                                 first_key = key
                             if val[0] == '"' and val[-1] == '"':

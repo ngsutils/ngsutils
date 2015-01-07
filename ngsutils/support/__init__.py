@@ -228,20 +228,20 @@ def quoted_split(s, delim, quote_char='"'):
     buf = ""
     inquote = False
 
-    for ch in s:
+    for c in s:
         if inquote:
-            buf += ch
-            if ch == quote_char:
+            buf += c
+            if c == quote_char:
                 inquote = False
-        elif ch == delim:
+        elif c == delim:
             tokens.append(buf)
             buf = ""
         else:
-            buf += ch
-            if ch == quote_char:
+            buf += c
+            if c == quote_char:
                 inquote = True
 
     if buf:
         tokens.append(buf)
-        
+
     return tokens
