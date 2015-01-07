@@ -220,3 +220,25 @@ def memoize(func):
 
     inner.__doc__ = '(@memoized %s)\n%s' % (func.__name__, func.__doc__)
     return inner
+
+
+def quoted_split(s, delim, quote_char='"'):
+    tokens = []
+
+    buf = ""
+    inquote = False
+
+    for ch in s:
+        if inquote:
+            buf += ch
+            if ch == quote_char:
+                inquote = False
+        elif ch == delim:
+            tokens.append(buf)
+            buf = ""
+        else:
+            buf += ch
+            if ch == quote_char:
+                inquote = True
+
+    return tokens

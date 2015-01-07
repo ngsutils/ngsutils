@@ -19,7 +19,7 @@ Notes:
 import sys
 import os
 from ngsutils.support.ngs_utils import gzip_aware_open
-from ngsutils.support import symbols
+from ngsutils.support import symbols, quoted_split
 from eta import ETA
 import datetime
 
@@ -74,7 +74,7 @@ class GTF(object):
                     end = int(end)
                     attributes = {}
 
-                    for key, val in [x.split(' ', 1) for x in [x.strip() for x in attrs.split(';')] if x and ' ' in x]:
+                    for key, val in [x.split(' ', 1) for x in [x.strip() for x in quoted_split(attrs, ';')] if x and ' ' in x]:
                         if val[0] == '"' and val[-1] == '"':
                             val = val[1:-1]
                         attributes[key] = val
