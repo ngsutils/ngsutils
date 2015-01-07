@@ -241,4 +241,7 @@ def quoted_split(s, delim, quote_char='"'):
             if ch == quote_char:
                 inquote = True
 
+    if buf:
+        tokens.append(buf)
+        
     return tokens
