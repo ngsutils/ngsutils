@@ -200,7 +200,8 @@ class Counts(object):
             acc += (i * val)
             count += val
 
-        return float(acc) / count
+        if count > 0:
+            return float(acc) / count
 
     def max(self):
         return len(self.bins) - 1
@@ -219,3 +220,28 @@ def memoize(func):
 
     inner.__doc__ = '(@memoized %s)\n%s' % (func.__name__, func.__doc__)
     return inner
+
+
+def quoted_split(s, delim, quote_char='"'):
+    tokens = []
+
+    buf = ""
+    inquote = False
+
+    for c in s:
+        if inquote:
+            buf += c
+            if c == quote_char:
+                inquote = False
+        elif c == delim:
+            tokens.append(buf)
+            buf = ""
+        else:
+            buf += c
+            if c == quote_char:
+                inquote = True
+
+    if buf:
+        tokens.append(buf)
+
+    return tokens

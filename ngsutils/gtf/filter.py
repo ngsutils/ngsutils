@@ -24,6 +24,11 @@ Possible filters:
                 
                 (This will keep only chromosomes 1-22, X, Y, and MT for Human)
 
+    -to-ensembl Rename UCSC-style chromosome names (chr1, chr2, etc) to 
+                Ensembl-style names (1, 2, etc.) 
+                
+                (This will keep only chromosomes 1-22, X, Y, and MT for Human)
+
 '''
     sys.exit(1)
 
@@ -72,6 +77,21 @@ class ToUCSCChrom(GTFFilter):
         return None
 
 
+class ToEnsemblChrom(GTFFilter):
+    def __init__(self):
+        self.valid = set(['chr%s' % x for x in '1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 X Y M'.split()])
+
+    def process(self, cols):
+        if cols[0] in self.valid:
+            out = cols[:]
+            if cols[0] == 'chrM':
+                out[0] = 'MT'
+            else:
+                out[0] = cols[0][3:]
+            return out
+        return None
+
+
 if __name__ == '__main__':
     fname = None
     last = None
@@ -82,6 +102,8 @@ if __name__ == '__main__':
         elif last == '-chr':
             filters.append(ChrSubstr(arg))
             last = None
+        elif arg == '-to-ensembl':
+            filters.append(ToEnsemblChrom())
         elif arg == '-to-ucsc':
             filters.append(ToUCSCChrom())
         elif arg in ['-chr']:
@@ -93,7 +115,5 @@ if __name__ == '__main__':
 
     if not fname or not filters:
         usage()
-
-
 
     gtf_filter(fname, filters)

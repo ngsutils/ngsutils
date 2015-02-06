@@ -71,6 +71,13 @@ if [ "$1" == "help" ]; then
         fi
     fi
     "$DIR"/ngsutils/$SUBDIR/$action -h
+
+elif [ "$1" == "version" ]; then
+    cd $DIR
+    GV="$(git show master --format='%h %ai' | head -n 1)"
+    VERSION=$(echo "$GV" | awk '{print $1}')
+    echo "$(cat VERSION | sed -e 's/\n//')-$VERSION"
+
 elif [ "$1" == "profile" ]; then
     shift
     action=$1.py

@@ -18,7 +18,7 @@ import os
 from ngsutils.support import gzip_reader
 
 
-def gtf_addreflink(gtf, reflink, out=sys.stdout, quiet=False):
+def gtf_addreflink(gtf, reflink, out=sys.stdout, quiet=False, replace=False):
     link_values = {}
 
     if not quiet:
@@ -43,18 +43,24 @@ def gtf_addreflink(gtf, reflink, out=sys.stdout, quiet=False):
                 line = line[:-idx]
             chrom, source, feature, start, end, score, strand, frame, attrs = line.rstrip().split('\t')
             transcript_id = None
+            gene_id = None
             for key, val in [x.split(' ') for x in [x.strip() for x in attrs.split(';')] if x]:
                 if val[0] == '"' and val[-1] == '"':
                     val = val[1:-1]
                 if key == 'transcript_id':
                     transcript_id = val
+                elif key == 'gene_id':
+                    gene_id = val
 
             if attrs[-1] != ';':
                 attrs = '%s;' % attrs
 
             if transcript_id in link_values:
-                extra = 'gene_name "%s"; isoform_id "%s";' % link_values[transcript_id]
-                attrs = '%s %s' % (attrs, extra)
+                if replace:
+                    attrs = 'gene_id "%s"; transcript_id "%s"; gene_name "%s"; orig_gene_id "%s";' % (link_values[transcript_id][1], transcript_id, link_values[transcript_id][0], gene_id)
+                else:
+                    extra = 'gene_name "%s"; isoform_id "%s";' % link_values[transcript_id]
+                    attrs = '%s %s' % (attrs, extra)
 
             out.write('\t'.join([chrom, source, feature, start, end, score, strand, frame, attrs]))
             if comment:
@@ -71,14 +77,23 @@ def usage(msg=None):
     if msg:
         print msg
     print __doc__
-    print 'Usage: gtfutils add_reflink filename.gtf reflink.txt'
+    print '''\
+Usage: gtfutils {-replace_gid} add_reflink filename.gtf reflink.txt
+
+Options:
+    -replace_gid    Replace the gene id in the GTF file with the Entrez ID from the refLink table
+'''
+
     sys.exit(1)
 
 if __name__ == '__main__':
     gtf = None
     reflink = None
+    replace = False
 
     for arg in sys.argv[1:]:
+        if arg == '-replace_gid':
+            replace = True
         if not gtf and (os.path.exists(arg) or arg == '-'):
             gtf = arg
         elif not reflink and (os.path.exists(arg) or arg == '-'):
@@ -89,4 +104,4 @@ if __name__ == '__main__':
     if gtf == '-' and reflink == '-':
         usage('Both GTF and reflink files can not be from stdin')
 
-    gtf_addreflink(gtf, reflink)
+    gtf_addreflink(gtf, reflink, replace=replace)

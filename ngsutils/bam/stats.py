@@ -168,7 +168,8 @@ flag_descriptions = {
     0x80: 'Last fragment',
     0x100: 'Secondary alignment',
     0x200: 'QC Fail',
-    0x400: 'PCR/Optical duplicate'
+    0x400: 'PCR/Optical duplicate',
+    0x800: 'Supplementary'
 }
 
 
@@ -288,6 +289,10 @@ class BamStats(object):
                     # note: this doesn't work for RNA mapped to a reference genome...
                     # for RNA, you'd need to map to a transcript library (refseq) to get
                     # an accurate template length
+                    #
+                    # just skipping 'N' cigar values won't cut it either... since the pairs
+                    # will likely silently span a gap.
+
                     if read.is_reverse:
                         k = -read.tlen
                     else:
