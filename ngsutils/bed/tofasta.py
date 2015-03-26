@@ -38,7 +38,7 @@ def bed_tofasta(bed, ref_fasta, min_size=50, stranded=True, include_name=False, 
                     seq = revcomp(seq)
                 out.write('>%s%s:%d-%d[%s]\n%s\n' % (name, region.chrom, region.start, region.end, region.strand, seq))
             else:
-                out.write('>%s%s:%d-%d%s\n%s\n' % (name, region.chrom, region.start, region.end, seq))
+                out.write('>%s%s:%d-%d\n%s\n' % (name, region.chrom, region.start, region.end, seq))
 
     fasta.close()
 
