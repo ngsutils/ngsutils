@@ -85,6 +85,9 @@ def _insilico_pcr_fasta(fileobj,  db,  perfect=15,  good=15,  size=4000,  flip=F
                     primers[name].append(seq)
 
             name = line[1:].strip().split()[0].rsplit('/', 1)[0]
+            if name[-4:] == '_rev' or name[-4:] == '_fwd':
+                name = name[:-4]
+
             seq = ''
         else:
             seq += line.strip()

@@ -29,7 +29,7 @@ export PYTHONPATH=$PYTHONPATH:"$DIR"
 
 if [ "$SUBDIR" == "ngs" ]; then
     if [ -e "$DIR"/.git ]; then
-        if [ "$1" == "update" ]]; then
+        if [ "$1" == "update" ]; then
             cd "$DIR"
     
             echo "Updating from current branch"

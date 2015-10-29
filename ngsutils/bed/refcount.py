@@ -51,7 +51,7 @@ def bed_refcount(refbed, bedfiles, stranded=True, out=sys.stdout):
     out.write('\tpresent\n')
 
     for region in refbed:
-        out.write(region)
+        out.write('%s\t%s\t%s\t%s\t%s\t%s' % (region.chrom, region.start, region.end, region.name, region.score, region.strand))
         present = 0
         for bed in bedfiles:
             count = 0
