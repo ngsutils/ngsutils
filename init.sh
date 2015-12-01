@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if [ "$PYTHON" == "" ]; then
+if [ "$PYTHON" = "" ]; then
     PYTHON="python"
 fi
 
@@ -15,7 +15,7 @@ fi
 
 . venv/bin/activate
 
-if [ $(uname -s) == "Darwin" ]; then
+if [ $(uname -s) = "Darwin" ]; then
     # Mac OS X Mountain Lion compiles with clang by default...
     # clang and cython don't get along... so force it to use gcc
 
