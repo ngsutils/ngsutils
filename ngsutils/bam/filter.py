@@ -85,6 +85,8 @@ Currently, the available filters are:
     -blacklist fname           Remove reads that are on this list (by name)
                                  These lists can be whitespace-delimited with
                                  the read name as the first column.
+    -maximum_mismatch_ratio val
+                               Filter by maximum mismatch ratio (fraction of length)
 
     -eq  tag_name value
     -lt  tag_name value
@@ -700,6 +702,20 @@ class ReadMaxLength(object):
         pass
 
 
+class MaximumMismatchRatio(object):
+    def __init__(self, ratio):
+        self.ratio = float(ratio)
+
+    def __repr__(self):
+        return "maximum mismatch ratio: %s" % self.val
+
+    def filter(self, bam, read):
+        return read_calc_mismatches(read) <= self.ratio*len(read.seq)
+
+    def close(self):
+        pass
+
+
 class QCFailFlag(object):
     def __repr__(self):
         return "no 0x200 (qcfail) flag"
@@ -840,7 +856,7 @@ _criteria = {
     'minlen': ReadMinLength,
     'maxlen': ReadMaxLength,
     'uniq': Unique,
-    'uniq_start': UniqueStart
+    'maximum_mismatch_ratio': MaximumMismatchRatio
 }
 
 
