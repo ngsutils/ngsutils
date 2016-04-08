@@ -19,7 +19,7 @@ usage() {
     exit 1
 }
 
-if [ "$1" == "" ]; then
+if [ "$1" = "" ]; then
     usage
 fi
 
@@ -29,7 +29,7 @@ export PYTHONPATH=$PYTHONPATH:"$DIR"
 
 if [ "$SUBDIR" = "ngs" ]; then
     if [ -e "$DIR"/.git ]; then
-        if [ "$1" == "update" ]; then
+        if [ "$1" = "update" ]; then
             cd "$DIR"
     
             echo "Updating from current branch"
@@ -42,7 +42,7 @@ if [ "$SUBDIR" = "ngs" ]; then
             if [ "$2" != "" ]; then
                 echo "Switching to branch: $2"
                 git fetch origin
-                if [ "$(git branch -l | grep "$2")" == "" ]; then
+                if [ "$(git branch -l | grep "$2")" = "" ]; then
                     git branch -t $2 origin/$2
                 fi
                 git checkout $2
