@@ -149,8 +149,9 @@ Recommended
 License
 ---
 
-    NGSUtils - Tools for next-generation sequencing analysis
+    NGSUtils - Tools for next-generation sequencing analysis  
     Copyright (c) 2010-2012 The Trustees of Indiana University
+    Copyright (c) 2013-2016 The Board of Trustees of Leland Stanford Junior University
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions are
@@ -188,10 +189,12 @@ License
     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ---
 
-Written and maintained by:
-Marcus Breese <mbreese@iupui.edu>  
-Center for Computational Biology and Bioinformatics  
-Indiana University School of Medicine
+Written and maintained by: Marcus Breese <mbreese@stanford..edu>  
+Dept. of Pediatrics, Div. Heme/Onc  
+Stanford University School of Medicine
 
 
-&copy;2010-2012 Trustees of Indiana University
+&copy;2010-2012, Trustees of Indiana University
+&copy;2013-2016, The Board of Trustees of Leland Stanford Junior
+University
+
