@@ -194,6 +194,5 @@ Dept. of Pediatrics, Div. of Hematology/Oncology
 Stanford University School of Medicine
 
 
-&copy;2010-2012 Trustees of Indiana University
+&copy;2010-2012 Trustees of Indiana University  
 &copy;2013-2016 The Board of Trustees of Leland Stanford Junior University
-
