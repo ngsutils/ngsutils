@@ -35,7 +35,6 @@ def _open_file(outbase, i, gz, quiet=False):
         return (open(tmp, 'w'), tmp, fn)
 
 
-
 def fastq_tile(fname, outbase, length, offset, gz=False, quiet=False):
     fastq = FASTQ(fname)
 
@@ -97,7 +96,7 @@ if __name__ == '__main__':
             last = None
         elif last == '-offset':
             offset = int(arg)
-            last = none
+            last = None
         elif arg == '-gz':
             gz = True
         elif arg in ['-len', '-offset']:
@@ -113,4 +112,3 @@ if __name__ == '__main__':
         usage()
 
     fastq_tile(fname, outtemplate, length, offset, gz)
-
