@@ -136,10 +136,32 @@ def insilico_pcr_pairs(fwd,  rev,  name,  db,  perfect=15,  good=15,  size=4000,
         if result:
             count = 0
             for m in re.finditer('><A HREF=".*">(.*):(\d+)([\+\-])(\d+)</A>', result):
+                outcols = [m.group(1), int(m.group(2))-1, m.group(4)]
                 if count == 0:
-                    out.write("%s\t%s\t%s\t%s\t0\t%s\n" % (m.group(1), int(m.group(2)) - 1, m.group(4), name, m.group(3)))
+                    outcols.append(name)
                 else:
-                    out.write("%s\t%s\t%s\t%s.%s\t0\t%s" % (m.group(1), int(m.group(2)) - 1, m.group(4), name, count, m.group(3)))
+                    outcols.append('%s.%s' % (name, count))
+                outcols.append('0')
+                outcols.append(m.group(3))
+                
+                # BED11 format for think/thin blocks
+                outcols.append(int(m.group(2))-1)
+                outcols.append(m.group(4))
+                outcols.append('0,192,0')
+                outcols.append('2')
+                if m.group(3) == '+':
+                    outcols.append('%s,%s' % (len(fwd), len(rev)))
+                    outcols.append('0,%s' % (int(m.group(4)) - (int(m.group(2))-1) - len(rev)))
+                else:
+                    outcols.append('%s,%s' % (len(rev), len(fwd)))
+                    outcols.append('0,%s' % (int(m.group(4)) - (int(m.group(2))-1) - len(fwd)))
+
+                out.write('%s\n' % '\t'.join([str(x) for x in outcols]))
+
+                #if count == 0:
+                #    out.write("%s\t%s\t%s\t%s\t0\t%s\n" % (m.group(1), int(m.group(2)) - 1, m.group(4), name, m.group(3)))
+                #else:
+                #    out.write("%s\t%s\t%s\t%s.%s\t0\t%s" % (m.group(1), int(m.group(2)) - 1, m.group(4), name, count, m.group(3)))
                 m = re.search('<PRE>><A HREF=".*">(.*):(\d+)([\+\-])(\d+)</A>', result)
                 count += 1
             if not quiet:
@@ -158,6 +180,7 @@ if __name__ == '__main__':
     tab = None
     fwd = None
     rev = None
+    name = 'stdin_primers'
 
     last = None
     for arg in sys.argv[1:]:
@@ -170,6 +193,9 @@ if __name__ == '__main__':
         elif last == '-size':
             size = int(arg)
             last = None
+        elif last == '-name':
+            name = arg
+            last = None
         elif last == '-db':
             db = arg
             last = None
@@ -179,7 +205,7 @@ if __name__ == '__main__':
         elif last == '-tab' and os.path.exists(arg):
             tab = arg
             last = None
-        elif arg in ['-db',  '-good',  '-perfect',  '-size',  '-fasta',  '-tab']:
+        elif arg in ['-db',  '-good',  '-perfect',  '-size',  '-fasta',  '-tab', '-name']:
             last = arg
         elif arg == '-h':
             usage()
@@ -209,4 +235,4 @@ if __name__ == '__main__':
     elif tab:
         insilico_pcr_tab(tab, db, perfect, good, size, flip)
     else:
-        insilico_pcr_pairs(fwd, rev, 'stdin_primers', db, perfect, good, size, flip)
+        insilico_pcr_pairs(fwd, rev, name, db, perfect, good, size, flip)
