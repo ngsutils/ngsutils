@@ -8,7 +8,7 @@ export PYTHONPATH=$PYTHONPATH:"$DIR"
 export HIDE_ETA="1"
 export TESTING="1"
 
-if [ "$1" == "" ]; then
+if [ "$1" = "" ]; then
     # run all tests...
     cd $DIR
     if [ "`which unit2`" != "" ]; then
