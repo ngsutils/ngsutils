@@ -707,7 +707,7 @@ class MaximumMismatchRatio(object):
         self.ratio = float(ratio)
 
     def __repr__(self):
-        return "maximum mismatch ratio: %s" % self.val
+        return "maximum mismatch ratio: %s" % self.ratio
 
     def filter(self, bam, read):
         return read_calc_mismatches(read) <= self.ratio*len(read.seq)
