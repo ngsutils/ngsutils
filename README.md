@@ -1,5 +1,11 @@
 ngsutils - Tools for next-gen sequencing analysis
 ===
+
+Update
+---
+Development on this tool has largely stopped. For a more up-to-date set of tools that are easier to install and maintain, see https://compgen.io/ngsutilsj
+
+
 Usage
 ---
 Run the `bamutils`, `bedutils`, `fastqutils`, or `gtfutils` scripts. These are the main driver scripts 
